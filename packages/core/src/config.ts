@@ -68,6 +68,10 @@ const schema = z
       .default(2 * MS_DAY),
     DOCKSIDE_REQUEST_PROOF_SKEW_MS: z.coerce.number().int().min(1_000).max(300_000).default(60_000),
     DOCKSIDE_FUNDED_PAYOUTS: z.enum(["BLOCKED"]).default("BLOCKED"),
+    /** Requests per minute per client address on unauthenticated routes (challenges, logins, invitations). */
+    DOCKSIDE_RATE_LIMIT_UNAUTH_PER_MIN: z.coerce.number().int().min(1).max(100_000).default(300),
+    /** Requests per minute per presented session token on authenticated routes. */
+    DOCKSIDE_RATE_LIMIT_SESSION_PER_MIN: z.coerce.number().int().min(1).max(1_000_000).default(3000),
     DOCKSIDE_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   })
   .strict();
