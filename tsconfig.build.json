@@ -8,6 +8,9 @@
       "path": "packages/store"
     },
     {
+      "path": "packages/near"
+    },
+    {
       "path": "packages/authority"
     },
     {
