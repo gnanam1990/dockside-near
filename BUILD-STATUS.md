@@ -16,7 +16,7 @@ Stack and layout decision: [docs/adr/0001](docs/adr/0001-stack-and-monorepo-layo
 | Module | Status | Owned tests | Result |
 |---|---|---|---|
 | M00 foundation/contracts | tests passing (IMPLEMENTED_UNVERIFIED at product level) | T-001, T-002 | T-001 PASS (unit/property/cross-language), T-002 PASS |
-| M01 organization/authority | NOT_RUN | T-004, T-005, T-006 | — |
+| M01 organization/authority | tests passing (IMPLEMENTED_UNVERIFIED at product level) | T-004, T-005, T-006 | T-004 PASS, T-005 PASS, T-006 PASS (service + HTTP boundary); INV-13 human-acceptance evidence NOT_RUN |
 | M02–M09 | NOT_RUN | — | — |
 
 ## M00 — foundation/contracts
@@ -61,6 +61,68 @@ Stack and layout decision: [docs/adr/0001](docs/adr/0001-stack-and-monorepo-layo
 
 Evidence: `docs/evidence/M00/` (local paths redacted).
 
+## M01 — organization/authority
+
+- Branch: `feat/dockside-m01-organization-authority`, base = M00 merge on main.
+- Mapped IDs: FR-10, FR-15, NFR-02, NFR-06, INV-13, T-004, T-005, T-006. Decisions: [ADR-0003](docs/adr/0003-authority-sessions-and-service-custody.md).
+- Implemented (real, no mocks on any path):
+  - `packages/store/migrations/0002_authority.sql`: organizations, principals, key_versions (unique public key,
+    status lifecycle), role_grants (one active grant per capability), proof_challenges, invitations (secret hash only),
+    sessions (token hash only), service_enrollments, recoveries.
+  - `packages/authority` `AuthorityService`: PoP bootstrap (canonical Ed25519 or NEAR NEP-413 wallet signature)
+    bound to origin/org/role/key/nonce/expiry; single-use challenges; PoP sessions with per-request signed proofs and
+    durable request nonces; one-time hashed scoped invitations; recipient acceptance in its own session; later admin grant;
+    self-consumption/self-escalation/wrong-org/role-escalation/second-party-capability denial; versioned human keys with
+    rotation, revocation, historical verification, delayed recovery by a different admin with principal veto;
+    ManifestAttestor and deterministic-policy service enrollment with scoped PoP, opaque custody metadata, separate
+    activation, rotation, delayed recovery, revocation; typed verification contracts (`verifyServiceSignature`,
+    `verifyTradeServiceSignature`, `verifyPrincipalSignature`, `verifyHistorical`, `verifyTradeRevisionAcceptance`,
+    `bindingStatus`, `assertIndependentParties`); every authority event and denial in the hash-chained audit log.
+  - `IsolatedSigner` + `packages/authority/signer/isolated-signer.mjs`: service key generated and used only inside a
+    child process with a purpose allowlist (local stand-in for HSM/KMS custody; same request/response contract).
+  - `services/api`: node:http control API for every M01 flow, strict JSON (duplicate keys/unknown fields/size limits),
+    exact-origin check, session token + `Dockside-Proof` per request, security headers, typed error envelope,
+    `/healthz` and migration-aware `/readyz`; entry point `services/api/dist/main.js` (`pnpm run api`).
+- Red evidence: `docs/evidence/M01/red-run-1.txt` (3 suites failed: `../src/index.js` did not exist; tests were written first).
+  Two test-authoring bugs were fixed during green-up (display names with `_`; a random-nonce payload signed and verified as
+  two different objects); no assertion was weakened.
+- Mutation sanity: removing the request-proof signature check makes T-004 and the HTTP suite fail
+  (`docs/evidence/M01/mutation-check.txt`).
+- Real vs simulated: all signatures are real Ed25519 (node:crypto) with freshly generated keys; NEP-413 bytes are built
+  exactly as NEAR wallets do, but **no real wallet extension or NEAR account was used** (no account creation allowed).
+  The four parties in tests are separately keyed principals in separate sessions, but are driven by one test process:
+  this satisfies the unit/integration paths only and **does not satisfy INV-13 human acceptance** (REAL-PRODUCT-GATE item 3: NOT_RUN).
+- Known gaps (later modules): no rate limiting on unauthenticated challenge creation (M07/M09); NEAR account ↔ key ownership
+  via RPC `view_access_key` not checked (NOT_RUN, no network); trade services assumed to be enrolled by a counterparty org;
+  browser-held session keys (M08) undecided (ADR-0003 flip condition); integrated cross-role matrix T-003 belongs to M07.
+
+### M01 commands, exit codes and counts (Windows, git-bash)
+
+| Command | Exit | Result |
+|---|---|---|
+| `pnpm install --frozen-lockfile` | 0 | lockfile up to date |
+| `pnpm exec biome check .` (format + lint) | 0 | 38 files, no diagnostics requiring fixes |
+| `pnpm run typecheck` | 0 | `tsc -b` (core, store, authority, api) + test typecheck clean |
+| `pnpm test --reporter=verbose` (runs `pnpm run build` first) | 0 | 7 files, **71 tests passed**: T-001 11, T-002 12, store 7, T-004 12, T-005 9, T-006 13, HTTP 7 |
+| `cargo test --manifest-path contract/Cargo.toml` | 0 | 6 passed (4 unit + 2 cross-language vectors) |
+| `node scripts/secret-scan.mjs` | 0 | 84 files clean |
+| `pnpm audit` | 0 | no known vulnerabilities |
+| `node <scratch>/smoke.mjs services/api/dist/main.js <db>` | 0 | built server: `/healthz` 200, `/readyz` 200 schemaVersion 2, malformed key 400 `INVALID_KEY`, typo env var exits 1 |
+
+Evidence: `docs/evidence/M01/` (local paths redacted).
+
+## Handoff for M02/M03 (next stages)
+
+- Canonical bytes: use `digestFor`/`signFor`/`requireSignature` with a registered `SIGNING_DOMAINS` entry; add new
+  domains there (and to the Rust crate vectors) rather than ad-hoc hashing. Contract-side encoding is
+  `contract/crates/dockside-canonical` (add the NEAR contract as a new workspace member that depends on it).
+- Trade terms: `parseTradeTerms`/`tradeTermsFromJson`, `tradeRevisionDigest`, `assertRevisionTransition` (INV-01).
+- Authority: accept a revision with `verifyTradeRevisionAcceptance`; verify ManifestAttestor / policy-setter
+  signatures only through `verifyTradeServiceSignature(terms, role, purpose, payload, sig)`; human party signatures via
+  `verifyPrincipalSignature`; use `bindingStatus(terms).requiresNewRevision` after rotation/revocation/recovery.
+- Persistence: add migrations as `packages/store/migrations/0003_*.sql` (contiguous numbering; never edit applied files).
+- Run `pnpm test` (builds first: the isolated signer and fresh-process tests import `dist/`).
+
 ## Blocked / not run (whole project)
 
 | Item | State | User action required |
@@ -69,3 +131,5 @@ Evidence: `docs/evidence/M00/` (local paths redacted).
 | 1Click dry probe (M06) | NOT_RUN (real 1Click calls not allowed) | Separately authorize and run the M06 probe. |
 | Funded mainnet payout | BLOCKED | Separate explicit authorization of network, wallet, amount, cap and executor. |
 | Push / PR / deploy / publish | NOT_RUN (local-only build) | Create a remote and push yourself if desired. |
+| Real NEAR wallet PoP (e.g. a wallet `signMessage` against `POST /v1/bootstrap/challenges`) | NOT_RUN (no wallet signing allowed) | Run `pnpm run build && pnpm run api`, request a challenge, sign `nep413.message` with your testnet wallet (nonce = `nep413.nonceHex`, recipient = `DOCKSIDE_ORIGIN`), and post it to `/v1/bootstrap/complete` with `scheme: "nep413"`. |
+| INV-13 human acceptance (four people, four devices) | NOT_RUN | Have four separate people enrol buyer, supplier, inspector and risk resolver through invitations on their own machines. |
