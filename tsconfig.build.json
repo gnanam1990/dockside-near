@@ -1,4 +1,17 @@
 {
   "files": [],
-  "references": [{ "path": "packages/core" }, { "path": "packages/store" }]
+  "references": [
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/store"
+    },
+    {
+      "path": "packages/authority"
+    },
+    {
+      "path": "services/api"
+    }
+  ]
 }

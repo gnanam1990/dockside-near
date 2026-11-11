@@ -1,0 +1,19 @@
+{
+  "name": "@dockside/authority",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside organization, principal, key, session, invitation and service-enrollment lifecycle (M01)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "signer"],
+  "dependencies": {
+    "@dockside/core": "workspace:*",
+    "@dockside/store": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

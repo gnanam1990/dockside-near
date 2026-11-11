@@ -20,7 +20,9 @@
     "security": "node scripts/secret-scan.mjs",
     "contract:test": "cargo test --manifest-path contract/Cargo.toml",
     "vectors": "pnpm run build && node scripts/generate-vectors.mjs",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "pretest": "pnpm run build",
+    "api": "node services/api/dist/main.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
