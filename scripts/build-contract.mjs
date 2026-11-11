@@ -14,7 +14,10 @@ const r = spawnSync(
 );
 if (r.status !== 0) process.exit(r.status ?? 1);
 
-const wasmPath = new URL("../contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm", import.meta.url);
+const wasmPath = new URL(
+  "../contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm",
+  import.meta.url,
+);
 const wasm = readFileSync(wasmPath);
 const imports = WebAssembly.Module.imports(new WebAssembly.Module(wasm)).map((i) => i.name);
 // Without `--cfg near`, near-sdk compiles host fallbacks and contract panics lose their message.

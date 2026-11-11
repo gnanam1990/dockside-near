@@ -1,0 +1,45 @@
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_canonical-fa988e96cb32ba14.exe)
+test tests::depth_limit ... ok
+test tests::struct_order_is_bytewise_and_duplicates_fail ... ok
+test tests::domains_are_validated ... ok
+test tests::type_tags_separate_numeric_forms ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\vectors.rs (contract\target\debug\deps\vectors-50d3156a3c35d13f.exe)
+test reproduces_typescript_vectors ... ok
+test verifies_typescript_signature_over_trade_revision ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_escrow_core-f4c8947e180e2872.exe)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\holds_and_keys.rs (contract\target\debug\deps\holds_and_keys-42ae67a0e1fdbaef.exe)
+test expiry_never_clears_a_hold ... ok
+test revoked_bound_keys_lose_authority_immediately ... ok
+test deterministic_policy_and_risk_may_set_but_no_one_else ... ok
+test only_the_bound_risk_resolver_can_resolve ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+     Running tests\refund_rows.rs (contract\target\debug\deps\refund_rows-411bb93e9f32e455.exe)
+test excess_return_revocation_restores_quarantined_exactly ... ok
+test failed_transfer_restores_the_exact_source_bucket_and_needs_a_new_intent ... ok
+test partial_funding_return_goes_only_to_the_original_funder_after_cooling ... ok
+test trade_expiry_undisputed_executes_to_the_original_funder ... ok
+test refunded_available_value_demotes_remaining_value_to_partial ... ok
+test policy_revision_replay_and_header_mutations_fail ... ok
+test key_loss_inspection_fail_and_unknown_rows_never_submit ... ok
+test trade_expiry_requires_expiry_initiator_signature_and_24h_challenge ... ok
+test mutual_cancel_needs_identical_dual_consent_and_one_hour_revocation_window ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+     Running tests\t007_t008_funding.rs (contract\target\debug\deps\t007_t008_funding-76d083fb5cb5e34d.exe)
+test funding_rejects_dust_and_expired_trades ... ok
+test partial_funding_stays_unavailable_until_complete ... ok
+test excess_is_quarantined_by_original_funder ... ok
+test exact_funding_is_accepted_and_recorded_per_original_funder ... ok
+test registration_verifies_both_parties_over_the_recomputed_digest ... ok
+test registration_fails_closed_on_schema_contract_and_network ... ok
+test conservation_property_over_random_deposit_sequences ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.52s
+     Running tests\t051_unexpected_assets.rs (contract\target\debug\deps\t051_unexpected_assets-8127804b750b1b28.exe)
+test recorded_asset_is_review_only_with_claimed_sender_and_no_funder ... ok
+test native_refund_entry_points_reject_unexpected_assets ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0

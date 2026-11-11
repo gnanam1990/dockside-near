@@ -1,0 +1,34 @@
+# M02 mutation sanity checks (mutant applied, suite run, source restored)
+
+## Mutant 1: revocation restores to AVAILABLE instead of the recorded source bucket
+$ cargo test -p dockside-escrow-core --test refund_rows
+test excess_return_revocation_restores_quarantined_exactly ... FAILED
+test failed_transfer_restores_the_exact_source_bucket_and_needs_a_new_intent ... ok
+test partial_funding_return_goes_only_to_the_original_funder_after_cooling ... ok
+test trade_expiry_undisputed_executes_to_the_original_funder ... ok
+test refunded_available_value_demotes_remaining_value_to_partial ... ok
+test policy_revision_replay_and_header_mutations_fail ... ok
+test key_loss_inspection_fail_and_unknown_rows_never_submit ... ok
+test trade_expiry_requires_expiry_initiator_signature_and_24h_challenge ... ok
+test mutual_cancel_needs_identical_dual_consent_and_one_hour_revocation_window ... ok
+thread 'excess_return_revocation_restores_quarantined_exactly' (25180) panicked at crates\dockside-escrow-core\tests\refund_rows.rs:124:68:
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+exit: (expected failure)
+
+## Mutant 2: hold RESOLVE verifies against the deterministic-policy key
+$ cargo test -p dockside-escrow-core --test holds_and_keys
+test only_the_bound_risk_resolver_can_resolve ... FAILED
+test expiry_never_clears_a_hold ... ok
+test revoked_bound_keys_lose_authority_immediately ... ok
+test deterministic_policy_and_risk_may_set_but_no_one_else ... ok
+thread 'only_the_bound_risk_resolver_can_resolve' (23164) panicked at crates\dockside-escrow-core\tests\holds_and_keys.rs:75:9:
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+exit: (expected failure)
+
+## Restored
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.68s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
