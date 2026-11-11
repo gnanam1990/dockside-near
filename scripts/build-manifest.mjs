@@ -7,7 +7,7 @@
 //   node scripts/build-manifest.mjs [--out <file>]       write (or print) the manifest
 //   node scripts/build-manifest.mjs --verify <file>      recompute and compare with a manifest;
 //                                                        commits after the manifest's commit may
-//                                                        change only docs/ (evidence)
+//                                                        change only docs/ and top-level *.md files
 // Run after `pnpm run build && pnpm run contract:build` (or `pnpm test`, which builds both).
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -133,9 +133,13 @@ function verify(file) {
     const changed = run("git", ["diff", "--name-only", want.commit, have.commit]);
     if (changed === null) problems.push(`commit ${want.commit} is not in this repository`);
     else {
-      const outside = changed.split("\n").filter((p) => p && !p.startsWith("docs/"));
+      // Evidence and status documents may follow the build; nothing that is built or run may.
+      const docsOnly = (p) => p.startsWith("docs/") || /^[A-Z0-9-]+\.md$/.test(p);
+      const outside = changed.split("\n").filter((p) => p && !docsOnly(p));
       if (outside.length)
-        problems.push(`files outside docs/ changed since the manifest commit: ${outside.join(", ")}`);
+        problems.push(
+          `files other than documentation changed since the manifest commit: ${outside.join(", ")}`,
+        );
     }
   }
   const out = { ok: problems.length === 0, manifestCommit: want.commit, headCommit: have.commit, problems };

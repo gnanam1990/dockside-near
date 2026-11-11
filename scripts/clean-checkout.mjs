@@ -3,15 +3,16 @@
 // builds, runs the whole check suite and the contract host tests, writes the build manifest of the
 // fresh build and compares the wasm digest with the source checkout's build when one exists.
 //
-// Usage: node scripts/clean-checkout.mjs [--ref <commit>] [--e2e] [--keep] [--report <file.json>]
+// Usage: node scripts/clean-checkout.mjs [--ref <commit>] [--e2e] [--keep] [--report <file.json>] [--manifest <file.json>]
 //   --ref     commit or branch to reproduce (default HEAD of this checkout)
 //   --e2e     also build the web app and run the Playwright browser suite
 //   --keep    keep the temporary clone for inspection
 //   --report  write the step log (commands, exit codes, durations, summaries) as JSON
+//   --manifest  copy the fresh clone's build manifest to this file
 // Nothing here touches the network beyond the package registries used by pnpm and cargo.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,11 +27,17 @@ const opt = (n) => {
 };
 
 const steps = [];
-const redact = (s) => s.split(SOURCE).join("<source>");
+let dir = "";
+// Evidence must not carry local paths: the source checkout and the temporary clone are replaced.
+const redact = (s) => {
+  let out = s.split(SOURCE).join("<source>");
+  if (dir) out = out.split(dir).join("<tmp>");
+  return out;
+};
 
 function step(name, cmd, cwd, { allowFail = false } = {}) {
   const started = Date.now();
-  process.stdout.write(`\n=== ${name}: ${cmd}\n`);
+  process.stdout.write(`\n=== ${name}: ${redact(cmd)}\n`);
   const r = spawnSync(cmd, { cwd, shell: true, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
   const tail = out.split(/\r?\n/).filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l));
@@ -41,10 +48,15 @@ function step(name, cmd, cwd, { allowFail = false } = {}) {
   );
   const rec = {
     name,
-    command: cmd,
+    command: redact(cmd),
     exitCode: r.status,
     ms: Date.now() - started,
     summary: summary.slice(-12).map((l) => redact(l.trim())),
+    // Total over the whole step output (cargo prints one result line per test binary).
+    cargoTestsPassed: [...out.matchAll(/test result: ok\. (\d+) passed/g)].reduce(
+      (a, m) => a + Number(m[1]),
+      0,
+    ),
   };
   steps.push(rec);
   process.stdout.write(`${rec.summary.join("\n")}\nexit ${r.status} in ${Math.round(rec.ms / 1000)}s\n`);
@@ -55,7 +67,6 @@ function step(name, cmd, cwd, { allowFail = false } = {}) {
   return { status: r.status, out };
 }
 
-let dir = "";
 function finish(code) {
   const report = {
     schema: "dockside/clean-checkout@1",
@@ -73,6 +84,9 @@ function finish(code) {
   };
   const reportPath = opt("--report");
   if (reportPath) writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  const manifestOut = opt("--manifest");
+  const fresh = dir ? join(dir, "build-manifest.json") : "";
+  if (manifestOut && fresh && existsSync(fresh)) copyFileSync(fresh, manifestOut);
   if (dir && !flag("--keep")) rmSync(dir, { recursive: true, force: true });
   process.stdout.write(
     `\nclean checkout: ${report.result}${dir && flag("--keep") ? ` (kept ${dir})` : ""}\n`,
