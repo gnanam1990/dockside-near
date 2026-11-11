@@ -1,0 +1,31 @@
+# pnpm run contract:test 2026-11-11T18:40:27Z exit 0 (contract unchanged by M08)
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_canonical-fa988e96cb32ba14.exe)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\vectors.rs (contract\target\debug\deps\vectors-50d3156a3c35d13f.exe)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_escrow_core-f4c8947e180e2872.exe)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\holds_and_keys.rs (contract\target\debug\deps\holds_and_keys-42ae67a0e1fdbaef.exe)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+     Running tests\refund_rows.rs (contract\target\debug\deps\refund_rows-411bb93e9f32e455.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+     Running tests\t007_t008_funding.rs (contract\target\debug\deps\t007_t008_funding-76d083fb5cb5e34d.exe)
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.52s
+     Running tests\t009_t010_t050_refund_matrix.rs (contract\target\debug\deps\t009_t010_t050_refund_matrix-eb3d35e4c8188104.exe)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.05s
+     Running tests\t015_t019_release_conjunction.rs (contract\target\debug\deps\t015_t019_release_conjunction-e54f9565b8ee77e7.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.22s
+     Running tests\t016_hold_resolution.rs (contract\target\debug\deps\t016_hold_resolution-eadb06579a745125.exe)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+     Running tests\t020_t021_t047_destination.rs (contract\target\debug\deps\t020_t021_t047_destination-03731a70000e9949.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.91s
+     Running tests\t022_t023_value_lock.rs (contract\target\debug\deps\t022_t023_value_lock-ac64a1c169e380a2.exe)
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
+     Running tests\t046_pre_submit_exits.rs (contract\target\debug\deps\t046_pre_submit_exits-28f5cc4af794aa96.exe)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+     Running tests\t049_t017_t018_contract_evidence.rs (contract\target\debug\deps\t049_t017_t018_contract_evidence-9a7f3aa93e2eb758.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.52s
+     Running tests\t051_unexpected_assets.rs (contract\target\debug\deps\t051_unexpected_assets-8127804b750b1b28.exe)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

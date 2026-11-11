@@ -1,0 +1,6 @@
+# pnpm run check (format, lint, typecheck incl. web and local stack, build, contract wasm, vitest, secret scan)
+# 2026-11-11T18:40:27Z exit 0
+ Test Files  32 passed (32)
+      Tests  368 passed (368)
+> node scripts/secret-scan.mjs
+secret-scan: 287 files clean
