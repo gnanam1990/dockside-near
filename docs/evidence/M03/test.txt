@@ -1,0 +1,125 @@
+
+ RUN  v4.1.12 <worktree>
+
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > accepts the valid baseline (control) 12ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects unsupported or missing schema versions 4ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects duplicate keys at the raw boundary, including escaped-equivalent keys 1ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects unknown fields at every depth 8ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > does not let __proto__ keys pollute prototypes 2ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects ambiguous, non-canonical and wrong-network addresses 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects malformed lengths for keys, signatures, identifiers and amounts 4ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > enforces resource limits at the raw boundary 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects lossy numbers, unpaired surrogates, control characters, BOM and trailing content 2ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects structurally dependent authority (INV-13 at the terms boundary) 5ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > fails closed on configuration typos, invalid values and blocked networks 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > fails closed on validity windows and idempotency reuse 1ms
+ ✓ packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > refuses endpoints outside the allowlist, plain http off loopback and embedded credentials 2ms
+ ✓ packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > decodes call_function results and validates the JSON-RPC envelope 39ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > applies migrations once and is idempotent on reopen 26ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > fails closed when an applied migration was edited or the database is newer than the build 17ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > rolls back a failing migration atomically 39ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > runs invite -> recipient PoP in its own session -> later admin grant 53ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > stores only a hash of the one-time invitation secret 26ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > init refuses mainnet: the funded rail stays BLOCKED 19ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > T-007: registers the TS-signed revision and accepts exact native funding from the recorded funder 19ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > T-007: tampered terms, wrong signer and a different contract are rejected by the wasm 10ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > T-008: partial funding is unavailable, excess is quarantined per funder, failed calls revert 12ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > T-008: excess return executes a native transfer to the original funder only; FAILED restores QUARANTINED 22ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > T-051: token and NFT transfers are recorded for review only and never touch native fields 13ms
+ ✓ packages/near/test/m02-escrow-wasm.test.ts > M02 escrow contract (compiled wasm, simulated NEAR host) > holds: policy setter SETs, only the risk resolver RESOLVEs, on the compiled contract 17ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > is independent of JSON field order at every depth (property) 165ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > binds origin, organization, role, key, nonce and expiry into the signed challenge 28ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > creates the organization, admin principal, key version 1, grant and a PoP session from a real signature 28ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > accepts an actual NEAR wallet NEP-413 signMessage signature 22ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > persists consumed nonces across restart so replay is denied after a crash 28ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > joins exact idempotent repeats and rejects conflicting reuse without re-running the effect 20ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > keeps the audit log append-only and hash-chained 22ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > rolls back every write of a failed transaction 16ms
+ ✓ packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > maps contract panics, unknown accounts, server errors, timeouts and oversize bodies 145ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > reports health and readiness with the migrated schema 25ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > bootstraps with a canonical signature and with a NEP-413 wallet signature 81ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > rejects self-consumption by the inviting administrator 29ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > is one-time: a second acceptance or a replayed challenge is denied 31ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > only allows one concurrent acceptance per invitation 31ms
+ ✓ packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > parses account, access key and transaction status facts 38ms
+ ✓ packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > EscrowContract rejects views that do not match the contract schema 6ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > denies replay of a consumed challenge, including after restart 28ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > rejects a signature from another key, over altered facts, or under another domain 37ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > rejects expired challenges 20ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > rejects wrong origin at the verifier and in the wallet recipient 18ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > treats canonically-equivalent Unicode (NFC/NFD) as the same identity (property) 182ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > human keys > revocation blocks new authority immediately but keeps historical verification 118ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > human keys > only the organization's security admin may revoke another principal's key 86ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > enrolls a distinct key version: an enrolled key cannot bootstrap or enroll again 26ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > authenticates every request with a fresh proof signed by the session key 46ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > issues separate sessions for separate logins and expires them 29ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > denies wrong-organization grants and invitations 34ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > denies role escalation and self-escalation 42ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > requires acceptance before grant and rejects expired invitations 27ms
+ ✓ packages/authority/test/t005-invitation-grant.test.ts > T-005 invitation and role grant require separate sessions > establishes independent buyer, supplier, inspector and risk principals through separate sessions 71ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > keeps sessions and consumed request nonces durable across restart 35ms
+ ✓ packages/authority/test/t004-bootstrap-pop.test.ts > T-004 organization bootstrap proves key possession > never stores session tokens in plaintext 22ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > human keys > recovers a lost key only after delay, with PoP, freezing the old key meanwhile 104ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > requires a fresh proof for every authenticated request 101ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > runs the invitation flow across separate HTTP sessions and blocks self-consumption 176ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > normalises operator address display forms to the same signed bytes 8ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > changes identity when any material field changes 61ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > round-trips terms through boundary JSON without changing identity 3ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > reproduces committed golden vectors byte-for-byte (restart/platform stability) 4ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > computes the same digest in a freshly started process 151ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > type-tags values so that u64, u128 and string forms of a number never collide 1ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > is injective over generated structured values (property) 37ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > binds signatures to their domain: a trade signature is not a buyer approval 3ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > enforces INV-01: an accepted revision cannot change in place; successors chain digests 4ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > fails closed on wrong origin, duplicate keys, unknown fields, oversize bodies and wrong content type 76ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > sets security headers and never leaks stacks 16ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > human keys > lets the principal veto a hostile recovery during the delay with its existing key 95ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > human keys > forbids an administrator from recovering its own key 71ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > keeps sessions valid across a server and database restart 51ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > human keys > rotation creates a new version; the active trade revision stays bound to the old one 112ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > rejects an empty, malformed or unknown-field policy 440ms
+ ✓ packages/evidence/test/m03-t013-t018-replacement.test.ts > T-013 evidence replacement is revisioned and concurrent-safe > replacement creates a new manifest revision and preserves the full history 493ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-016 hold SET separation, resolution and expiry fail closed > the enrolled deterministic-policy service and the risk principal may SET; nobody else 495ms
+ ✓ packages/evidence/test/m03-t017-t049-attestation.test.ts > T-049 manifest attestation cannot be forged or stale (service boundary) > accepts only the exact bound attestor over the current complete manifest 503ms
+ ✓ packages/evidence/test/m03-contract-wasm.test.ts > M03 services against the compiled escrow contract > the contract accepts the service's attestation and inspection and derives the same manifest digest 519ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > enrolls a ManifestAttestor whose private key never leaves an isolated signer process 88ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > requires a security admin, a service capability, PoP and opaque custody metadata 95ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > rejects wrong-but-enrolled, cross-trade, cross-policy and cross-org service signatures 95ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > an empty manifest is INCOMPLETE and cannot be attested 392ms
+ ✓ packages/evidence/test/m03-t013-t018-replacement.test.ts > T-013 evidence replacement is revisioned and concurrent-safe > a stale compare-and-swap surfaces VERSION_CONFLICT and changes nothing 443ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-016 hold SET separation, resolution and expiry fail closed > only the bound risk/policy principal RESOLVEs; every other signer and mutated field is refused 468ms
+ ✓ packages/evidence/test/m03-contract-wasm.test.ts > M03 services against the compiled escrow contract > forged completeness, mutated predicates and the wrong signer are rejected by the wasm 439ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > rotation does not silently change the active revision; the rotated key is unbound until a dual-signed successor 103ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > revocation blocks new service signatures, keeps history, and forces a new revision 82ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > recovers a service key only after the recovery delay and suspends the old one meanwhile 85ms
+ ✓ packages/authority/test/t006-revocation-recovery.test.ts > T-006 revocation and recovery preserve history > service keys (ManifestAttestor and deterministic policy) > persists every authority event in an intact audit chain across restart 76ms
+ ✓ packages/evidence/test/m03-t017-t049-attestation.test.ts > T-049 manifest attestation cannot be forged or stale (service boundary) > rejects forged completeness, projections and every mutated binding or predicate 555ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-016 hold SET separation, resolution and expiry fail closed > expiry never clears a hold: EXPIRED_UNRESOLVED blocks until a valid risk resolution 371ms
+ ✓ packages/evidence/test/m03-t013-t018-replacement.test.ts > T-013 evidence replacement is revisioned and concurrent-safe > two service instances on separate database connections race: exactly one replacement wins 427ms
+ ✓ packages/evidence/test/m03-contract-wasm.test.ts > M03 services against the compiled escrow contract > replacement: the new revision supersedes the old attestation and inspection on chain too 432ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > a missing slot keeps the manifest INCOMPLETE; the full set becomes COMPLETE 781ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-016 hold SET separation, resolution and expiry fail closed > a revoked risk key loses SET and RESOLVE authority at once 367ms
+ ✓ packages/evidence/test/m03-contract-wasm.test.ts > M03 services against the compiled escrow contract > deterministic-policy SET and risk RESOLVE produced by the services are the contract's hold records 456ms
+ ✓ packages/evidence/test/m03-t017-t049-attestation.test.ts > T-049 manifest attestation cannot be forged or stale (service boundary) > a wrong-but-enrolled attestor, the policy service and a buyer key cannot attest 723ms
+ ✓ packages/evidence/test/m03-t013-t018-replacement.test.ts > T-018 changed evidence invalidates attestation > add, remove, replace and stale each change the digest and supersede predecessor authority 479ms
+ ✓ packages/evidence/test/m03-t013-t018-replacement.test.ts > T-018 changed evidence invalidates attestation > removing a required item leaves the slot MISSING and the manifest unattestable 393ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-016 hold SET separation, resolution and expiry fail closed > deterministic rules SET holds from evidence facts only, once per rule and manifest 428ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > rejects over-cardinality and wrong content types detected from bytes, not labels 757ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-014 model output cannot mutate hold authority > pass-like, hold-like, malicious, delayed and malformed output only ever becomes an advisory finding 465ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > malicious files are quarantined: active PDF content, byte and decompression bombs 385ms
+ ✓ packages/evidence/test/m03-t014-t016-holds.test.ts > T-014 model output cannot mutate hold authority > model-made hold payloads have no key that verifies, and findings cannot be promoted in the database 345ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > stale items make the manifest INCOMPLETE once their freshness deadline passes 350ms
+ ✓ packages/evidence/test/m03-t017-t049-attestation.test.ts > T-049 manifest attestation cannot be forged or stale (service boundary) > rotation, revocation and recovery without a new trade revision all remove attestation authority 1411ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-011 evidence policy requires complete fresh slots > binding requires the accepted revision and the exact policy its terms sign 369ms
+ ✓ packages/evidence/test/m03-t017-t049-attestation.test.ts > T-017 only the enrolled inspector can attest the complete manifest (service boundary) > requires a current attested manifest and the bound inspector key 449ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-012 unauthorized uploader or issuer is rejected > rejects uploaders whose capability or organization the slot does not allow 340ms
+ ✓ packages/evidence/test/m03-t017-t049-attestation.test.ts > T-017 only the enrolled inspector can attest the complete manifest (service boundary) > a revoked inspector key loses its decision and cannot attest again 370ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-012 unauthorized uploader or issuer is rejected > rejects wrong, forged, future, stale, cross-trade and revoked issuers 369ms
+ ✓ packages/evidence/test/m03-t011-t012-slots.test.ts > T-012 unauthorized uploader or issuer is rejected > items uploaded for another trade never fill this trade's slots 634ms
+
+ Test Files  14 passed (14)
+      Tests  115 passed (115)
+   Start at  21:17:21
+   Duration  5.82s (transform 2.89s, setup 0ms, import 8.18s, tests 19.67s, environment 1ms)
+
+exit: 0

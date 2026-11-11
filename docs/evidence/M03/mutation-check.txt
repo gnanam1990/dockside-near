@@ -1,0 +1,17 @@
+mutant: RESOLVE also accepts the deterministic-policy key
+  exit 1; 1 failed | 6 passed (7)
+    × only the bound risk/policy principal RESOLVEs; every other signer and mutated field is refused 315ms
+mutant: attestation ignores rotation/revocation of the bound key
+  exit 1; 1 failed | 5 passed (6)
+    × rotation, revocation and recovery without a new trade revision all remove attestation authority 429ms
+mutant: stale items still count as filled
+  exit 1; 1 failed | 9 passed (10)
+    × stale items make the manifest INCOMPLETE once their freshness deadline passes 311ms
+mutant: manifest compare-and-swap disabled inside the transaction
+  exit 0; 5 passed (5)
+
+note: the fourth mutant survives by design. With the in-transaction revision check removed, the
+second writer still inserts evidence_manifests(trade_id, revision = expected + 1), which collides
+with the winner's primary key and is mapped to VERSION_CONFLICT. The race and stale-CAS tests stay
+green because the database constraint, not the application check, is the final guard.
+After each mutant the source file was restored; restored suite: packages/evidence 32 passed.
