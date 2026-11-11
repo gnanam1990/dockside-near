@@ -277,9 +277,7 @@ export class Journal {
     };
   }
 
-  incidents(
-    tradeId: string,
-  ): {
+  incidents(tradeId: string): {
     incidentId: string;
     operationId: string | null;
     kind: IncidentKind;
