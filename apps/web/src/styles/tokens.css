@@ -1,0 +1,70 @@
+/*
+ * Dockside semantic tokens (UI-SPEC §4). Components consume only these variables;
+ * raw colour values live in this file alone. Every text/background and control/background
+ * pair used by components is checked for WCAG 2.2 AA in apps/web/test/tokens.test.ts.
+ */
+:root {
+  color-scheme: light dark;
+
+  --surface-canvas: #f8fafc;
+  --surface-panel: #ffffff;
+  --surface-subtle: #e9eef5;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-default: #cbd5e1;
+  --border-control: #64748b;
+  --action-primary: #1e3a5f;
+  --action-primary-hover: #16304f;
+  --on-action-primary: #ffffff;
+  --action-secondary: #2563eb;
+  --status-positive: #15803d;
+  --status-warning: #a16207;
+  --status-negative: #b91c1c;
+  --status-unknown: #6d28d9;
+  --focus-ring: #1e3a5f;
+  --skeleton: #e2e8f0;
+  --backdrop: rgb(15 23 42 / 0.55);
+
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --duration: 160ms;
+  --nav-width: 232px;
+  --content-max: 1280px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-canvas: #0b1220;
+    --surface-panel: #111a2b;
+    --surface-subtle: #1b2638;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a3b1c6;
+    --border-default: #334155;
+    --border-control: #7c8ca3;
+    --action-primary: #9dbce6;
+    --action-primary-hover: #b6cdee;
+    --on-action-primary: #0b1220;
+    --action-secondary: #8db4f8;
+    --status-positive: #4ade80;
+    --status-warning: #facc15;
+    --status-negative: #f87171;
+    --status-unknown: #c4b5fd;
+    --focus-ring: #9dbce6;
+    --skeleton: #1e293b;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}
