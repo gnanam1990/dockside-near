@@ -1,0 +1,5 @@
+
+> dockside@0.1.0 typecheck <path>
+> tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json
+
+exit=0

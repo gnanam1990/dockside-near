@@ -1,0 +1,25 @@
+
+ RUN  v3.2.7 <repo>
+
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts (12 tests) 38ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/test/t001-canonical-identity.test.ts [ packages/core/test/t001-canonical-identity.test.ts ]
+Error: ENOENT: no such file or directory, open '<path>
+ ❯ packages/core/test/t001-canonical-identity.test.ts:32:28
+     30| 
+     31| const vectorsUrl = new URL("../../../fixtures/canonical-vectors.json",…
+     32| const vectors = JSON.parse(readFileSync(vectorsUrl, "utf8")) as {
+       |                            ^
+     33|   vectors: { name: string; domain: string; version: number; value: Typ…
+     34|   tradeTerms: { json: Record<string, unknown>; digestHex: string };
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  12 passed (12)
+   Start at  19:46:47
+   Duration  1.13s (transform 322ms, setup 0ms, collect 535ms, tests 38ms, environment 1ms, prepare 413ms)
+
