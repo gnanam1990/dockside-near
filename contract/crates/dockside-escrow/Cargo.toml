@@ -1,0 +1,15 @@
+[package]
+name = "dockside-escrow"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Dockside NEAR escrow contract (native testnet NEAR, per-funder ledger, refunds, holds, evidence)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dockside-escrow-core = { path = "../dockside-escrow-core" }
+near-sdk = "=5.30.1"
+serde_json = "=1.0.154"
