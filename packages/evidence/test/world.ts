@@ -8,6 +8,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
+import { IsolatedSigner } from "@dockside/authority";
 import {
   type CanonicalValue,
   type Ed25519KeyPair,
@@ -20,12 +21,19 @@ import {
   tradeTermsCanonical,
   tradeTermsFromJson,
 } from "@dockside/core";
-import { type Actor, bootstrap, enrollHuman, type Harness, makeHarness } from "../../authority/test/helpers.js";
-import { IsolatedSigner } from "@dockside/authority";
+import {
+  type Actor,
+  bootstrap,
+  enrollHuman,
+  type Harness,
+  makeHarness,
+} from "../../authority/test/helpers.js";
 import {
   type EvidencePolicyInput,
   EvidenceService,
   HoldService,
+  type InspectionDecision,
+  inspectionPayload,
   issuancePayload,
   LocalObjectStore,
   policyDigest,
@@ -160,12 +168,25 @@ export interface World {
   evidence: EvidenceService;
   holds: HoldService;
   signers: IsolatedSigner[];
-  issue(actor: Actor, capability: string, slotId: string, content: Uint8Array, issuedAt?: number): {
+  issue(
+    actor: Actor,
+    capability: string,
+    slotId: string,
+    content: Uint8Array,
+    issuedAt?: number,
+  ): {
     capability: string;
     issuedAt: number;
     signature: string;
   };
   sign(actor: Actor, purpose: SigningPurpose, payload: CanonicalValue): string;
+  /** An inspection payload over a manifest, signed by `by` (the bound inspector by default). */
+  inspect(
+    manifestRevision: number,
+    manifestDigest: string,
+    decision: InspectionDecision,
+    opts?: { by?: Actor; ttlMs?: number; nonce?: string; payloadOverrides?: Record<string, CanonicalValue> },
+  ): [CanonicalValue, string];
   close(): void;
 }
 
@@ -208,8 +229,22 @@ export async function makeWorld(opts: { policy?: EvidencePolicyInput } = {}): Pr
   const inspector = enrollHuman(h, inspectAdmin, "INSPECTOR");
   const otherInspector = enrollHuman(h, inspectAdmin, "INSPECTOR", "Second Inspector");
   const tradeId = randomIds.next("trd");
-  const att = await enrollService(h, buyerAdmin, "MANIFEST_ATTEST", "manifest-attestor", ["MANIFEST_ATTESTATION"], null);
-  const pol = await enrollService(h, buyerAdmin, "DETERMINISTIC_POLICY_SET", "deterministic-policy", ["HOLD_SET"], tradeId);
+  const att = await enrollService(
+    h,
+    buyerAdmin,
+    "MANIFEST_ATTEST",
+    "manifest-attestor",
+    ["MANIFEST_ATTESTATION"],
+    null,
+  );
+  const pol = await enrollService(
+    h,
+    buyerAdmin,
+    "DETERMINISTIC_POLICY_SET",
+    "deterministic-policy",
+    ["HOLD_SET"],
+    tradeId,
+  );
   const policy = opts.policy ?? commercialPolicy();
   const party = (a: Actor, accountId: string) => ({
     organizationId: a.organizationId,
@@ -218,13 +253,25 @@ export async function makeWorld(opts: { policy?: EvidencePolicyInput } = {}): Pr
     publicKey: a.key.publicKey,
     accountId,
   });
-  const svc = (enrollmentId: string, serviceId: string, pk: string, capability: string, scopeTrade: string | null, schema: string) => ({
+  const svc = (
+    enrollmentId: string,
+    serviceId: string,
+    pk: string,
+    capability: string,
+    scopeTrade: string | null,
+    schema: string,
+  ) => ({
     enrollmentId,
     serviceId,
     keyVersion: 1,
     publicKey: pk,
     capability,
-    scope: { organizationId: buyerAdmin.organizationId, tradeId: scopeTrade, evidencePolicyId: "commercial-docs", evidencePolicyRevision: 1 },
+    scope: {
+      organizationId: buyerAdmin.organizationId,
+      tradeId: scopeTrade,
+      evidencePolicyId: "commercial-docs",
+      evidencePolicyRevision: 1,
+    },
     attestationSchema: schema,
   });
   const terms = tradeTermsFromJson({
@@ -247,16 +294,44 @@ export async function makeWorld(opts: { policy?: EvidencePolicyInput } = {}): Pr
       publicKey: inspector.key.publicKey,
       attestationSchema: "dockside/inspection-attestation@1",
     },
-    manifestAttestor: svc(att.enrollmentId, "manifest-attestor", att.signer.publicKey, "MANIFEST_ATTEST", null, "dockside/manifest-attestation@1"),
-    policySetter: svc(pol.enrollmentId, "deterministic-policy", pol.signer.publicKey, "DETERMINISTIC_POLICY_SET", tradeId, "dockside/hold-set@1"),
-    riskResolver: { principalId: risk.principalId, keyVersionId: risk.keyVersionId, publicKey: risk.key.publicKey },
-    payout: { network: "near-testnet", recipientType: "NEAR_ACCOUNT", destination: "harbor-supplier.testnet" },
+    manifestAttestor: svc(
+      att.enrollmentId,
+      "manifest-attestor",
+      att.signer.publicKey,
+      "MANIFEST_ATTEST",
+      null,
+      "dockside/manifest-attestation@1",
+    ),
+    policySetter: svc(
+      pol.enrollmentId,
+      "deterministic-policy",
+      pol.signer.publicKey,
+      "DETERMINISTIC_POLICY_SET",
+      tradeId,
+      "dockside/hold-set@1",
+    ),
+    riskResolver: {
+      principalId: risk.principalId,
+      keyVersionId: risk.keyVersionId,
+      publicKey: risk.key.publicKey,
+    },
+    payout: {
+      network: "near-testnet",
+      recipientType: "NEAR_ACCOUNT",
+      destination: "harbor-supplier.testnet",
+    },
     refundPolicy: { id: "dockside-refund-v1", revision: 1 },
     delayPolicy: { destinationChangeDelayMs: DAY },
     expiresAt: h.clock.now() + 60 * DAY,
   });
   const objects = new LocalObjectStore(join(dir, "objects"), newNonce());
-  const evidence = new EvidenceService({ db: h.db, clock: h.clock, ids: randomIds, authority: h.svc, objects });
+  const evidence = new EvidenceService({
+    db: h.db,
+    clock: h.clock,
+    ids: randomIds,
+    authority: h.svc,
+    objects,
+  });
   const holds = new HoldService({ db: h.db, clock: h.clock, ids: randomIds, authority: h.svc, evidence });
   evidence.registerPolicy(policy);
   const c = tradeTermsCanonical(terms);
@@ -300,6 +375,22 @@ export async function makeWorld(opts: { policy?: EvidencePolicyInput } = {}): Pr
     },
     sign(actor, purpose, payload) {
       return signFor(actor.key.privateKey, purpose, payload);
+    },
+    inspect(manifestRevision, manifestDigest, decision, opts = {}) {
+      const now = h.clock.now();
+      const payload = {
+        ...(inspectionPayload(terms, {
+          manifestRevision,
+          manifestDigest,
+          decision,
+          reasonCodes: decision === "PASS" ? ["DOCS_MATCH"] : ["DOCS_MISMATCH"],
+          issuedAt: now,
+          expiresAt: now + (opts.ttlMs ?? 7 * DAY),
+          nonce: opts.nonce ?? newNonce(),
+        }) as Record<string, CanonicalValue>),
+        ...(opts.payloadOverrides ?? {}),
+      };
+      return [payload, signFor((opts.by ?? inspector).key.privateKey, "INSPECTION_ATTESTATION", payload)];
     },
     close() {
       for (const s of signers) s.close();
