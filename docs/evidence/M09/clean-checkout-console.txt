@@ -1,0 +1,61 @@
+
+=== clone: git clone --quiet --no-local "<source>" "<tmp>\dockside"
+
+exit 0 in 1s
+
+=== checkout: git -c advice.detachedHead=false checkout --quiet b2c1bd0bc62c932bf9d9c2edcb423fe93dee11b1
+
+exit 0 in 0s
+
+=== versions: node --version && pnpm --version && rustc --version && cargo --version
+
+exit 0 in 0s
+
+=== install: pnpm install --frozen-lockfile
+
+exit 0 in 3s
+
+=== wasm target: rustup target list --installed
+
+exit 0 in 0s
+
+=== check: pnpm run check
+Checked 151 files in 129ms. No fixes applied.
+Checked 152 files in 68ms. No fixes applied.
+dockside_escrow.wasm 709051 bytes sha256 616a4b97f8d15a3c53711a6fc560d92769823c8ff544bf7f65e848254e07af9a
+Test Files  36 passed (36)
+Tests  392 passed (392)
+secret-scan: 299 files clean
+exit 0 in 77s
+
+=== contract host tests: pnpm run contract:test
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test t019_failed_transfer_restores_exact_slices_and_requires_a_new_intent ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.09s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0 in 59s
+
+=== audit: pnpm audit --prod
+
+exit 0 in 1s
+
+=== build manifest: node scripts/build-manifest.mjs --out "<tmp>\build-manifest.json"
+build manifest written: commit b2c1bd0bc62c932bf9d9c2edcb423fe93dee11b1 wasm 616a4b97f8d15a3c53711a6fc560d92769823c8ff544bf7f65e848254e07af9a dist 8dcfe144966c5e9b0fe13e8e1e42e899345eaa7eb438ab8be89b4e9ce9153773
+exit 0 in 1s
+
+=== browser suite: pnpm run web:e2e
+22 passed (2.8m)
+exit 0 in 168s
+
+wasm fresh 616a4b97f8d15a3c53711a6fc560d92769823c8ff544bf7f65e848254e07af9a source 616a4b97f8d15a3c53711a6fc560d92769823c8ff544bf7f65e848254e07af9a
+
+clean checkout: PASS
+EXIT 0

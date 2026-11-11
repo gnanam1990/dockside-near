@@ -1,0 +1,8 @@
+
+running 1 test
+T-041 outcomes: {"approve": 796, "cancel": 449, "evidence": 2489, "execute": 570, "fund": 4975, "hold": 1719, "intent": 1162, "paid": 379, "refund-authorize": 43, "refund-begin": 19, "refund-request": 259, "refund-returned": 3, "refund-revoke": 144, "refunded": 7, "release-returned": 184, "resolve": 1465, "time": 1674}
+T-041 refusals: {"APPROVAL_EXPIRED": 41, "APPROVAL_MISSING": 91, "APPROVAL_STALE": 500, "DELAY_NOT_ELAPSED": 91, "EXPIRED": 9, "FUNDING_FROZEN": 529, "HOLD_ACTIVE": 94, "INTENT_EXPIRED": 376, "INVALID_AMOUNT": 1429, "INVALID_STATE": 6800, "MANIFEST_CONSUMED": 1, "MANIFEST_NOT_CURRENT": 1544, "NOTHING_ELIGIBLE": 416, "NOT_ELIGIBLE": 694, "NOT_FULLY_FUNDED": 165, "NO_HOLD": 551, "NO_INTENT": 3346, "NO_REFUND": 6295, "NO_SUBMIT": 1585, "STALE_ITEM": 1, "STALE_LEDGER": 59, "VALIDATION_FAILED": 47, "VALUE_LOCKED": 999}
+test t041_conservation_and_source_buckets_survive_generated_sequences ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.32s
+

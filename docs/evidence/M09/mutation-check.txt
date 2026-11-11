@@ -1,0 +1,30 @@
+M09 mutation check (each mutant applied by hand to the working tree, the named suite run, then the file restored
+with `git checkout --` / a saved copy and the suite re-run green). Windows 11, cargo 1.97.1, Node 22.23.1.
+
+1. contract/crates/dockside-escrow-core/src/ledger.rs restore_from_refund:
+   `*f.bucket_mut(bucket) += amount;`  ->  `f.available += amount;`
+   (a revoked or returned refund restores to AVAILABLE instead of the recorded source bucket)
+   - first T-041 draft (shadow ledger + conservation only): test result: ok. 1 passed   -> SURVIVED
+     The draft checked totals but not which bucket received the value. The per-step exact-move check was added.
+   - final T-041: panicked at tests/t041_generated_conservation.rs:112:13
+     "seed 21 step 45 refund-revoke: acme-buyer.testnet.partial moved by exactly the expected amount  left: 0"
+     test result: FAILED. 0 passed; 1 failed                                            -> KILLED
+
+2. contract/crates/dockside-escrow-core/src/ledger.rs restore_reserved:
+   `f.available += a;`  ->  `f.partial += a;`
+   (a cancelled intent or a returned release transfer restores to PARTIAL instead of AVAILABLE)
+   - final T-041: "seed 1 step 5 cancel: acme-buyer.testnet.partial moved by exactly the expected amount
+     left: 500000000000000000000000"  test result: FAILED                              -> KILLED
+
+3. services/api/src/app.ts: failed authentication no longer counted against the client address
+   - services/api/test/m09-hardening.test.ts: Tests 1 failed | 3 passed (4)             -> KILLED
+
+4. services/api/src/trades.ts POST /v1/trades/:id/destination-activation: bound-party check removed
+   - first T-042 draft: Tests 5 passed (5)                                             -> SURVIVED
+     The roles it tried lack the BUYER_APPROVER/SUPPLIER_SIGNER capability, so the capability check alone
+     refused them. A same-organisation, unbound BUYER_APPROVER case was added.
+   - final T-042: "unbound approver /destination-activation: expected undefined to be 'FORBIDDEN'"
+     Tests 2 failed | 3 passed (5)                                                       -> KILLED
+
+Restored tree: cargo test --test t041_generated_conservation -> 1 passed; vitest m09-hardening 4 passed,
+m09-t042-redirection 5 passed.
