@@ -90,6 +90,8 @@ export const refundViewSchema = z.array(
       requestedAt: z.number().int(),
       dispute: z.object({ role: z.string(), at: z.number().int(), digest: z.string() }).strict().nullable(),
       history: z.array(z.tuple([z.string(), z.number().int()])),
+      basis: z.string().nullable(),
+      riskSigned: z.boolean(),
     })
     .strict(),
 );
@@ -176,6 +178,124 @@ export const evidenceViewSchema = z
   })
   .strict();
 
+export const RELEASE_INTENT_STATES = [
+  "VALUE_LOCKED",
+  "DIRECT_TESTNET_AUTHORIZED",
+  "FUNDED_AUTHORIZATION_REQUIRED",
+  "FUNDED_AUTHORIZED",
+  "SUBMITTING",
+  "PROCESSING",
+  "UNKNOWN",
+  "REVIEW",
+  "RECONCILING",
+  "ADJUDICATION",
+  "PAID",
+  "REFUNDED",
+  "FAILED",
+  "CANCELLED_PRE_SUBMIT",
+  "ABANDONED_PRE_SUBMIT",
+  "SUPERSEDED_PRE_SUBMIT",
+] as const;
+export type ReleaseIntentState = (typeof RELEASE_INTENT_STATES)[number];
+
+const releaseIntentViewSchema = z
+  .object({
+    releaseIntentId: z.string(),
+    tradeRevision: z.number().int(),
+    termsDigest: z.string(),
+    requestDigest: z.string(),
+    amount: u128,
+    slices: z.array(z.object({ funder: z.string(), amount: u128 }).strict()),
+    sourceBucket: z.literal("AVAILABLE"),
+    destination: z.string(),
+    executionProfile: z.string(),
+    state: z.enum(RELEASE_INTENT_STATES),
+    stateVersion: z.number().int(),
+    createdAt: z.number().int(),
+    expiresAt: z.number().int(),
+    approval: z
+      .object({
+        digest: z.string(),
+        approvedAt: z.number().int(),
+        expiresAt: z.number().int(),
+        manifestRevision: z.number().int(),
+        manifestDigest: z.string(),
+        attestationDigest: z.string(),
+        inspectionDigest: z.string(),
+        holdsViewDigest: z.string(),
+      })
+      .strict()
+      .nullable(),
+    pendingCancel: z
+      .object({
+        digest: z.string(),
+        reasonCode: z.string(),
+        expiresAt: z.number().int(),
+        consents: z.array(
+          z
+            .object({
+              role: z.enum(["BUYER_APPROVER", "SUPPLIER_SIGNER"]),
+              expiresAt: z.number().int(),
+              recordedAt: z.number().int(),
+              revoked: z.boolean(),
+              digest: z.string(),
+            })
+            .strict(),
+        ),
+      })
+      .strict()
+      .nullable(),
+    exitDigest: z.string().nullable(),
+    predecessor: z.string().nullable(),
+    successor: z.string().nullable(),
+    attempts: z.array(z.string()),
+    consumedManifest: z.string().nullable(),
+    history: z.array(z.tuple([z.string(), z.number().int()])),
+  })
+  .strict();
+
+const destinationChangeViewSchema = z
+  .object({
+    successorDigest: z.string(),
+    successorRevision: z.number().int(),
+    fromDestination: z.string(),
+    toDestination: z.string(),
+    proposedBy: z.enum(["BUYER", "SUPPLIER"]),
+    proposedAt: z.number().int(),
+    consentDeadline: z.number().int(),
+    buyerConsentAt: z.number().int().nullable(),
+    supplierConsentAt: z.number().int().nullable(),
+    delayUntil: z.number().int().nullable(),
+    status: z.enum(["PROPOSED", "CONSENTED", "ACTIVATED", "REVOKED", "EXPIRED"]),
+    closedAt: z.number().int().nullable(),
+    supersededIntent: z.string().nullable(),
+    successorIntent: z.string().nullable(),
+  })
+  .strict();
+
+/** Contract view of release intents, the live value lock, release blockers and destination changes. */
+export const releaseViewSchema = z
+  .object({
+    tradeId: z.string(),
+    revision: z.number().int(),
+    termsDigest: z.string(),
+    payoutDestination: z.string(),
+    liveIntent: z.string().nullable(),
+    blockers: z.array(z.string()),
+    holdsViewDigest: z.string().nullable(),
+    intents: z.array(releaseIntentViewSchema),
+    revisions: z.array(
+      z.object({ revision: z.number().int(), digest: z.string(), activatedAt: z.number().int() }).strict(),
+    ),
+    pendingDestinationChange: destinationChangeViewSchema.nullable(),
+    destinationHistory: z.array(destinationChangeViewSchema),
+    abandonPolicy: z
+      .object({ id: z.literal("dockside-abandon-v1"), revision: z.literal(1), graceMs: z.number().int() })
+      .strict(),
+  })
+  .strict();
+export type ReleaseView = z.output<typeof releaseViewSchema>;
+
 export const unexpectedAssetSchema = z.array(
   z
     .object({
@@ -234,6 +354,9 @@ export class EscrowContract {
   }
   getEvidence(tradeId: string) {
     return this.view("get_evidence", { trade_id: tradeId }, evidenceViewSchema);
+  }
+  getRelease(tradeId: string) {
+    return this.view("get_release", { trade_id: tradeId }, releaseViewSchema);
   }
   getUnexpectedAssets(fromIndex = 0, limit = 50) {
     return this.view("get_unexpected_assets", { from_index: fromIndex, limit }, unexpectedAssetSchema);
@@ -298,14 +421,95 @@ export class EscrowContract {
   requestRefundCall(
     tradeId: string,
     payload: TypedJson,
-    sigs: { buyer?: string; supplier?: string } = {},
+    sigs: { buyer?: string; supplier?: string; risk?: string } = {},
   ): FunctionCall {
     return this.call("request_refund", {
       trade_id: tradeId,
       payload,
       buyer_signature: sigs.buyer ?? null,
       supplier_signature: sigs.supplier ?? null,
+      risk_signature: sigs.risk ?? null,
     });
+  }
+
+  /** INSPECTION_FAIL authorization signed by the bound risk/policy key. */
+  authorizeRefundSignedCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("authorize_refund_signed", { trade_id: tradeId, payload, signature });
+  }
+
+  /* ----------------------- release and destination (M04) ----------------------- */
+
+  createReleaseIntentCall(tradeId: string, payload: TypedJson, buyerSignature: string): FunctionCall {
+    return this.call("create_release_intent", {
+      trade_id: tradeId,
+      payload,
+      buyer_signature: buyerSignature,
+    });
+  }
+
+  approveReleaseCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("approve_release", { trade_id: tradeId, payload, signature });
+  }
+
+  /** Permissionless relay: the contract rechecks the whole release conjunction itself. */
+  executeReleaseCall(tradeId: string, releaseIntentId: string): FunctionCall {
+    return this.call("execute_release", { trade_id: tradeId, release_intent_id: releaseIntentId }, 100n);
+  }
+
+  submitCancelConsentCall(
+    tradeId: string,
+    cancel: TypedJson,
+    consent: TypedJson,
+    signature: string,
+  ): FunctionCall {
+    return this.call("submit_cancel_consent", { trade_id: tradeId, cancel, consent, signature });
+  }
+
+  revokeCancelConsentCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("revoke_cancel_consent", { trade_id: tradeId, payload, signature });
+  }
+
+  abandonReleaseIntentCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("abandon_release_intent", { trade_id: tradeId, payload, signature });
+  }
+
+  proposeDestinationChangeCall(
+    tradeId: string,
+    successorTerms: TypedJson,
+    proposerRole: "BUYER" | "SUPPLIER",
+    signature: string,
+  ): FunctionCall {
+    return this.call(
+      "propose_destination_change",
+      { trade_id: tradeId, successor_terms: successorTerms, proposer_role: proposerRole, signature },
+      100n,
+    );
+  }
+
+  consentDestinationChangeCall(
+    tradeId: string,
+    successorDigest: string,
+    role: "BUYER" | "SUPPLIER",
+    signature: string,
+  ): FunctionCall {
+    return this.call("consent_destination_change", {
+      trade_id: tradeId,
+      successor_digest: successorDigest,
+      role,
+      signature,
+    });
+  }
+
+  revokeDestinationChangeCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("revoke_destination_change", { trade_id: tradeId, payload, signature });
+  }
+
+  activateDestinationChangeCall(tradeId: string, successorDigest: string): FunctionCall {
+    return this.call(
+      "activate_destination_change",
+      { trade_id: tradeId, successor_digest: successorDigest },
+      100n,
+    );
   }
 
   cosignRefundCall(tradeId: string, refundIntentId: string, role: "BUYER" | "SUPPLIER", signature: string) {

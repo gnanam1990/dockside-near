@@ -1,0 +1,20 @@
+{
+  "name": "@dockside/release",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside release intents, buyer approval, CANCEL/ABANDON exits and dual-consent destination change: service journal and relays over the escrow contract (M04)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/authority": "workspace:*",
+    "@dockside/core": "workspace:*",
+    "@dockside/evidence": "workspace:*",
+    "@dockside/near": "workspace:*",
+    "@dockside/store": "workspace:*"
+  }
+}
