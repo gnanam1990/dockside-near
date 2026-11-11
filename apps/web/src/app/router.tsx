@@ -64,6 +64,7 @@ export type Route =
   | { readonly name: "sign-in" }
   | { readonly name: "trades" }
   | { readonly name: "trade-new" }
+  | { readonly name: "trade-countersign" }
   | { readonly name: "trade"; readonly tradeId: string; readonly tab: string }
   | { readonly name: "inspections" }
   | { readonly name: "payouts" }
@@ -88,6 +89,7 @@ export function matchRoute(path: string): Route {
   if (p === "/sign-in") return { name: "sign-in" };
   if (p === "/trades") return { name: "trades" };
   if (p === "/trades/new") return { name: "trade-new" };
+  if (p === "/trades/countersign") return { name: "trade-countersign" };
   const t = /^\/trades\/([^/]+)(?:\/([a-z]+))?$/.exec(p);
   if (t) {
     const tab = t[2] ?? "overview";

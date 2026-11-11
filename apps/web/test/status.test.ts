@@ -128,3 +128,55 @@ describe("rendering", () => {
     expect(() => formatUnits("", 24)).toThrow();
   });
 });
+
+describe("backend vocabularies served since M04/M05 (release journal, operation journal)", () => {
+  const LOCKED_OPS = [
+    "SUBMITTING",
+    "EXECUTING",
+    "PROCESSING",
+    "UNKNOWN",
+    "REVIEW",
+    "RECONCILING",
+    "ADJUDICATION",
+  ];
+  it("every release-intent state the contract or journal can report has its own label", async () => {
+    const { RELEASE_INTENT_STATES } = await import("@dockside/near");
+    const labels = new Set<string>();
+    for (const s of [...RELEASE_INTENT_STATES, "PREPARED", "EXPIRED_UNSIGNED"]) {
+      const m = describeStatus("releaseIntentState", s);
+      expect(m.label, s).not.toMatch(/^Unrecognized/);
+      labels.add(m.label);
+    }
+    expect(labels.size).toBe(RELEASE_INTENT_STATES.length + 2);
+  });
+  it("every economic-operation state has its own label; locked states are never positive and never PAID-like", async () => {
+    const { OPERATION_STATES } = await import("@dockside/journal");
+    const labels = new Set<string>();
+    for (const s of OPERATION_STATES) {
+      const m = describeStatus("operationState", s);
+      expect(m.label, s).not.toMatch(/^Unrecognized/);
+      labels.add(m.label);
+      if (LOCKED_OPS.includes(s)) {
+        expect(m.locked, s).toBe(true);
+        expect(m.tone, s).not.toBe("positive");
+        expect(m.icon, s).not.toBe(describeStatus("operationState", "PAID").icon);
+      }
+    }
+    expect(labels.size).toBe(OPERATION_STATES.length);
+    const positive = OPERATION_STATES.filter(
+      (s: string) => describeStatus("operationState", s).tone === "positive",
+    );
+    expect(positive).toEqual(["PAID"]);
+  });
+  it("attestation, inspection and slot vocabularies cover the evidence service values", () => {
+    for (const s of ["CURRENT", "SUPERSEDED", "EXPIRED", "STALE", "INVALIDATED"])
+      expect(describeStatus("attestationStatus", s).label).not.toMatch(/^Unrecognized/);
+    for (const s of ["PASS", "FAIL", "REVIEW"])
+      expect(describeStatus("inspectionDecision", s).label).not.toMatch(/^Unrecognized/);
+    for (const s of ["MISSING", "UNDERFILLED", "STALE", "FILLED"])
+      expect(describeStatus("slotStatus", s).label).not.toMatch(/^Unrecognized/);
+    // No evidence-side value borrows a positive tone: completeness is not payment.
+    for (const d of ["attestationStatus", "inspectionDecision", "slotStatus"] as const)
+      for (const s of ["CURRENT", "PASS", "FILLED"]) expect(describeStatus(d, s).tone).not.toBe("positive");
+  });
+});

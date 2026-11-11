@@ -7,10 +7,13 @@ import { defineConfig } from "vite";
  * preview server sends a strict CSP: no inline script, no third-party origins.
  */
 const api = process.env["DOCKSIDE_API_URL"] ?? "http://127.0.0.1:8787";
-const proxy = {
+/** Optional relayer for contract calls (the local stack serves one for its simulated chain). */
+const relayer = process.env["DOCKSIDE_RELAYER_URL"];
+const proxy: Record<string, { target: string; changeOrigin: boolean }> = {
   "/v1": { target: api, changeOrigin: false },
   "/healthz": { target: api, changeOrigin: false },
   "/readyz": { target: api, changeOrigin: false },
+  ...(relayer ? { "/relay": { target: relayer, changeOrigin: false } } : {}),
 };
 
 const csp = [

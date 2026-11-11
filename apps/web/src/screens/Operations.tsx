@@ -2,9 +2,33 @@ import type { ReactNode } from "react";
 import { useApiData, useApp } from "../app/app-context";
 import { Link } from "../app/router";
 import { PageHeader } from "../components/AppShell";
+import { MoneyValue, TableScroller } from "../components/Data";
 import { Callout, EmptyState, FailureState, LoadingState } from "../components/States";
 import { StatusBadge } from "../components/Status";
 import type { ApiOutcome } from "../lib/api/client";
+import type { Network } from "../lib/api/types";
+import { formatUtc } from "../lib/format";
+
+interface InspectionRow {
+  readonly tradeId: string;
+  readonly assignedToViewer: boolean;
+  readonly currentAttestation: { readonly digest: string; readonly manifestDigest: string } | null;
+  readonly inspection: {
+    readonly decision: string;
+    readonly digest: string;
+    readonly expiresAt: number;
+  } | null;
+}
+
+interface PayoutRow {
+  readonly tradeId: string;
+  readonly destination: string;
+  readonly amountYocto: string;
+  readonly operationId: string;
+  readonly state: string;
+  readonly lockHeld: boolean;
+  readonly txHash: string | null;
+}
 
 function useSignedInData<T>(load: () => Promise<ApiOutcome<T>>) {
   const app = useApp();
@@ -25,14 +49,53 @@ export function InspectionsScreen() {
         <p>Inspections appear when a trade names you as its inspector and evidence is submitted.</p>
       </EmptyState>
     );
-  else
+  else {
+    const rows = outcome.data.inspections as InspectionRow[];
     body = (
-      <Callout tone="unknown" icon="unknown" title="Inspections received but not yet rendered">
-        <p>
-          The API returned inspections that this web build does not render yet. Nothing is inferred from them.
-        </p>
-      </Callout>
+      <TableScroller label="Inspections">
+        <table data-testid="inspections-table">
+          <caption>
+            Trades you can see, with their current attestation and inspector decision (
+            {formatUtc(outcome.receivedAt)})
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Trade</th>
+              <th scope="col">Assigned to you</th>
+              <th scope="col">Attested manifest</th>
+              <th scope="col">Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.tradeId}>
+                <td>
+                  <Link href={`/trades/${r.tradeId}/evidence`}>{r.tradeId}</Link>
+                </td>
+                <td>{r.assignedToViewer ? "Yes: you are the named inspector" : "No"}</td>
+                <td className="mono wrap">
+                  {r.currentAttestation ? r.currentAttestation.manifestDigest : "No current attestation"}
+                </td>
+                <td>
+                  {r.inspection ? (
+                    <StatusBadge
+                      dimension="inspectionDecision"
+                      value={r.inspection.decision}
+                      source="evidence service"
+                      observedAt={outcome.receivedAt}
+                      compact
+                    />
+                  ) : (
+                    "No decision"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroller>
     );
+  }
   return (
     <>
       <PageHeader
@@ -93,14 +156,51 @@ export function PayoutsScreen() {
         </p>
       </EmptyState>
     );
-  else
+  else {
+    const rows = outcome.data.payouts as PayoutRow[];
+    const net = (app.ready?.network ?? "near-testnet") as Network;
     body = (
-      <Callout tone="unknown" icon="unknown" title="Payouts received but not yet rendered">
-        <p>
-          The API returned payout operations that this web build does not render yet. Nothing is inferred.
-        </p>
-      </Callout>
+      <TableScroller label="Payout operations">
+        <table data-testid="payouts-table">
+          <caption>Release operations (economic-operation journal, {formatUtc(outcome.receivedAt)})</caption>
+          <thead>
+            <tr>
+              <th scope="col">Trade</th>
+              <th scope="col">Operation</th>
+              <th scope="col">State</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Destination</th>
+              <th scope="col">Transaction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.operationId}>
+                <td>
+                  <Link href={`/trades/${r.tradeId}/payout`}>{r.tradeId}</Link>
+                </td>
+                <td className="mono">{r.operationId}</td>
+                <td>
+                  <StatusBadge
+                    dimension="operationState"
+                    value={r.state}
+                    source="economic-operation journal"
+                    observedAt={outcome.receivedAt}
+                    compact
+                  />
+                </td>
+                <td>
+                  <MoneyValue value={{ amount: r.amountYocto, asset: "NEAR", decimals: 24, network: net }} />
+                </td>
+                <td className="mono wrap">{r.destination}</td>
+                <td className="mono wrap">{r.txHash ?? "Not broadcast"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroller>
     );
+  }
   const funded = app.ready?.fundedPayouts;
   return (
     <>
@@ -136,7 +236,7 @@ export function PayoutsScreen() {
           <section className="panel" key={s.id} aria-labelledby={`payout-${s.id}`}>
             <h2 id={`payout-${s.id}`}>{s.title}</h2>
             <p className="muted">{s.text}</p>
-            <p>Shown per operation once the API serves payout projections.</p>
+            <p>Shown per operation on each trade's Payout tab.</p>
           </section>
         ))}
       </div>

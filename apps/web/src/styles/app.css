@@ -20,6 +20,12 @@ body {
   min-width: 0;
   font-size: 1rem;
   overflow-x: hidden;
+  /* Long identifiers and digests wrap inside their own field instead of widening the page. */
+  overflow-wrap: break-word;
+}
+summary,
+legend {
+  overflow-wrap: anywhere;
 }
 
 h1,
@@ -792,4 +798,79 @@ dialog::backdrop {
     padding-left: var(--space-5);
     padding-right: var(--space-5);
   }
+}
+
+/* ------------------------------ M08 workspace ------------------------------ */
+.wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.action,
+.relay,
+.hold,
+.operation,
+.slot,
+.upload,
+.request,
+.advisory {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  margin: var(--space-3) 0;
+  background: var(--surface-panel);
+  min-width: 0;
+}
+.slots {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.review {
+  border-left: 4px solid var(--action-primary);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0;
+  min-width: 0;
+}
+.payload {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+.payload div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.payload dt {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.payload dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  margin-right: var(--space-3);
+}
+fieldset {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+textarea {
+  width: 100%;
+  min-height: 6rem;
+  font: inherit;
+}
+.proposal-facts {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.ok {
+  font-weight: 600;
 }

@@ -16,8 +16,6 @@ import type {
   RoleGrantView,
   ServiceEnrollmentView,
   SessionGrant,
-  TradeDetail,
-  TradeListResponse,
 } from "./types";
 
 /** Signing domains used by the browser (packages/core/src/signing.ts SIGNING_DOMAINS). */
@@ -113,7 +111,12 @@ export class DocksideClient {
 
   async call<T>(
     spec: EndpointSpec,
-    options: { params?: Record<string, string>; query?: Record<string, string>; body?: unknown } = {},
+    options: {
+      params?: Record<string, string>;
+      query?: Record<string, string>;
+      body?: unknown;
+      signal?: AbortSignal;
+    } = {},
   ): Promise<ApiOutcome<T>> {
     let path: string;
     try {
@@ -155,6 +158,7 @@ export class DocksideClient {
     try {
       const init: RequestInit = { method: spec.method, headers, credentials: "omit", cache: "no-store" };
       if (spec.method === "POST") init.body = bodyText;
+      if (options.signal) init.signal = options.signal;
       res = await this.fetchImpl(`${this.opts.baseUrl}${pathWithQuery}`, init);
     } catch (e) {
       const at = this.now();
@@ -297,29 +301,8 @@ export class DocksideClient {
     return this.call(ENDPOINTS.audit, { query: { limit: String(limit) } });
   }
 
-  /* ------------------------------ planned API ------------------------------ */
+  /* --------------------- trade routes (typed in ./trade.ts) --------------------- */
 
-  listTrades(): Promise<ApiOutcome<TradeListResponse>> {
-    return this.call(ENDPOINTS.listTrades);
-  }
-  createTrade(draft: unknown): Promise<ApiOutcome<{ tradeId: string }>> {
-    return this.call(ENDPOINTS.createTrade, { body: draft });
-  }
-  getTrade(tradeId: string): Promise<ApiOutcome<TradeDetail>> {
-    return this.call(ENDPOINTS.getTrade, { params: { id: tradeId } });
-  }
-  tradeSection(
-    section:
-      | "tradeEvidence"
-      | "tradeHolds"
-      | "tradeRelease"
-      | "tradePayout"
-      | "tradeRefund"
-      | "tradeTimeline",
-    tradeId: string,
-  ): Promise<ApiOutcome<Record<string, unknown>>> {
-    return this.call(ENDPOINTS[section], { params: { id: tradeId } });
-  }
   listInspections(): Promise<ApiOutcome<{ inspections: unknown[] }>> {
     return this.call(ENDPOINTS.listInspections);
   }

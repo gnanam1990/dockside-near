@@ -1,0 +1,182 @@
+ ✓ apps/web/test/tokens.test.ts > light scheme > defines every required token 2ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > text-primary on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > text-primary on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > text-secondary on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > text-secondary on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > action-secondary on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > action-secondary on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-positive on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-positive on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-warning on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-warning on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-negative on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-negative on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-unknown on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > status-unknown on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > primary and secondary text on surface-subtle (table headers, selected nav) meet 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > button text on action-primary meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > border-control on surface-canvas meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > border-control on surface-panel meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > focus-ring on surface-canvas meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > focus-ring on surface-panel meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > action-primary on surface-canvas meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > light scheme > action-primary on surface-panel meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > defines every required token 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > text-primary on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > text-primary on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > text-secondary on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > text-secondary on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > action-secondary on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > action-secondary on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-positive on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-positive on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-warning on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-warning on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-negative on surface-canvas meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-negative on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-unknown on surface-canvas meets 4.5:1 1ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > status-unknown on surface-panel meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > primary and secondary text on surface-subtle (table headers, selected nav) meet 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > button text on action-primary meets 4.5:1 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > border-control on surface-canvas meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > border-control on surface-panel meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > focus-ring on surface-canvas meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > focus-ring on surface-panel meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > action-primary on surface-canvas meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > dark scheme > action-primary on surface-panel meets 3:1 (non-text UI component) 0ms
+ ✓ apps/web/test/tokens.test.ts > component styles use semantic tokens only > no raw colour literal outside tokens.css 5ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > has vectors to check 1ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > null 3ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > empty-string 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > ascii-string 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > nfc-unicode-string 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > u64-zero 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > u64-max-safe 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > u128-zero 1ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > u128-max 1ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > u128-one-near 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > bool-true 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > bool-false 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > bytes 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > empty-list 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > nested-list 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > empty-struct 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > struct-field-order 2ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > nested-struct 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > trade-revision-v1 1ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > rejects non-NFC strings, unsafe numbers, bad field names and bad domains 0ms
+ ✓ apps/web/test/canonical.test.ts > browser canonical encoding matches fixtures/canonical-vectors.json > round-trips base58 with leading zero bytes 1ms
+ ✓ apps/web/test/status.test.ts > payout vocabulary > covers the TDD release/payout states 1ms
+ ✓ apps/web/test/status.test.ts > payout vocabulary > every state has a distinct label 0ms
+ ✓ apps/web/test/status.test.ts > payout vocabulary > locked states are locked, never positive, never share the paid icon, and say no override exists 1ms
+ ✓ apps/web/test/status.test.ts > payout vocabulary > PAID is the only positive payout state and names the terminal evidence 0ms
+ ✓ apps/web/test/status.test.ts > payout vocabulary > FAILED states the authoritative no-transfer disposition and the new-intent requirement 0ms
+ ✓ apps/web/test/status.test.ts > independent dimensions > dry compatibility is never positive and always says no funds moved 0ms
+ ✓ apps/web/test/status.test.ts > independent dimensions > dry PASS, WORKING_TESTNET, provider refund and destination receipt are distinct 0ms
+ ✓ apps/web/test/status.test.ts > independent dimensions > expired-unresolved holds stay blocking 0ms
+ ✓ apps/web/test/status.test.ts > independent dimensions > an unrecognized value is reported as unsupported, not mapped to a known meaning 0ms
+ ✓ apps/web/test/status.test.ts > rendering > a badge carries icon (hidden from AT), text label, sentence, source and exact time 7ms
+ ✓ apps/web/test/status.test.ts > rendering > money uses exact integer units with asset and network 1ms
+ ✓ apps/web/test/status.test.ts > rendering > formatUnits never rounds and never coerces malformed amounts 1ms
+ ✓ apps/web/test/status.test.ts > backend vocabularies served since M04/M05 (release journal, operation journal) > every release-intent state the contract or journal can report has its own label 167ms
+ ✓ apps/web/test/status.test.ts > backend vocabularies served since M04/M05 (release journal, operation journal) > every economic-operation state has its own label; locked states are never positive and never PAID-like 119ms
+ ✓ apps/web/test/status.test.ts > backend vocabularies served since M04/M05 (release journal, operation journal) > attestation, inspection and slot vocabularies cover the evidence service values 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > TRADE_REVISION digest equals @dockside/core 4ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > INSPECTION_ATTESTATION digest equals @dockside/core 1ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > HOLD_SET digest equals @dockside/core 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > HOLD_RESOLVE digest equals @dockside/core 1ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > BUYER_APPROVAL digest equals @dockside/core 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > EVIDENCE_ISSUANCE digest equals @dockside/core 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > RELEASE_INTENT digest equals @dockside/core 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > CANCEL_RELEASE_INTENT digest equals @dockside/core 1ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > CANCEL_CONSENT digest equals @dockside/core 1ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > REVOKE_CANCEL_CONSENT digest equals @dockside/core 1ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > ABANDON_RELEASE_INTENT digest equals @dockside/core 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > refuses a server digest that does not match the payload 1ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > refuses purposes it does not sign and payloads that are not canonical 0ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > a non-extractable device key signature verifies with the backend verifier 3ms
+ ✓ apps/web/test/signing.test.ts > browser signing domains match the backend > evidence issuance statements equal the evidence service payload 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /healthz is served with the same auth requirement 1ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /readyz is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/bootstrap/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/bootstrap/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/sessions/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/sessions/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/me is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations/accept is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations/:id/grant is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/principals/:id/capabilities is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/keys/:id/revoke is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/keys/rotation/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/keys/rotation/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/prove is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/:id/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/:id/cancel-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/cancel is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/prove is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/activate is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/rotate is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/recover is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/revoke is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/service-enrollments/:id is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/audit is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/evidence-policies is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/sync is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/attestor is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/evidence is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/evidence is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/inspections is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/inspections is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/holds is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/hold-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/holds is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/holds/:id/resolution-requests is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/holds/:id/resolution-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/holds/:id/resolution is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/release is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/release-intents is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/signature is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/approval-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/approval is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/execute is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consent-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consents is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consent-revocation-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consent-revocations is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/abandon-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/abandon is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/payout is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/refund is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/timeline is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/payouts is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/audit-export is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/operations/:id is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/operations/:id/reconciliation-requests is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/operations/:id/adjudication-requests is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/operations/:id/source-hints is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/freeze is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trade-proposals is served with the same auth requirement 2ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trade-proposals/review is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/evidence-policy is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/inspection-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > every served route is in the catalog 2ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > refuses identifiers the router would not accept 1ms
+ ✓ apps/web/test/client.test.ts > web API client against the real control API > generates non-extractable device keys 3ms
+ ✓ apps/web/test/client.test.ts > web API client against the real control API > bootstraps, authenticates every request with PoP, invites and grants in separate sessions 223ms
+ ✓ apps/web/test/client.test.ts > web API client against the real control API > reports a route the running build does not serve as endpoint-unavailable, not as data 46ms
+ ✓ apps/web/test/client.test.ts > web API client against the real control API > refuses to sign a challenge whose digest, origin, key or purpose differs 15ms
+ ✓ apps/web/test/client.test.ts > web API client against the real control API > an authenticated call without a session never reaches the network 0ms
+ ✓ apps/web/test/client.test.ts > web API client against the real control API > a proof signed for another origin is rejected by the server 55ms
+ ✓ services/api/test/m08-proposals.test.ts > M08 trade proposals > builds exact terms from server-resolved bindings; both parties sign; the contract registers it 70ms
+ ✓ services/api/test/m08-proposals.test.ts > M08 trade proposals > refuses proposals from non-buyers and gives one answer for every unusable principal 75ms
+ ✓ services/api/test/m08-proposals.test.ts > M08 inspection challenge > is served only to the bound inspector and binds the current attestation 48ms
+ Test Files  7 passed (7)
+      Tests  180 passed (180)
