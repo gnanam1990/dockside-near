@@ -9,11 +9,24 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@dockside/core": ["packages/core/src/index.ts"],
-      "@dockside/store": ["packages/store/src/index.ts"],
-      "@dockside/authority": ["packages/authority/src/index.ts"]
+      "@dockside/core": [
+        "packages/core/src/index.ts"
+      ],
+      "@dockside/store": [
+        "packages/store/src/index.ts"
+      ],
+      "@dockside/authority": [
+        "packages/authority/src/index.ts"
+      ],
+      "@dockside/api": [
+        "services/api/src/app.ts"
+      ]
     },
     "allowImportingTsExtensions": false
   },
-  "include": ["packages/*/test/**/*.ts", "services/*/test/**/*.ts", "vitest.config.ts"]
+  "include": [
+    "packages/*/test/**/*.ts",
+    "services/*/test/**/*.ts",
+    "vitest.config.ts"
+  ]
 }
