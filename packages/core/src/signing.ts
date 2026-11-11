@@ -24,6 +24,10 @@ export const SIGNING_DOMAINS = {
   REFUND_REVOKE: { domain: "dockside/refund-revoke", version: 1 },
   REFUND_DISPUTE: { domain: "dockside/refund-dispute", version: 1 },
   BOUND_KEY_REVOCATION: { domain: "dockside/bound-key-revocation", version: 1 },
+  EVIDENCE_POLICY: { domain: "dockside/evidence-policy", version: 1 },
+  EVIDENCE_SLOT_POLICY: { domain: "dockside/evidence-slot-policy", version: 1 },
+  EVIDENCE_MANIFEST: { domain: "dockside/evidence-manifest", version: 1 },
+  EVIDENCE_ISSUANCE: { domain: "dockside/evidence-issuance", version: 1 },
   AUDIT_EVENT: { domain: "dockside/audit-event", version: 1 },
 } as const;
 
