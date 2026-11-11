@@ -287,6 +287,31 @@ export const ENDPOINTS = {
     "M07",
   ),
   freezeTrade: e("freezeTrade", "POST", "/v1/trades/:id/freeze", true, "implemented", "M07"),
+  proposeTrade: e("proposeTrade", "POST", "/v1/trade-proposals", true, "implemented", "M08"),
+  reviewTradeProposal: e(
+    "reviewTradeProposal",
+    "POST",
+    "/v1/trade-proposals/review",
+    true,
+    "implemented",
+    "M08",
+  ),
+  tradeEvidencePolicy: e(
+    "tradeEvidencePolicy",
+    "GET",
+    "/v1/trades/:id/evidence-policy",
+    true,
+    "implemented",
+    "M08",
+  ),
+  inspectionChallenge: e(
+    "inspectionChallenge",
+    "POST",
+    "/v1/trades/:id/inspection-challenges",
+    true,
+    "implemented",
+    "M08",
+  ),
 } as const satisfies Record<string, EndpointSpec>;
 
 export type EndpointId = keyof typeof ENDPOINTS;
