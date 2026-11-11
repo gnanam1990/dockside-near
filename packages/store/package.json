@@ -1,0 +1,17 @@
+{
+  "name": "@dockside/store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside durable storage on node:sqlite: migrations, transactions, nonces, idempotency, append-only audit",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "migrations"],
+  "dependencies": {
+    "@dockside/core": "workspace:*"
+  }
+}
