@@ -1,0 +1,40 @@
+
+ RUN  v4.1.12 <repo>
+
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > accepts the valid baseline (control) 10ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects unsupported or missing schema versions 5ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects duplicate keys at the raw boundary, including escaped-equivalent keys 2ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects unknown fields at every depth 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > does not let __proto__ keys pollute prototypes 1ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects ambiguous, non-canonical and wrong-network addresses 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects malformed lengths for keys, signatures, identifiers and amounts 4ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > enforces resource limits at the raw boundary 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects lossy numbers, unpaired surrogates, control characters, BOM and trailing content 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > rejects structurally dependent authority (INV-13 at the terms boundary) 5ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > fails closed on configuration typos, invalid values and blocked networks 3ms
+ ✓ packages/core/test/t002-schema-fail-closed.test.ts > T-002 schema and unknown fields fail closed > fails closed on validity windows and idempotency reuse 1ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > applies migrations once and is idempotent on reopen 20ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > fails closed when an applied migration was edited or the database is newer than the build 12ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > rolls back a failing migration atomically 18ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > persists consumed nonces across restart so replay is denied after a crash 15ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > joins exact idempotent repeats and rejects conflicting reuse without re-running the effect 12ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > keeps the audit log append-only and hash-chained 14ms
+ ✓ packages/store/test/store-foundation.test.ts > store foundation > rolls back every write of a failed transaction 9ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > is independent of JSON field order at every depth (property) 165ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > treats canonically-equivalent Unicode (NFC/NFD) as the same identity (property) 171ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > normalises operator address display forms to the same signed bytes 6ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > changes identity when any material field changes 46ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > round-trips terms through boundary JSON without changing identity 1ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > reproduces committed golden vectors byte-for-byte (restart/platform stability) 3ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > computes the same digest in a freshly started process 142ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > type-tags values so that u64, u128 and string forms of a number never collide 0ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > is injective over generated structured values (property) 46ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > binds signatures to their domain: a trade signature is not a buyer approval 2ms
+ ✓ packages/core/test/t001-canonical-identity.test.ts > T-001 canonical identity is stable > enforces INV-01: an accepted revision cannot change in place; successors chain digests 5ms
+
+ Test Files  3 passed (3)
+      Tests  30 passed (30)
+   Start at  19:53:25
+   Duration  1.18s (transform 464ms, setup 0ms, import 1.21s, tests 738ms, environment 0ms)
+
+exit=0
