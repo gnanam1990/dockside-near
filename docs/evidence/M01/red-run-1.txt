@@ -1,0 +1,25 @@
+       | ^
+     23|   type AuthContext,
+     24|   AuthorityService,
+ ❯ packages/authority/test/t005-invitation-grant.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  packages/authority/test/t006-revocation-recovery.test.ts [ packages/authority/test/t006-revocation-recovery.test.ts ]
+Error: Cannot find module '../src/index.js' imported from <repo>/packages/authority/test/t006-revocation-recovery.test.ts
+ ❯ packages/authority/test/t006-revocation-recovery.test.ts:20:1
+     18| import { AuditLog } from "@dockside/store";
+     19| import { afterAll, afterEach, beforeAll, describe, expect, it } from "…
+     20| import { IsolatedSigner } from "../src/index.js";
+       | ^
+     21| import { type Actor, bootstrap, closeHarnesses, code, enrollHuman, typ…
+     22|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  no tests
+   Start at  19:59:56
+   Duration  964ms (transform 1.29s, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+

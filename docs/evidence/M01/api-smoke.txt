@@ -1,0 +1,5 @@
+healthz 200 {"status":"ok"}
+readyz 200 {"ready":true,"schemaVersion":2,"network":"near-testnet","fundedPayouts":"BLOCKED"}
+bad key 400 {"error":{"code":"INVALID_KEY","message":"ed25519 public key must be 32 bytes","details":{}}}
+startup log {"event":"listening","address":{"address":"127.0.0.1","family":"IPv4","port":8799},"migrationsApplied":[1,2],"config":{"DOCKSIDE_DB_PATH":"<path>","DOCKSIDE_ORIGIN":"http://localhost:8799
+typo config exit 1 true
