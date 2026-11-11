@@ -204,6 +204,55 @@ impl Ledger {
         self.check_conservation()
     }
 
+    /// Reserve every funder's AVAILABLE value for one release intent (exact per-funder slices).
+    pub fn reserve_available(&mut self) -> R<Vec<(String, u128)>> {
+        let mut slices = Vec::new();
+        for (k, f) in self.funders.iter_mut() {
+            if f.available > 0 {
+                slices.push((k.clone(), f.available));
+                f.reserved = f.reserved.checked_add(f.available).ok_or_else(overflow)?;
+                f.available = 0;
+            }
+        }
+        ensure(!slices.is_empty(), "NOTHING_ELIGIBLE", "no available value to reserve")?;
+        self.check_conservation()?;
+        Ok(slices)
+    }
+
+    /// The slices a reservation of all AVAILABLE value would take, without mutating.
+    pub fn available_slices(&self) -> Vec<(String, u128)> {
+        self.funders.iter().filter(|(_, f)| f.available > 0).map(|(k, f)| (k.clone(), f.available)).collect()
+    }
+
+    /// Pre-submit exit or authoritative no-transfer FAILED: reserved -> available, exact slices.
+    pub fn restore_reserved(&mut self, slices: &[(String, u128)]) -> R<()> {
+        for (k, a) in slices {
+            let f = self.funders.get_mut(k).ok_or_else(|| crate::error::Error { code: "CONSERVATION_VIOLATION", message: "reserved funder missing".into() })?;
+            ensure(f.reserved >= *a, "CONSERVATION_VIOLATION", "reservation underflow")?;
+            f.reserved -= a;
+            f.available += a;
+        }
+        self.check_conservation()
+    }
+
+    /// PAID: reserved -> released, exact slices.
+    pub fn settle_release(&mut self, slices: &[(String, u128)]) -> R<()> {
+        for (k, a) in slices {
+            let f = self.funders.get_mut(k).ok_or_else(|| crate::error::Error { code: "CONSERVATION_VIOLATION", message: "reserved funder missing".into() })?;
+            ensure(f.reserved >= *a, "CONSERVATION_VIOLATION", "reservation underflow")?;
+            f.reserved -= a;
+            f.released += a;
+        }
+        self.check_conservation()
+    }
+
+    /// True when exactly these slices are reserved and nothing else is.
+    pub fn reservation_matches(&self, slices: &[(String, u128)]) -> bool {
+        let total: u128 = self.sum(|f| f.reserved);
+        let want: u128 = slices.iter().map(|(_, a)| *a).fold(0u128, |a, b| a.saturating_add(b));
+        total == want && slices.iter().all(|(k, a)| self.funders.get(k).is_some_and(|f| f.reserved >= *a))
+    }
+
     pub fn check_conservation(&self) -> R<()> {
         let mut funded = 0u128;
         for f in self.funders.values() {

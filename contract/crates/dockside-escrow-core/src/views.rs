@@ -67,6 +67,7 @@ pub fn refunds(t: &TradeRecord) -> J {
                     "clockOrigin": r.clock_origin, "deadline": r.deadline, "requestedAt": r.requested_at,
                     "dispute": r.dispute.as_ref().map(|d| json!({"role": d.role, "at": d.at, "digest": d.digest})),
                     "history": r.history.iter().map(|(st, at)| json!([st, at])).collect::<Vec<J>>(),
+                    "basis": r.basis, "riskSigned": r.risk_signed,
                 })
             })
             .collect(),
@@ -104,6 +105,7 @@ pub fn trade(t: &TradeRecord, now_ms: u64) -> J {
         "revokedRoles": t.revoked_roles.iter().cloned().collect::<Vec<String>>(),
         "blockingHolds": t.blocking_holds(),
         "currentManifestDigest": t.current_manifest_digest(now_ms),
+        "liveReleaseIntent": t.release.live,
         "ledger": ledger(t),
     })
 }
@@ -140,5 +142,56 @@ pub fn evidence(t: &TradeRecord, now_ms: u64) -> J {
             "expiresAt": i.expires_at, "invalidated": i.invalidated,
         })),
         "currentInspectionDecision": e.current_inspection(now_ms).map(|i| i.decision.clone()),
+    })
+}
+
+pub fn release_intent(i: &crate::release::ReleaseIntent) -> J {
+    json!({
+        "releaseIntentId": i.id, "tradeRevision": i.trade_revision, "termsDigest": i.terms_digest,
+        "requestDigest": i.request_digest, "amount": s(i.amount),
+        "slices": i.slices.iter().map(|x| json!({"funder": x.funder, "amount": s(x.amount)})).collect::<Vec<J>>(),
+        "sourceBucket": i.source_bucket.as_str(), "destination": i.destination, "executionProfile": i.profile,
+        "state": i.state.as_str(), "stateVersion": i.version, "createdAt": i.created_at, "expiresAt": i.expires_at,
+        "approval": i.approval.as_ref().map(|a| json!({
+            "digest": a.digest, "approvedAt": a.approved_at, "expiresAt": a.expires_at,
+            "manifestRevision": a.manifest_revision, "manifestDigest": a.manifest_digest,
+            "attestationDigest": a.attestation_digest, "inspectionDigest": a.inspection_digest,
+            "holdsViewDigest": a.holds_view_digest,
+        })),
+        "pendingCancel": i.cancel.as_ref().map(|c| json!({
+            "digest": c.digest, "reasonCode": c.reason_code, "expiresAt": c.expires_at,
+            "consents": c.consents.iter().map(|k| json!({"role": k.role, "expiresAt": k.expires_at, "recordedAt": k.recorded_at, "revoked": k.revoked, "digest": k.digest})).collect::<Vec<J>>(),
+        })),
+        "exitDigest": i.exit_digest, "predecessor": i.predecessor, "successor": i.successor,
+        "attempts": i.attempts, "consumedManifest": i.consumed_manifest,
+        "history": i.history.iter().map(|(st, at)| json!([st, at])).collect::<Vec<J>>(),
+    })
+}
+
+fn change(c: &crate::destination::DestinationChange) -> J {
+    json!({
+        "successorDigest": c.successor_digest, "successorRevision": c.terms.revision,
+        "fromDestination": c.from_destination, "toDestination": c.to_destination,
+        "proposedBy": c.proposed_by, "proposedAt": c.proposed_at, "consentDeadline": c.consent_deadline,
+        "buyerConsentAt": c.buyer_consent_at, "supplierConsentAt": c.supplier_consent_at,
+        "delayUntil": c.delay_until, "status": c.status.as_str(), "closedAt": c.closed_at,
+        "supersededIntent": c.superseded_intent, "successorIntent": c.successor_intent,
+    })
+}
+
+pub fn release(t: &TradeRecord, now_ms: u64) -> J {
+    json!({
+        "tradeId": t.terms.trade_id,
+        "revision": t.terms.revision,
+        "termsDigest": t.terms_digest,
+        "payoutDestination": t.terms.payout_destination,
+        "liveIntent": t.release.live,
+        "blockers": t.release_blockers(now_ms),
+        "holdsViewDigest": t.holds_view_digest(now_ms).ok(),
+        "intents": t.release.intents.values().map(release_intent).collect::<Vec<J>>(),
+        "revisions": t.revisions.iter().map(|r| json!({"revision": r.revision, "digest": r.digest, "activatedAt": r.activated_at})).collect::<Vec<J>>(),
+        "pendingDestinationChange": t.destination.pending.as_ref().map(change),
+        "destinationHistory": t.destination.history.iter().map(change).collect::<Vec<J>>(),
+        "abandonPolicy": {"id": crate::release::ABANDON_POLICY_ID, "revision": crate::release::ABANDON_POLICY_REVISION, "graceMs": crate::release::ABANDON_GRACE_MS},
     })
 }

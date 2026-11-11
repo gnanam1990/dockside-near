@@ -130,6 +130,25 @@ impl EvidenceState {
             .filter(|i| !i.invalidated && i.manifest_digest == m.digest && now_ms < i.expires_at)
     }
 
+    /// A new trade revision was activated: the accepted manifest and inspection were bound to the
+    /// predecessor revision, so they move to history and cannot authorize anything under the new one.
+    pub fn reset_for_new_revision(&mut self) {
+        if let Some(mut cur) = self.current.take() {
+            if cur.status == ManifestStatus::Valid {
+                cur.status = ManifestStatus::Superseded;
+            }
+            self.history.push(cur);
+        }
+        if let Some(i) = self.inspection.as_mut() {
+            i.invalidated = true;
+        }
+    }
+
+    /// Highest manifest revision ever accepted for the trade (manifest revisions never regress).
+    pub fn last_revision(&self) -> Option<u64> {
+        self.current.iter().chain(self.history.iter()).map(|m| m.revision).max()
+    }
+
     pub fn invalidate_unconsumed(&mut self, role: &str, _now_ms: u64) {
         match role {
             "manifestAttestor" => {
@@ -395,8 +414,8 @@ impl TradeRecord {
         o.expect_str("organizationId", &b.scope.organization_id, "SCOPE_MISMATCH")?;
         let (issued, expires) = self.check_window(&o, ctx, policy.attestation_lifetime_ms)?;
         let manifest_revision = o.u64("manifestRevision")?;
-        if let Some(cur) = &self.evidence.current {
-            ensure(manifest_revision > cur.revision, "STALE_MANIFEST", "manifest revision is not newer than the accepted manifest")?;
+        if let Some(last) = self.evidence.last_revision() {
+            ensure(manifest_revision > last, "STALE_MANIFEST", "manifest revision is not newer than the accepted manifest")?;
         }
         ensure(is_nonce(&o.str("nonce")?), "VALIDATION_FAILED", "nonce malformed")?;
         let (hex, d) = digest_hex(domains::MANIFEST_ATTESTATION, &v)?;

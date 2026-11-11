@@ -44,11 +44,11 @@ fn native_refund_entry_points_reject_unexpected_assets() {
             ],
         )
     };
-    let none = RefundSignatures { buyer: None, supplier: None };
+    let none = RefundSignatures { buyer: None, supplier: None, risk: None };
     let p = mk("UNEXPECTED_ASSET_RECOVERY", "token-sender.testnet", "QUARANTINED", "a");
     assert_eq!(code(rec.request_refund(&w.as_caller("token-sender.testnet").ctx(), &p, none)), "NOT_NATIVE_REFUND");
     let p = mk("EXCESS_FUNDING_RETURN", "token-sender.testnet", "QUARANTINED", "b");
-    assert_eq!(code(rec.request_refund(&w.as_caller("token-sender.testnet").ctx(), &p, RefundSignatures { buyer: None, supplier: None })), "NOTHING_ELIGIBLE");
+    assert_eq!(code(rec.request_refund(&w.as_caller("token-sender.testnet").ctx(), &p, RefundSignatures { buyer: None, supplier: None, risk: None })), "NOTHING_ELIGIBLE");
     assert_eq!(rec.ledger, before, "native ledger untouched");
     assert!(rec.refunds.is_empty());
 }
