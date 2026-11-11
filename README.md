@@ -5,16 +5,18 @@ agreement, release needs a signed inspection result and buyer approval, unauthor
 rejected, and payout evidence is reconciled. The authoritative specification is the sealed pack in
 [`docs/spec/`](docs/spec/START-HERE.md) (do not edit it).
 
-**Current truth:** see [`BUILD-STATUS.md`](BUILD-STATUS.md). Only modules M00 (foundation/contracts) and
-M01 (organization/authority) exist. There is no NEAR contract deployment, no escrow, no UI, and no
-runtime `WORKING_*` claim of any kind.
+**Current truth:** see [`BUILD-STATUS.md`](BUILD-STATUS.md). Modules M00 (foundation/contracts), M01
+(organization/authority) and M02 (NEAR escrow contract, per-funder funding and refunds, built and tested
+locally) exist. The contract is **not deployed** anywhere (testnet deployment is BLOCKED until you run
+`scripts/testnet-deploy/`), there is no release path yet (M04), no UI, and no runtime `WORKING_*` claim.
 
 ## Requirements
 
 - Node.js 22 (`>=22.13 <23`; developed on 22.23.1) — `node:sqlite` is used and prints an
   `ExperimentalWarning` on Node 22.
 - pnpm 10 (`corepack enable` or a global install; developed on 10.34.9)
-- Rust stable with cargo (developed on 1.97.1) for `contract/`
+- Rust stable with cargo (developed on 1.97.1) and the wasm target for `contract/`:
+  `rustup target add wasm32-unknown-unknown`
 
 ## Setup
 
@@ -26,13 +28,15 @@ pnpm run build
 ## Test and check
 
 ```sh
-pnpm test                 # builds first (pretest), then vitest: unit, property, integration and HTTP suites
-                          # (real on-disk SQLite, real Ed25519 keys, isolated signer child process)
+pnpm test                 # pretest builds TypeScript and the contract wasm, then vitest: unit, property,
+                          # integration, HTTP and compiled-wasm suites (real on-disk SQLite, real Ed25519 keys,
+                          # isolated signer child process, wasm under a SIMULATED NEAR host - not nearcore)
 pnpm run typecheck        # tsc project build + test typecheck
 pnpm run lint             # biome lint
 pnpm run format:check     # biome format (check only)
 pnpm run security         # repository secret scan (pnpm audit is run separately: `pnpm audit`)
-pnpm run contract:test    # cargo test for contract/ (canonical encoding cross-language vectors)
+pnpm run contract:build   # wasm32 release build from contract/ (--cfg near); prints the artifact sha256
+pnpm run contract:test    # cargo host tests: canonical vectors + escrow-core authority logic
 pnpm run check            # format + lint + typecheck + test + security
 ```
 
@@ -88,10 +92,27 @@ packages/authority  organizations, principals, keys, sessions, invitations, serv
 services/api        HTTP control API (M01 authority endpoints)                          (M01)
 services/worker     reserved for workers (M03/M05)
 apps/web            reserved for the UI (M08)
-contract/           Rust workspace: dockside-canonical crate; NEAR escrow contract in M02
+packages/near       NEAR JSON-RPC client, escrow contract client, signed payload builders  (M02)
+contract/           Rust workspace: dockside-canonical (DCE-1), dockside-escrow-core (authority
+                    logic, host-tested), dockside-escrow (near-sdk 5.30.1 wasm contract)         (M02)
+scripts/testnet-deploy  runbook + read-only verify script for YOUR testnet deployment (BLOCKED here)
 fixtures/           cross-language canonical vectors
 docs/adr            architecture decisions;  docs/evidence: retained run output
 ```
+
+## NEAR contract (local)
+
+```sh
+pnpm run contract:build
+# contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm
+```
+
+Entry points: `new`, `register_trade`, payable `fund`, `set_hold`, `resolve_hold`, `revoke_bound_key`,
+`request_refund`, `cosign_refund`, `revoke_refund`, `dispute_refund`, `authorize_refund`, `execute_refund`
+(+ private `on_refund_transfer`), `ft_on_transfer` / `nft_on_transfer` / `mt_on_transfer` (recorded for
+review only), and views `get_config`, `get_trade`, `get_ledger`, `get_refunds`, `get_holds`,
+`get_unexpected_assets`. Signed arguments are typed canonical JSON built by `@dockside/near`
+(see ADR-0004). Deploying to testnet is for you to do: [`scripts/testnet-deploy/README.md`](scripts/testnet-deploy/README.md).
 
 ## Safety boundaries
 
