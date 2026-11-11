@@ -235,6 +235,11 @@ describe("M07 integrated API: evidence to PAID over HTTP", () => {
       "RELEASE_EXECUTION_REQUESTED",
     ])
       expect(types.has(ev), ev).toBe(true);
+    // Default exports mask party, funder and destination account ids (SECURITY.md data policy).
+    expect(exported.destinations).toBe("MASKED");
+    for (const acct of ["harbor-supplier.testnet", "acme-buyer.testnet", "treasury-acme.testnet"])
+      expect(res.text.includes(acct), acct).toBe(false);
+    expect(res.text).toContain(c.escrow.contractId);
     expect(exported.exclusions.map((x: any) => x.item)).toEqual(
       expect.arrayContaining([
         "quotes and funded payout authorizations",
@@ -284,6 +289,17 @@ describe("M07 integrated API: evidence to PAID over HTTP", () => {
     expect(hidden.status).toBe(404);
     expect(hidden.text).toBe(missing.text);
     expect((await a.http(null, "GET", `/v1/trades/${t}/audit-export`)).status).toBe(401);
+    const full = await a.http(supplierAdmin, "GET", `/v1/trades/${t}/audit-export?destinations=full`);
+    expect(full.status).toBe(200);
+    expect(full.json.destinations).toBe("FULL");
+    expect(full.text).toContain("harbor-supplier.testnet");
+    expect(verifyAuditExport(full.json).ok).toBe(true);
+    expect(
+      (await a.http(a.auditor, "GET", `/v1/trades/${t}/audit-export?destinations=full`)).json.error.code,
+    ).toBe("FORBIDDEN");
+    expect(
+      (await a.http(a.auditor, "GET", `/v1/trades/${t}/audit-export?destinations=all`)).json.error.code,
+    ).toBe("VALIDATION_FAILED");
     const tl = await a.http(supplierAdmin, "GET", `/v1/trades/${t}/timeline`);
     expect(tl.json.events.map((e: any) => e.eventType)).toContain("AUDIT_EXPORTED");
   });

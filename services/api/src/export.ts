@@ -55,6 +55,7 @@ export interface AuditExport {
     auditChain: { ok: boolean; count?: number; brokenAtSeq?: number };
     auditHeadHash: string | null;
   };
+  readonly destinations: "MASKED" | "FULL";
   readonly exclusions: readonly { item: string; reason: string }[];
   readonly checksum: string;
 }
@@ -158,10 +159,11 @@ export function buildAuditExport(
   m: TradeModules,
   terms: TradeTerms,
   ctx: AuthContext,
-  opts: { observedChain: unknown },
+  opts: { observedChain: unknown; destinations?: DestinationMode },
 ): AuditExport {
   const db = d.db;
   const t = terms.tradeId;
+  const mode: DestinationMode = opts.destinations ?? "MASKED";
   const all = (sql: string, ...p: (string | number)[]) => db.all(sql, ...p).map(clean);
   const inList = (table: string, col: string, ids: string[], order = "rowid") =>
     ids.length
@@ -330,11 +332,69 @@ export function buildAuditExport(
       auditChain: new AuditLog(d.db, d.clock, d.ids).verifyChain(),
       auditHeadHash: head?.event_hash ?? null,
     },
-    exclusions: EXPORT_EXCLUSIONS,
+    destinations: mode,
+    exclusions:
+      mode === "MASKED"
+        ? [
+            ...EXPORT_EXCLUSIONS,
+            {
+              item: "full NEAR account ids of parties, funders and the payout destination",
+              reason:
+                "default export; replaced by acct_<sha256 prefix>, request destinations=full as a party",
+            },
+          ]
+        : EXPORT_EXCLUSIONS,
   };
   // Normalise through JSON so the checksum is computed over exactly what the client receives.
-  const normalised = JSON.parse(
+  let normalised = JSON.parse(
     JSON.stringify(body, (_k, v) => (typeof v === "bigint" ? v.toString(10) : v)),
   ) as Omit<AuditExport, "checksum">;
+  if (mode === "MASKED") {
+    const accounts = new Set<string>();
+    for (const r of revisions) {
+      const tj = r["terms"] as Record<string, Record<string, unknown>> | undefined;
+      for (const v of [
+        tj?.["buyer"]?.["accountId"],
+        tj?.["supplier"]?.["accountId"],
+        tj?.["payout"]?.["destination"],
+      ])
+        if (typeof v === "string") accounts.add(v);
+    }
+    for (const o of operations) if (typeof o["recipient"] === "string") accounts.add(o["recipient"]);
+    const ledger = (opts.observedChain as { ledger?: { funders?: Record<string, unknown> } } | null)?.ledger;
+    for (const f of Object.keys(ledger?.funders ?? {})) accounts.add(f);
+    for (const i of releaseIntents)
+      for (const sl of (i["slices"] as { funder?: string }[] | undefined) ?? [])
+        if (typeof sl.funder === "string") accounts.add(sl.funder);
+    accounts.delete(terms.escrowContractId);
+    normalised = maskAccounts(normalised, [...accounts]) as Omit<AuditExport, "checksum">;
+  }
   return { ...normalised, checksum: exportChecksum(normalised) };
+}
+
+export type DestinationMode = "MASKED" | "FULL";
+
+export function maskAccount(account: string): string {
+  return `acct_${digestText(account).slice(0, 24)}`;
+}
+
+/** Replace every occurrence of the given account ids (values, keys and inside strings). */
+function maskAccounts(v: unknown, accounts: string[]): unknown {
+  const sorted = [...accounts].sort((a, b) => b.length - a.length);
+  const masks = sorted.map((a) => [a, maskAccount(a)] as const);
+  const str = (x: string) => {
+    let out = x;
+    for (const [a, m] of masks) if (out.includes(a)) out = out.split(a).join(m);
+    return out;
+  };
+  const walk = (x: unknown): unknown => {
+    if (typeof x === "string") return str(x);
+    if (Array.isArray(x)) return x.map(walk);
+    if (x && typeof x === "object")
+      return Object.fromEntries(
+        Object.entries(x as Record<string, unknown>).map(([k, y]) => [str(k), walk(y)]),
+      );
+    return x;
+  };
+  return walk(v);
 }

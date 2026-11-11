@@ -950,11 +950,23 @@ export function tradeRoutes(d: AppDeps): Route[] {
     }),
 
     /* ------------------------------ audit export ------------------------------ */
-    r("GET", "/v1/trades/:id/audit-export", true, undefined, async ({ ctx, params }) => {
+    r("GET", "/v1/trades/:id/audit-export", true, undefined, async ({ ctx, params, query }) => {
       const c = must(ctx);
       act(c, "EXPORT_AUDIT");
       const m = mods(d);
       const t = loadTrade(m, c, params["id"] as string);
+      const want = query.get("destinations") ?? "masked";
+      if (want !== "masked" && want !== "full")
+        fail("VALIDATION_FAILED", "destinations must be masked or full");
+      // Full account ids only for the trade's own parties and their organisations' security admins.
+      const rel = relationsOf(c, t);
+      const party =
+        rel.includes("BUYER") ||
+        rel.includes("SUPPLIER") ||
+        (c.capabilities.includes("ORG_SECURITY_ADMIN") &&
+          (rel.includes("BUYER_ORG") || rel.includes("SUPPLIER_ORG")));
+      if (want === "full" && !party)
+        fail("FORBIDDEN", "full destinations are limited to the trade's parties");
       const observedChain = {
         source: "escrow-contract-view",
         contractId: t.escrowContractId,
@@ -965,7 +977,10 @@ export function tradeRoutes(d: AppDeps): Route[] {
         evidence: await m.escrow.getEvidence(t.tradeId),
         release: await m.escrow.getRelease(t.tradeId),
       };
-      const out = buildAuditExport(d, m, t, c, { observedChain });
+      const out = buildAuditExport(d, m, t, c, {
+        observedChain,
+        destinations: want === "full" ? "FULL" : "MASKED",
+      });
       log(c, "AUDIT_EXPORTED", "trade", t.tradeId);
       return out;
     }),
