@@ -18,7 +18,11 @@ const FILTERS: ReadonlyArray<{ id: string; label: string; match: (t: TradeListIt
   { id: "all", label: "All trades", match: () => true },
   { id: "hold", label: "Hold blocking release", match: (t) => t.holdsBlocking > 0 },
   { id: "release", label: "Release intent live", match: (t) => t.liveIntentState !== null },
-  { id: "unknown", label: "Payout locked or unknown", match: (t) => LOCKED.includes(t.liveIntentState ?? "") },
+  {
+    id: "unknown",
+    label: "Payout locked or unknown",
+    match: (t) => LOCKED.includes(t.liveIntentState ?? ""),
+  },
   { id: "frozen", label: "Frozen by an incident", match: (t) => t.frozen },
   { id: "mine-inspect", label: "I am the named inspector", match: (t) => t.relations.includes("INSPECTOR") },
 ];
@@ -59,14 +63,27 @@ function TradeTable({ trades, receivedAt }: { trades: TradeListItem[]; receivedA
               </td>
               <td>{t.milestone.description}</td>
               <td>
-                <MoneyValue value={{ amount: t.amountYocto, asset: "NEAR", decimals: 24, network: t.network as Network }} />
+                <MoneyValue
+                  value={{
+                    amount: t.amountYocto,
+                    asset: "NEAR",
+                    decimals: 24,
+                    network: t.network as Network,
+                  }}
+                />
               </td>
               <td className="tabular">r{t.revision}</td>
               <td>{t.relations.join(", ")}</td>
               <td>{t.holdsBlocking > 0 ? `${t.holdsBlocking} blocking release` : "None blocking"}</td>
               <td>
                 {t.liveIntentState ? (
-                  <StatusBadge dimension="releaseIntentState" value={t.liveIntentState} source="release journal" observedAt={receivedAt} compact />
+                  <StatusBadge
+                    dimension="releaseIntentState"
+                    value={t.liveIntentState}
+                    source="release journal"
+                    observedAt={receivedAt}
+                    compact
+                  />
                 ) : (
                   "None live"
                 )}
@@ -101,8 +118,9 @@ export function TradesScreen() {
       <EmptyState title="No trades yet">
         <p>
           A trade exists only after a buyer and supplier sign the same canonical agreement. Start with{" "}
-          <Link href="/trades/new">Create trade</Link> or <Link href="/trades/countersign">Countersign a proposal</Link>;
-          nothing is shown here until the API records one.
+          <Link href="/trades/new">Create trade</Link> or{" "}
+          <Link href="/trades/countersign">Countersign a proposal</Link>; nothing is shown here until the API
+          records one.
         </p>
       </EmptyState>
     );
@@ -124,7 +142,9 @@ export function TradesScreen() {
       <>
         <search className="filters" aria-label="Filter trades">
           <Field id="trade-search" label="Search" help="Trade ID, milestone or destination account.">
-            {(aria) => <input {...aria} type="search" value={query} onChange={(e) => setQuery(e.target.value)} />}
+            {(aria) => (
+              <input {...aria} type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
+            )}
           </Field>
           <Field id="trade-filter" label="Show">
             {(aria) => (

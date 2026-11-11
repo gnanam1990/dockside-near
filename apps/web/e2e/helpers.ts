@@ -47,11 +47,15 @@ export async function expectNoBodyOverflow(page: Page, label: string): Promise<v
       for (let p = n.parentElement; p && p !== document.body; p = p.parentElement)
         if (getComputedStyle(p).overflowX !== "visible") clipped = true;
       if (right > client + 0.5 && !clipped)
-        culprits.push(`text "${(n.textContent ?? "").slice(0, 40)}" in ${n.parentElement?.tagName.toLowerCase()} ${Math.round(right)}px`);
+        culprits.push(
+          `text "${(n.textContent ?? "").slice(0, 40)}" in ${n.parentElement?.tagName.toLowerCase()} ${Math.round(right)}px`,
+        );
     }
     return { scroll: document.documentElement.scrollWidth, client, culprits };
   });
-  expect(o.scroll, `horizontal body overflow on ${label}: ${o.culprits.join(", ")}`).toBeLessThanOrEqual(o.client);
+  expect(o.scroll, `horizontal body overflow on ${label}: ${o.culprits.join(", ")}`).toBeLessThanOrEqual(
+    o.client,
+  );
 }
 
 export async function waitForScreen(page: Page): Promise<void> {

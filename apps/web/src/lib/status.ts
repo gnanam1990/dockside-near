@@ -68,7 +68,10 @@ export type Dimension =
 const LOCK = "Value stays reserved. No retry, exit or terminal override is available.";
 
 export const VOCABULARY: Record<
-  Exclude<Dimension, "releaseIntentState" | "operationState" | "attestationStatus" | "inspectionDecision" | "slotStatus">,
+  Exclude<
+    Dimension,
+    "releaseIntentState" | "operationState" | "attestationStatus" | "inspectionDecision" | "slotStatus"
+  >,
   Record<string, StatusMeaning>
 > = {
   payoutState: {
@@ -426,7 +429,8 @@ const RELEASE_INTENT: Record<string, StatusMeaning> = {
     label: "Intent prepared, not signed",
     tone: "neutral",
     icon: "pending",
-    sentence: "A release intent payload exists but no buyer signature has reached the contract; nothing is reserved.",
+    sentence:
+      "A release intent payload exists but no buyer signature has reached the contract; nothing is reserved.",
   },
   EXPIRED_UNSIGNED: {
     label: "Prepared intent expired unsigned",
@@ -480,9 +484,17 @@ const OPERATION: Record<string, StatusMeaning> = {
     locked: true,
   },
   ...Object.fromEntries(
-    ["SUBMITTING", "PROCESSING", "UNKNOWN", "REVIEW", "RECONCILING", "ADJUDICATION", "PAID", "REFUNDED", "FAILED"].map(
-      (k) => [k, req(k)],
-    ),
+    [
+      "SUBMITTING",
+      "PROCESSING",
+      "UNKNOWN",
+      "REVIEW",
+      "RECONCILING",
+      "ADJUDICATION",
+      "PAID",
+      "REFUNDED",
+      "FAILED",
+    ].map((k) => [k, req(k)]),
   ),
 };
 

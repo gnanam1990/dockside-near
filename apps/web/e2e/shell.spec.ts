@@ -18,6 +18,7 @@ const ROUTES = [
   "/sign-in",
   "/trades",
   "/trades/new",
+  "/trades/countersign",
   `/trades/${TRADE_ID}/overview`,
   `/trades/${TRADE_ID}/evidence`,
   "/inspections",
@@ -79,13 +80,13 @@ test.describe("signed in against the real API", () => {
     await expect(page.getByTestId("audit-count")).toContainText("hidden by filters");
 
     await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Trades" }).click();
-    const unavailable = page.getByTestId("state-unavailable");
-    await expect(unavailable).toBeVisible();
-    await expect(unavailable).toContainText("GET /v1/trades");
+    // Trade modules are configured: an administrator with no trade sees the empty state, no rows.
+    await expect(page.getByTestId("state-empty")).toContainText("No trades yet");
     await expect(page.locator("table")).toHaveCount(0);
 
+    // An unknown trade id gets the same NOT_FOUND as a trade the session is not related to.
     await page.goto(`/trades/${TRADE_ID}/payout`);
-    await expect(page.getByTestId("state-unavailable")).toContainText(`GET /v1/trades/${TRADE_ID}`);
+    await expect(page.getByTestId("state-error")).toContainText("NOT_FOUND: trade not found");
     await page.goto("/payouts");
     await expect(page.getByText("Funded payouts are disabled by server configuration")).toBeVisible();
     await expect(page.getByText("NEAR testnet").first()).toBeVisible();
@@ -155,32 +156,34 @@ test.describe("signed in against the real API", () => {
     await page.getByRole("button", { name: "Continue" }).click();
     const summary = page.locator(".error-summary");
     await expect(summary).toBeFocused();
-    await expect(summary.getByRole("link")).toHaveCount(3);
+    await expect(summary.getByRole("link")).toHaveCount(1);
     await summary.getByRole("link").first().click();
-    await expect(page.getByLabel("Supplier organization ID")).toBeFocused();
+    await expect(page.getByLabel("Supplier signer principal ID")).toBeFocused();
 
     const id = (p: string, n: string) => `${p}_${n.repeat(32)}`;
-    await page.getByLabel("Supplier organization ID").fill(id("org", "1"));
+    await page.getByLabel("Supplier signer principal ID").fill("not-an-id");
+    await page.getByLabel("Supplier signer principal ID").blur();
+    await expect(page.locator("#trade-supplierSignerPrincipalId-error")).toContainText("must be a prefix_");
     await page.getByLabel("Supplier signer principal ID").fill(id("prn", "2"));
-    await page.getByLabel("Buyer approver principal ID").fill("not-an-id");
-    await page.getByLabel("Buyer approver principal ID").blur();
-    await expect(page.locator("#trade-buyerApproverPrincipalId-error")).toContainText("must be a prefix_");
-    await page.getByLabel("Buyer approver principal ID").fill(id("prn", "3"));
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Amount (native testnet NEAR)").fill("12.5");
-    await page.getByLabel("Milestone").fill("Container DS-1 delivered and inspected at port");
+    await page.getByLabel("Milestone reference").fill("ds-1");
+    await page
+      .getByLabel("Milestone", { exact: true })
+      .fill("Container DS-1 delivered and inspected at port");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Supplier NEAR testnet account").fill("supplier-payouts.testnet");
     await expect(page.getByText("Acceptance binds payment to this destination")).toBeVisible();
+    await page.getByLabel("Buyer funding NEAR testnet account").fill("draft-buyer.testnet");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Named inspector principal ID").fill(id("prn", "4"));
-    await page.getByLabel("ManifestAttestor enrollment ID").fill(id("sen", "5"));
     await page.getByLabel("Risk/policy resolver principal ID").fill(id("prn", "6"));
-    await page.getByLabel("Evidence policy ID").fill(id("evp", "7"));
+    await page.getByLabel("Evidence policy ID").fill("commercial-docs");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Request canonical agreement" }).click();
+    // The administrator holds no Buyer Approver capability: the server refuses, inputs stay.
     await expect(summary).toBeFocused();
-    await expect(summary).toContainText("not available in this backend build");
+    await expect(summary).toContainText("Server refused the draft (FORBIDDEN)");
     await expect(page.locator(".form-layout")).toContainText("supplier-payouts.testnet");
     await expect(page.locator(".form-layout")).toContainText("12.5");
   });

@@ -48,9 +48,12 @@ export function Section<T>({
   children: (data: T, receivedAt: number) => ReactNode;
 }) {
   if (!outcome) return <LoadingState what={what} />;
-  if (!outcome.ok) return <FailureState failure={outcome.error} what={what} onRetry={reload} headingLevel={3} />;
+  if (!outcome.ok)
+    return <FailureState failure={outcome.error} what={what} onRetry={reload} headingLevel={3} />;
   return (
-    <div aria-busy={state === "refreshing" ? "true" : "false"}>{children(outcome.data, outcome.receivedAt)}</div>
+    <div aria-busy={state === "refreshing" ? "true" : "false"}>
+      {children(outcome.data, outcome.receivedAt)}
+    </div>
   );
 }
 
@@ -65,10 +68,19 @@ export const BLOCKERS: Record<string, { readonly text: string; readonly tab: str
     text: "The contract's accepted manifest or inspection is not the current one.",
     tab: "evidence",
   },
-  INSPECTION_NOT_PASS: { text: "The bound inspector has not signed PASS over the current manifest.", tab: "evidence" },
+  INSPECTION_NOT_PASS: {
+    text: "The bound inspector has not signed PASS over the current manifest.",
+    tab: "evidence",
+  },
   HOLD_ACTIVE: { text: "A HoldRecord is ACTIVE or EXPIRED_UNRESOLVED.", tab: "evidence" },
-  STALE_HOLDS: { text: "The holds view changed since approval; a fresh approval is required.", tab: "release" },
-  APPROVAL_MISSING: { text: "The bound buyer approver has not approved the live release intent.", tab: "release" },
+  STALE_HOLDS: {
+    text: "The holds view changed since approval; a fresh approval is required.",
+    tab: "release",
+  },
+  APPROVAL_MISSING: {
+    text: "The bound buyer approver has not approved the live release intent.",
+    tab: "release",
+  },
   APPROVAL_STALE: { text: "The buyer approval no longer matches current evidence or holds.", tab: "release" },
   APPROVAL_EXPIRED: { text: "The buyer approval expired.", tab: "release" },
   NO_RELEASE_INTENT: { text: "No release intent holds the value lock yet.", tab: "release" },
@@ -94,7 +106,8 @@ export function BlockerList({ tradeId, blockers }: { tradeId: string; blockers: 
         const m = BLOCKERS[b];
         return (
           <li key={b} data-blocker={b}>
-            <code>{b}</code> {m ? m.text : "Condition reported by the backend (no description in this client)."}{" "}
+            <code>{b}</code>{" "}
+            {m ? m.text : "Condition reported by the backend (no description in this client)."}{" "}
             <Link href={`/trades/${tradeId}/${m?.tab ?? "overview"}`}>See evidence</Link>
           </li>
         );

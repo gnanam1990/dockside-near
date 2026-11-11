@@ -13,7 +13,11 @@ interface InspectionRow {
   readonly tradeId: string;
   readonly assignedToViewer: boolean;
   readonly currentAttestation: { readonly digest: string; readonly manifestDigest: string } | null;
-  readonly inspection: { readonly decision: string; readonly digest: string; readonly expiresAt: number } | null;
+  readonly inspection: {
+    readonly decision: string;
+    readonly digest: string;
+    readonly expiresAt: number;
+  } | null;
 }
 
 interface PayoutRow {
@@ -50,7 +54,10 @@ export function InspectionsScreen() {
     body = (
       <TableScroller label="Inspections">
         <table data-testid="inspections-table">
-          <caption>Trades you can see, with their current attestation and inspector decision ({formatUtc(outcome.receivedAt)})</caption>
+          <caption>
+            Trades you can see, with their current attestation and inspector decision (
+            {formatUtc(outcome.receivedAt)})
+          </caption>
           <thead>
             <tr>
               <th scope="col">Trade</th>
@@ -66,10 +73,18 @@ export function InspectionsScreen() {
                   <Link href={`/trades/${r.tradeId}/evidence`}>{r.tradeId}</Link>
                 </td>
                 <td>{r.assignedToViewer ? "Yes: you are the named inspector" : "No"}</td>
-                <td className="mono wrap">{r.currentAttestation ? r.currentAttestation.manifestDigest : "No current attestation"}</td>
+                <td className="mono wrap">
+                  {r.currentAttestation ? r.currentAttestation.manifestDigest : "No current attestation"}
+                </td>
                 <td>
                   {r.inspection ? (
-                    <StatusBadge dimension="inspectionDecision" value={r.inspection.decision} source="evidence service" observedAt={outcome.receivedAt} compact />
+                    <StatusBadge
+                      dimension="inspectionDecision"
+                      value={r.inspection.decision}
+                      source="evidence service"
+                      observedAt={outcome.receivedAt}
+                      compact
+                    />
                   ) : (
                     "No decision"
                   )}
@@ -166,7 +181,13 @@ export function PayoutsScreen() {
                 </td>
                 <td className="mono">{r.operationId}</td>
                 <td>
-                  <StatusBadge dimension="operationState" value={r.state} source="economic-operation journal" observedAt={outcome.receivedAt} compact />
+                  <StatusBadge
+                    dimension="operationState"
+                    value={r.state}
+                    source="economic-operation journal"
+                    observedAt={outcome.receivedAt}
+                    compact
+                  />
                 </td>
                 <td>
                   <MoneyValue value={{ amount: r.amountYocto, asset: "NEAR", decimals: 24, network: net }} />

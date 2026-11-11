@@ -56,11 +56,26 @@ function Dimensions() {
       <h3 id="dims-title">State, one dimension at a time</h3>
       <IdentityList
         items={[
-          ["Evidence", <StatusBadge key="e" dimension="evidenceState" value={p.evidence.status} source="evidence service" observedAt={at} />],
+          [
+            "Evidence",
+            <StatusBadge
+              key="e"
+              dimension="evidenceState"
+              value={p.evidence.status}
+              source="evidence service"
+              observedAt={at}
+            />,
+          ],
           [
             "Attestation",
             p.attestation ? (
-              <StatusBadge key="a" dimension="attestationStatus" value={p.attestation.status} source="evidence service" observedAt={at} />
+              <StatusBadge
+                key="a"
+                dimension="attestationStatus"
+                value={p.attestation.status}
+                source="evidence service"
+                observedAt={at}
+              />
             ) : (
               "No current attestation"
             ),
@@ -68,7 +83,13 @@ function Dimensions() {
           [
             "Inspection",
             p.inspection ? (
-              <StatusBadge key="i" dimension="inspectionDecision" value={p.inspection.decision} source="evidence service" observedAt={at} />
+              <StatusBadge
+                key="i"
+                dimension="inspectionDecision"
+                value={p.inspection.decision}
+                source="evidence service"
+                observedAt={at}
+              />
             ) : (
               "No inspector decision"
             ),
@@ -78,13 +99,26 @@ function Dimensions() {
             p.holds.items.length === 0
               ? "No HoldRecord"
               : p.holds.items.map((h) => (
-                  <StatusBadge key={h.holdId} dimension="holdState" value={h.status} source="hold journal" observedAt={at} compact />
+                  <StatusBadge
+                    key={h.holdId}
+                    dimension="holdState"
+                    value={h.status}
+                    source="hold journal"
+                    observedAt={at}
+                    compact
+                  />
                 )),
           ],
           [
             "Release intent",
             live ? (
-              <StatusBadge key="r" dimension="releaseIntentState" value={live.state} source="release journal (contract-synced)" observedAt={at} />
+              <StatusBadge
+                key="r"
+                dimension="releaseIntentState"
+                value={live.state}
+                source="release journal (contract-synced)"
+                observedAt={at}
+              />
             ) : (
               "No live release intent"
             ),
@@ -94,11 +128,26 @@ function Dimensions() {
             p.operations.length === 0
               ? "None queued"
               : p.operations.map((o) => (
-                  <StatusBadge key={o.operationId} dimension="operationState" value={o.state} source="economic-operation journal" observedAt={at} compact />
+                  <StatusBadge
+                    key={o.operationId}
+                    dimension="operationState"
+                    value={o.state}
+                    source="economic-operation journal"
+                    observedAt={at}
+                    compact
+                  />
                 )),
           ],
-          ["Dry compatibility", "Not reported by this API build (M06 adapter BLOCKED). No funds moved; not used for testnet release."],
-          ["Funded payouts", p.fundedPayouts === "BLOCKED" ? "BLOCKED by server configuration" : `Unrecognized gate "${p.fundedPayouts}"`],
+          [
+            "Dry compatibility",
+            "Not reported by this API build (M06 adapter BLOCKED). No funds moved; not used for testnet release.",
+          ],
+          [
+            "Funded payouts",
+            p.fundedPayouts === "BLOCKED"
+              ? "BLOCKED by server configuration"
+              : `Unrecognized gate "${p.fundedPayouts}"`,
+          ],
           ["Trade frozen", p.frozen ? "Yes: an incident froze this trade" : "No"],
         ]}
       />
@@ -123,21 +172,30 @@ function Funding() {
                 items={[
                   ["Required", <Near key="q" yocto={String(l["required"] ?? "0")} network={tr.network} />],
                   ["Committed", <Near key="c" yocto={String(l["committed"] ?? "0")} network={tr.network} />],
-                  ["Fully funded", l["fullyFunded"] === true ? "Yes (contract ledger)" : "No (contract ledger)"],
+                  [
+                    "Fully funded",
+                    l["fullyFunded"] === true ? "Yes (contract ledger)" : "No (contract ledger)",
+                  ],
                   ["Available", <Near key="a" yocto={totals["available"] ?? "0"} network={tr.network} />],
                   ["Reserved", <Near key="r" yocto={totals["reserved"] ?? "0"} network={tr.network} />],
                   ["Released", <Near key="l" yocto={totals["released"] ?? "0"} network={tr.network} />],
                   ["Quarantined", <Near key="x" yocto={totals["quarantined"] ?? "0"} network={tr.network} />],
-                  ["Conservation", l["conservation"] === true ? "Holds (contract recomputation)" : "VIOLATED — see incidents"],
+                  [
+                    "Conservation",
+                    l["conservation"] === true
+                      ? "Holds (contract recomputation)"
+                      : "VIOLATED — see incidents",
+                  ],
                   ["Source", `${r.source}, ${formatUtc(r.observedAt)}`],
                 ]}
               />
               {l["fullyFunded"] !== true ? (
                 <Callout tone="neutral" icon="pending" title="How funding happens" headingLevel={3}>
                   <p>
-                    A funder sends a <code>fund</code> call with an attached deposit to <code>{tr.escrowContractId}</code>{" "}
-                    on {tr.network} from its own NEAR account. This build has no wallet connector (BLOCKED); the
-                    contract records each deposit against the original funder.
+                    A funder sends a <code>fund</code> call with an attached deposit to{" "}
+                    <code>{tr.escrowContractId}</code> on {tr.network} from its own NEAR account. This build
+                    has no wallet connector (BLOCKED); the contract records each deposit against the original
+                    funder.
                   </p>
                 </Callout>
               ) : null}
@@ -159,10 +217,30 @@ function Participants() {
       <h3 id="part-title">Participant authority</h3>
       <IdentityList
         items={[
-          ["Buyer approver", <code key="b" className="wrap">{who(tr.buyer.principalId)}</code>],
-          ["Supplier signer", <code key="s" className="wrap">{who(tr.supplier.principalId)}</code>],
-          ["Named inspector", <code key="i" className="wrap">{who(tr.inspector.principalId)}</code>],
-          ["Risk/policy resolver", <code key="r" className="wrap">{who(tr.riskResolver.principalId)}</code>],
+          [
+            "Buyer approver",
+            <code key="b" className="wrap">
+              {who(tr.buyer.principalId)}
+            </code>,
+          ],
+          [
+            "Supplier signer",
+            <code key="s" className="wrap">
+              {who(tr.supplier.principalId)}
+            </code>,
+          ],
+          [
+            "Named inspector",
+            <code key="i" className="wrap">
+              {who(tr.inspector.principalId)}
+            </code>,
+          ],
+          [
+            "Risk/policy resolver",
+            <code key="r" className="wrap">
+              {who(tr.riskResolver.principalId)}
+            </code>,
+          ],
           ["Your relation", t.p.viewer.relations.map((r) => RELATION_LABEL[r]).join(", ")],
         ]}
       />
@@ -198,15 +276,26 @@ function AgreementTab() {
         <IdentityList
           items={[
             ["Trade", <code key="t">{tr.tradeId}</code>],
-            ["Terms digest", <code key="d" className="wrap">{tr.termsDigest}</code>],
+            [
+              "Terms digest",
+              <code key="d" className="wrap">
+                {tr.termsDigest}
+              </code>,
+            ],
             ["Network", tr.network],
             ["Escrow contract", <code key="c">{tr.escrowContractId}</code>],
             ["Asset", `${tr.asset.kind} on ${tr.asset.network}`],
             ["Amount", <Near key="a" yocto={tr.amountYocto} network={tr.network} />],
             ["Milestone", `${tr.milestone.id}: ${tr.milestone.description}`],
-            ["Evidence policy", `${tr.evidencePolicy.id} r${tr.evidencePolicy.revision} (${tr.evidencePolicy.digest.slice(0, 16)}…)`],
+            [
+              "Evidence policy",
+              `${tr.evidencePolicy.id} r${tr.evidencePolicy.revision} (${tr.evidencePolicy.digest.slice(0, 16)}…)`,
+            ],
             ["Expires", formatUtc(tr.expiresAt)],
-            ["Signatures", "Buyer approver and supplier signer over this digest, verified by the contract at registration"],
+            [
+              "Signatures",
+              "Buyer approver and supplier signer over this digest, verified by the contract at registration",
+            ],
           ]}
         />
         <h4>Payout destination</h4>
@@ -241,7 +330,8 @@ function AgreementTab() {
               {r.contract.pendingDestinationChange
                 ? "A destination change is pending on the contract."
                 : "No destination change is pending. A change is a successor revision that both parties sign; there is no quick edit."}{" "}
-              Destination revision routes are not served by this API build, so <strong>Start destination revision</strong> is not offered.
+              Destination revision routes are not served by this API build, so{" "}
+              <strong>Start destination revision</strong> is not offered.
             </p>
           </section>
         )}
@@ -252,7 +342,15 @@ function AgreementTab() {
 
 /* ---------------------------------- payout ---------------------------------- */
 
-const LOCKED_OPS = ["SUBMITTING", "EXECUTING", "PROCESSING", "UNKNOWN", "REVIEW", "RECONCILING", "ADJUDICATION"];
+const LOCKED_OPS = [
+  "SUBMITTING",
+  "EXECUTING",
+  "PROCESSING",
+  "UNKNOWN",
+  "REVIEW",
+  "RECONCILING",
+  "ADJUDICATION",
+];
 
 function OperationDetail({ operationId }: { operationId: string }) {
   const t = useTrade();
@@ -264,21 +362,42 @@ function OperationDetail({ operationId }: { operationId: string }) {
       {(o: OperationView) => {
         const locked = LOCKED_OPS.includes(o.state);
         return (
-          <article className="operation" data-testid="operation" data-state={o.state} aria-labelledby={`op-${o.operationId}`}>
+          <article
+            className="operation"
+            data-testid="operation"
+            data-state={o.state}
+            aria-labelledby={`op-${o.operationId}`}
+          >
             <h4 id={`op-${o.operationId}`}>
               Operation <code>{o.operationId}</code>
             </h4>
-            <StatusBadge dimension="operationState" value={o.state} source="economic-operation journal" observedAt={t.receivedAt} />
+            <StatusBadge
+              dimension="operationState"
+              value={o.state}
+              source="economic-operation journal"
+              observedAt={t.receivedAt}
+            />
             <IdentityList
               items={[
                 ["Kind", o.kind],
                 ["Value lock", o.lockHeld ? "Held: the reservation stays in place" : "Released"],
                 ["Submissions", String(o.submitCount)],
-                ["Source transaction", o.txHash ? <code key="h" className="wrap">{o.txHash}</code> : "Not broadcast"],
+                [
+                  "Source transaction",
+                  o.txHash ? (
+                    <code key="h" className="wrap">
+                      {o.txHash}
+                    </code>
+                  ) : (
+                    "Not broadcast"
+                  ),
+                ],
                 [
                   "Disposition",
                   o.disposition ? (
-                    <code key="d" className="wrap small">{JSON.stringify(o.disposition)}</code>
+                    <code key="d" className="wrap small">
+                      {JSON.stringify(o.disposition)}
+                    </code>
                   ) : (
                     "None yet (no terminal evidence)"
                   ),
@@ -286,10 +405,17 @@ function OperationDetail({ operationId }: { operationId: string }) {
               ]}
             />
             {locked ? (
-              <Callout tone="unknown" icon="locked" title="Locked until reconciled" headingLevel={3} testId="op-locked">
+              <Callout
+                tone="unknown"
+                icon="locked"
+                title="Locked until reconciled"
+                headingLevel={3}
+                testId="op-locked"
+              >
                 <p>
-                  Prohibited while {o.state}: retrying payment, cancelling, abandoning, refunding and any terminal override.
-                  The reconciler reads the contract, the original transaction and its receipts next.
+                  Prohibited while {o.state}: retrying payment, cancelling, abandoning, refunding and any
+                  terminal override. The reconciler reads the contract, the original transaction and its
+                  receipts next.
                 </p>
                 {isRisk ? (
                   <div className="btn-row">
@@ -298,9 +424,16 @@ function OperationDetail({ operationId }: { operationId: string }) {
                       className="btn"
                       onClick={() =>
                         void t.api
-                          .call<{ state: string }>("requestReconciliation", { params: { id: o.operationId }, body: {} })
+                          .call<{ state: string }>("requestReconciliation", {
+                            params: { id: o.operationId },
+                            body: {},
+                          })
                           .then((r) => {
-                            setMsg(r.ok ? `Reconciliation requested; operation is ${r.data.state}.` : "Request refused.");
+                            setMsg(
+                              r.ok
+                                ? `Reconciliation requested; operation is ${r.data.state}.`
+                                : "Request refused.",
+                            );
                             t.refresh();
                           })
                       }
@@ -317,7 +450,11 @@ function OperationDetail({ operationId }: { operationId: string }) {
                             body: { note: "Opened from the payout workspace" },
                           })
                           .then((r) => {
-                            setMsg(r.ok ? `Adjudication opened; operation is ${r.data.state}.` : "Request refused.");
+                            setMsg(
+                              r.ok
+                                ? `Adjudication opened; operation is ${r.data.state}.`
+                                : "Request refused.",
+                            );
                             t.refresh();
                           })
                       }
@@ -326,7 +463,9 @@ function OperationDetail({ operationId }: { operationId: string }) {
                     </button>
                   </div>
                 ) : (
-                  <p className="small">Only the trade's risk/policy resolver may request reconciliation or adjudication.</p>
+                  <p className="small">
+                    Only the trade's risk/policy resolver may request reconciliation or adjudication.
+                  </p>
                 )}
                 <p role="status">{msg}</p>
               </Callout>
@@ -357,7 +496,13 @@ function OperationDetail({ operationId }: { operationId: string }) {
               </table>
             </TableScroller>
             {o.incidents.length ? (
-              <Callout tone="negative" icon="blocked" title="Frozen-value incident" headingLevel={3} role="alert">
+              <Callout
+                tone="negative"
+                icon="blocked"
+                title="Frozen-value incident"
+                headingLevel={3}
+                role="alert"
+              >
                 <p>{o.incidents.length} incident(s) froze this trade; value is held until risk review.</p>
               </Callout>
             ) : null}
@@ -382,7 +527,12 @@ function PayoutTab() {
                 ["Profile", p.profile],
                 ["Asset", "Native NEAR on NEAR testnet"],
                 ["Contract", <code key="c">{t.p.trade.escrowContractId}</code>],
-                ["Recipient (bound supplier account)", <code key="r" className="wrap">{p.destination}</code>],
+                [
+                  "Recipient (bound supplier account)",
+                  <code key="r" className="wrap">
+                    {p.destination}
+                  </code>,
+                ],
                 ["Amount", <Near key="a" yocto={p.amountYocto} network={t.p.trade.network} />],
                 ["Release intent", t.p.release.liveIntent?.releaseIntentId ?? "None live"],
               ]}
@@ -391,14 +541,15 @@ function PayoutTab() {
           <section aria-labelledby="dry-title" data-testid="payout-dry">
             <h3 id="dry-title">2. Optional dry compatibility</h3>
             <p>
-              Not reported by this API build: the 1Click adapter is BLOCKED (no pinned official client or credential).
-              No funds moved; not used for testnet release.
+              Not reported by this API build: the 1Click adapter is BLOCKED (no pinned official client or
+              credential). No funds moved; not used for testnet release.
             </p>
           </section>
           <section aria-labelledby="funded-title" data-testid="payout-funded">
             <h3 id="funded-title">3. Funded authorization</h3>
             <p>
-              {p.fundedPayout.status}: {p.fundedPayout.reason}. No funded controls are rendered; there is no demo toggle.
+              {p.fundedPayout.status}: {p.fundedPayout.reason}. No funded controls are rendered; there is no
+              demo toggle.
             </p>
           </section>
           <section aria-labelledby="exec-title" data-testid="payout-execution">
@@ -420,8 +571,9 @@ function PayoutTab() {
           <section aria-labelledby="recon-title">
             <h3 id="recon-title">6. Reconciliation</h3>
             <p>
-              Locked operations show the retained reservation, the next authoritative read and the only safe actions
-              (request reconciliation, open adjudication). Source: economic-operation journal, {formatUtc(p.observedAt)}.
+              Locked operations show the retained reservation, the next authoritative read and the only safe
+              actions (request reconciliation, open adjudication). Source: economic-operation journal,{" "}
+              {formatUtc(p.observedAt)}.
             </p>
           </section>
         </>
@@ -463,19 +615,21 @@ function RefundTab() {
                     {Object.entries(funders).map(([f, b]) => (
                       <tr key={f}>
                         <td className="mono wrap">{f}</td>
-                        {(["available", "reserved", "released", "refunded", "quarantined"] as const).map((k) => (
-                          <td key={k}>
-                            <Near yocto={b[k] ?? "0"} network={net} />
-                          </td>
-                        ))}
+                        {(["available", "reserved", "released", "refunded", "quarantined"] as const).map(
+                          (k) => (
+                            <td key={k}>
+                              <Near yocto={b[k] ?? "0"} network={net} />
+                            </td>
+                          ),
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </TableScroller>
               <p className="small">
-                {deposits.length} deposit(s) recorded. Excess above the required amount is QUARANTINED, never refundable as
-                release value.
+                {deposits.length} deposit(s) recorded. Excess above the required amount is QUARANTINED, never
+                refundable as release value.
               </p>
             </section>
             <section aria-labelledby="refunds-title" data-testid="refund-rows">
@@ -484,7 +638,9 @@ function RefundTab() {
               {r.refunds.map((x) => (
                 <IdentityList
                   key={String(x["refundIntentId"])}
-                  items={Object.entries(x).map(([k, v]) => [k, typeof v === "object" ? JSON.stringify(v) : String(v)] as const)}
+                  items={Object.entries(x).map(
+                    ([k, v]) => [k, typeof v === "object" ? JSON.stringify(v) : String(v)] as const,
+                  )}
                 />
               ))}
               <p>
@@ -495,7 +651,10 @@ function RefundTab() {
             </section>
             <section aria-labelledby="assets-title">
               <h3 id="assets-title">Asset recovery review</h3>
-              <p>Unexpected assets are reviewed separately and never appear as refundable native NEAR. None are served by this API build.</p>
+              <p>
+                Unexpected assets are reviewed separately and never appear as refundable native NEAR. None are
+                served by this API build.
+              </p>
             </section>
           </>
         );
@@ -519,8 +678,9 @@ function ExportPanel() {
     <section aria-labelledby="export-title" data-testid="audit-export">
       <h3 id="export-title">Audit export</h3>
       <p>
-        A checksummed export of every append-only record for this trade plus one fresh contract observation. Party
-        and destination accounts are masked by default. Export generation is separate from any product verdict.
+        A checksummed export of every append-only record for this trade plus one fresh contract observation.
+        Party and destination accounts are masked by default. Export generation is separate from any product
+        verdict.
       </p>
       <button
         type="button"
@@ -530,11 +690,17 @@ function ExportPanel() {
             setState("loading");
             const out = await t.api.auditExport(t.tradeId);
             if (!out.ok) {
-              setError(out.error.kind === "http" ? `${out.error.code}: ${out.error.message}` : out.error.kind);
+              setError(
+                out.error.kind === "http" ? `${out.error.code}: ${out.error.message}` : out.error.kind,
+              );
               return setState("failed");
             }
             setData(out.data);
-            setHref(URL.createObjectURL(new Blob([JSON.stringify(out.data, null, 2)], { type: "application/json" })));
+            setHref(
+              URL.createObjectURL(
+                new Blob([JSON.stringify(out.data, null, 2)], { type: "application/json" }),
+              ),
+            );
             setState("ready");
           })()
         }
@@ -551,9 +717,17 @@ function ExportPanel() {
         <div data-testid="export-preview">
           <IdentityList
             items={[
-              ["Checksum (SHA-256 over stable JSON)", <code key="c" className="wrap">{String(data["checksum"] ?? "")}</code>],
+              [
+                "Checksum (SHA-256 over stable JSON)",
+                <code key="c" className="wrap">
+                  {String(data["checksum"] ?? "")}
+                </code>,
+              ],
               ["Included sections", Object.keys(sections).join(", ")],
-              ["Excluded or redacted", exclusions.map((e) => (typeof e === "string" ? e : JSON.stringify(e))).join("; ")],
+              [
+                "Excluded or redacted",
+                exclusions.map((e) => (typeof e === "string" ? e : JSON.stringify(e))).join("; "),
+              ],
               ["Destinations", String(data["destinations"] ?? "MASKED")],
             ]}
           />
@@ -657,7 +831,11 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
     const id = window.setInterval(refresh, REFRESH_MS);
     return () => window.clearInterval(id);
   }, [refresh]);
-  const { outcome, reload } = useApiData(signedIn && valid ? () => api.get(tradeId) : null, [signedIn, tradeId, tick]);
+  const { outcome, reload } = useApiData(signedIn && valid ? () => api.get(tradeId) : null, [
+    signedIn,
+    tradeId,
+    tick,
+  ]);
   const tb = tab as TradeTab;
 
   let status: ReactNode = null;
@@ -667,7 +845,8 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
     status = (
       <Callout tone="warning" icon="blocked" title="Not a trade identifier">
         <p>
-          <code>{tradeId}</code> is not a valid trade ID, so nothing was requested. <Link href="/trades">Back to trades</Link>.
+          <code>{tradeId}</code> is not a valid trade ID, so nothing was requested.{" "}
+          <Link href="/trades">Back to trades</Link>.
         </p>
       </Callout>
     );
@@ -696,10 +875,13 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
         description={
           p ? (
             <>
-              <code>{p.trade.tradeId}</code> · <Near yocto={p.trade.amountYocto} network={p.trade.network} /> · revision r
-              {p.trade.revision} · contract <code>{p.trade.escrowContractId}</code> · release intent{" "}
-              {p.release.liveIntent ? describeStatus("releaseIntentState", p.release.liveIntent.state).label : "none"} ·
-              synced {formatUtc(ctx?.receivedAt ?? 0)} ({formatAge(ctx?.receivedAt ?? 0, app.now)})
+              <code>{p.trade.tradeId}</code> · <Near yocto={p.trade.amountYocto} network={p.trade.network} />{" "}
+              · revision r{p.trade.revision} · contract <code>{p.trade.escrowContractId}</code> · release
+              intent{" "}
+              {p.release.liveIntent
+                ? describeStatus("releaseIntentState", p.release.liveIntent.state).label
+                : "none"}{" "}
+              · synced {formatUtc(ctx?.receivedAt ?? 0)} ({formatAge(ctx?.receivedAt ?? 0, app.now)})
             </>
           ) : (
             "Trade workspace."

@@ -128,7 +128,8 @@ const STEPS: ReadonlyArray<{ title: string; fields: FieldSpec[] }> = [
         key: "expiresInDays",
         label: "Agreement lifetime (days)",
         help: "Whole days from now, 1 to 180.",
-        validate: (v) => (/^[1-9][0-9]{0,2}$/.test(v.trim()) && Number(v) <= 180 ? null : "Enter 1 to 180 days."),
+        validate: (v) =>
+          /^[1-9][0-9]{0,2}$/.test(v.trim()) && Number(v) <= 180 ? null : "Enter 1 to 180 days.",
         mono: true,
       },
     ],
@@ -238,7 +239,10 @@ function ProposalFacts({ terms }: { terms: Record<string, unknown> }) {
       "Milestone, evidence and lifetime",
       [
         ["Milestone", `${g("milestone.id")}: ${g("milestone.description")}`],
-        ["Evidence policy", `${g("evidencePolicy.id")} r${g("evidencePolicy.revision")} ${g("evidencePolicy.digest")}`],
+        [
+          "Evidence policy",
+          `${g("evidencePolicy.id")} r${g("evidencePolicy.revision")} ${g("evidencePolicy.digest")}`,
+        ],
         ["Refund policy", `${g("refundPolicy.id")} r${g("refundPolicy.revision")}`],
         ["Trade", `${g("tradeId")} revision ${g("revision")}`],
         ["Expires", formatUtc(Number(g("expiresAt")))],
@@ -273,11 +277,11 @@ interface Submitted {
 /** Review, explicit signature, and the package the counterparty needs. */
 function ProposalSigning({
   proposal,
-  role,
+  party,
   buyerSignature,
 }: {
   proposal: Proposal;
-  role: "buyer" | "supplier";
+  party: "buyer" | "supplier";
   buyerSignature?: string;
 }) {
   const app = useApp();
@@ -299,7 +303,7 @@ function ProposalSigning({
     const prep = await prepareSignature(proposal.purpose, proposal.payload, proposal.digest);
     if (!s || !prep.ok) return;
     const signature = await signPrepared(prep.value, s.privateKey);
-    if (role === "buyer") {
+    if (party === "buyer") {
       setPkg(JSON.stringify({ terms: proposal.terms, buyerSignature: signature }));
       return;
     }
@@ -321,7 +325,7 @@ function ProposalSigning({
         <div>
           <dt>Actor</dt>
           <dd className="mono">
-            {app.sessionGrant?.principalId} ({role === "buyer" ? "buyer approver" : "supplier signer"}, key{" "}
+            {app.sessionGrant?.principalId} ({party === "buyer" ? "buyer approver" : "supplier signer"}, key{" "}
             {app.sessionGrant?.keyVersionId})
           </dd>
         </div>
@@ -332,8 +336,9 @@ function ProposalSigning({
         <div>
           <dt>Consequence</dt>
           <dd>
-            Your signature accepts these exact terms. Once both parties sign and the contract registers them, payment
-            can only go to the destination above, after the evidence, inspection, hold and approval conditions.
+            Your signature accepts these exact terms. Once both parties sign and the contract registers them,
+            payment can only go to the destination above, after the evidence, inspection, hold and approval
+            conditions.
           </dd>
         </div>
       </dl>
@@ -344,7 +349,7 @@ function ProposalSigning({
           <p>{check.reason}</p>
         </Callout>
       ) : null}
-      {role === "supplier" ? (
+      {party === "supplier" ? (
         <p data-testid="buyer-signature-check">
           {proposal.buyerSignatureValid === true
             ? "The buyer approver's signature verifies against the buyer key these terms bind."
@@ -361,10 +366,12 @@ function ProposalSigning({
           <button
             type="button"
             className="btn btn--primary"
-            disabled={!check?.ok || !gate.allowed || (role === "supplier" && proposal.buyerSignatureValid !== true)}
+            disabled={
+              !check?.ok || !gate.allowed || (party === "supplier" && proposal.buyerSignatureValid !== true)
+            }
             onClick={() => void sign()}
           >
-            {role === "buyer" ? "Sign as buyer approver" : "Sign as supplier signer and submit"}
+            {party === "buyer" ? "Sign as buyer approver" : "Sign as supplier signer and submit"}
           </button>
         </div>
       ) : null}
@@ -373,8 +380,8 @@ function ProposalSigning({
           <h3>Proposal package for the supplier</h3>
           <p>
             Send this exact text to the supplier signer. They open{" "}
-            <Link href="/trades/countersign">Countersign a proposal</Link> in their own session, review the same facts
-            and digest, sign, and submit.
+            <Link href="/trades/countersign">Countersign a proposal</Link> in their own session, review the
+            same facts and digest, sign, and submit.
           </p>
           <AddressDisplay value={pkg} label="proposal package" />
         </div>
@@ -404,7 +411,8 @@ function ProposalSigning({
           ) : null}
           {relayed >= 2 ? (
             <p role="status" data-testid="trade-registered">
-              Registered on the escrow contract. <Link href={`/trades/${submit.tradeId}`}>Open the trade workspace</Link>.
+              Registered on the escrow contract.{" "}
+              <Link href={`/trades/${submit.tradeId}`}>Open the trade workspace</Link>.
             </p>
           ) : null}
         </div>
@@ -476,7 +484,13 @@ export function CountersignScreen() {
           help="Paste the text the buyer approver sent you."
         >
           {(aria) => (
-            <textarea {...aria} className="mono" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea
+              {...aria}
+              className="mono"
+              rows={6}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
           )}
         </Field>
         <button type="submit" className="btn btn--primary" disabled={!gate.allowed || text.trim() === ""}>
@@ -484,7 +498,7 @@ export function CountersignScreen() {
         </button>
       </form>
       {proposal ? (
-        <ProposalSigning proposal={proposal.p} role="supplier" buyerSignature={proposal.buyerSignature} />
+        <ProposalSigning proposal={proposal.p} party="supplier" buyerSignature={proposal.buyerSignature} />
       ) : null}
     </>
   );
@@ -623,7 +637,15 @@ export function TradeCreateScreen() {
                   className={f.mono ? "mono" : undefined}
                   spellCheck={false}
                   value={draft[f.key]}
-                  onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDraft((d) => ({ ...d, [f.key]: v }));
+                    // Clear a shown error as soon as the value is fixed, so the layout does not shift
+                    // under the pointer when the user moves on to Continue.
+                    setErrors((prev) =>
+                      prev[f.key] ? { ...prev, [f.key]: f.validate(v) ?? undefined } : prev,
+                    );
+                  }}
                   onBlur={() =>
                     setErrors((prev) => ({
                       ...prev,
@@ -747,7 +769,7 @@ export function TradeCreateScreen() {
           </details>
         </aside>
       </div>
-      {proposal ? <ProposalSigning proposal={proposal} role="buyer" /> : null}
+      {proposal ? <ProposalSigning proposal={proposal} party="buyer" /> : null}
     </>
   );
 }

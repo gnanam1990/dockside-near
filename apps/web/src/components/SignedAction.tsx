@@ -83,7 +83,13 @@ export function RelayPanel({
       </dl>
       {relayer === undefined ? <p className="muted">Checking for a relayer…</p> : null}
       {relayer === null ? (
-        <Callout tone="warning" icon="blocked" title="No relayer is configured" headingLevel={3} testId="relay-blocked">
+        <Callout
+          tone="warning"
+          icon="blocked"
+          title="No relayer is configured"
+          headingLevel={3}
+          testId="relay-blocked"
+        >
           <p>
             This build has no relayer or wallet connector for {call.receiverId}. The signed call above is
             complete; submit it with your own NEAR wallet. Status: BLOCKED until a relayer is provisioned.
@@ -93,11 +99,16 @@ export function RelayPanel({
       {relayer ? (
         <>
           <p className="small">
-            Relayer <code>{relayer.relayer}</code> on {relayer.chain === "SIMULATED" ? "a simulated chain" : relayer.network}
-            : {relayer.note}
+            Relayer <code>{relayer.relayer}</code> on{" "}
+            {relayer.chain === "SIMULATED" ? "a simulated chain" : relayer.network}: {relayer.note}
           </p>
           {state !== "done" ? (
-            <button type="button" className="btn btn--primary" onClick={() => void send()} disabled={state === "sending"}>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => void send()}
+              disabled={state === "sending"}
+            >
               Submit to the escrow contract
             </button>
           ) : null}
@@ -105,7 +116,9 @@ export function RelayPanel({
       ) : null}
       <p role="status" data-testid="relay-status">
         {state === "sending" ? "Submitting the call…" : null}
-        {state === "done" && result ? `Contract accepted ${result.method} (transaction ${result.txHash}).` : null}
+        {state === "done" && result
+          ? `Contract accepted ${result.method} (transaction ${result.txHash}).`
+          : null}
         {state === "failed"
           ? `Contract did not accept the call: ${result?.error ?? error ?? result?.outcome ?? "unknown reason"}.`
           : null}
@@ -225,7 +238,8 @@ export function SignedAction(p: SignedActionProps) {
             <div>
               <dt>Signer</dt>
               <dd className="mono">
-                {session?.grant.principalId} (key version {session?.grant.keyVersion}, {session?.grant.keyVersionId})
+                {session?.grant.principalId} (key version {session?.grant.keyVersion},{" "}
+                {session?.grant.keyVersionId})
               </dd>
             </div>
             <div>
@@ -285,7 +299,8 @@ export function SignedAction(p: SignedActionProps) {
       ) : null}
       {phase.k === "done" ? (
         <p role="status" className="ok" data-testid={`done-${p.id}`}>
-          Recorded by the server (and accepted by the contract where a call was needed). The view refreshes from the API.
+          Recorded by the server (and accepted by the contract where a call was needed). The view refreshes
+          from the API.
         </p>
       ) : null}
       {phase.k === "failed" ? <FailureState failure={phase.failure} what={p.title} headingLevel={3} /> : null}

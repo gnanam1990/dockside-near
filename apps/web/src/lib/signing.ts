@@ -1,4 +1,11 @@
-import { type CanonicalValue, canonicalDigest, fromTypedJson, sha256, type TypedJson, toHex } from "./canonical";
+import {
+  type CanonicalValue,
+  canonicalDigest,
+  fromTypedJson,
+  sha256,
+  type TypedJson,
+  toHex,
+} from "./canonical";
 import { signBytes } from "./keys";
 
 /**
@@ -51,7 +58,12 @@ export async function prepareSignature(
   } catch (e) {
     return { ok: false, reason: `payload is not canonical: ${(e as Error).message}` };
   }
-  const digestHex = toHex(await canonicalDigest(SIGNING_DOMAINS[purpose], 1, value));
+  let digestHex: string;
+  try {
+    digestHex = toHex(await canonicalDigest(SIGNING_DOMAINS[purpose], 1, value));
+  } catch (e) {
+    return { ok: false, reason: `payload cannot be encoded canonically: ${(e as Error).message}` };
+  }
   if (serverDigestHex !== null && serverDigestHex !== digestHex)
     return { ok: false, reason: "the server's digest does not match the payload; nothing was signed" };
   return { ok: true, value: { purpose, value, digestHex, serverDigestHex } };
