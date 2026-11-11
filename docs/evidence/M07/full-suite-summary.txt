@@ -1,0 +1,12 @@
+Command: pnpm run check (format:check, lint, typecheck, build + contract:build + vitest run, secret-scan)
+Commit: 2567b9a on feat/dockside-m07-integrated-api-audit
+Environment: Windows 11, Node v22.23.1, pnpm 10.34.9
+Exit code: 0
+Checked 131 files in 46ms. No fixes applied.
+Checked 132 files in 53ms. No fixes applied.
+ Test Files  30 passed (30)
+      Tests  343 passed (343)
+> node scripts/secret-scan.mjs
+secret-scan: 266 files clean
+
+Baseline before M07 (main 9c1e0b2): Test Files 23 passed, Tests 281 passed

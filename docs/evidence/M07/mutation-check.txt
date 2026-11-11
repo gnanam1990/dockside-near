@@ -1,0 +1,10 @@
+Mutation check: each mutation applied to the source, the named test files run, source restored.
+Tool: scratch python driver (not committed); every mutation must fail the suite (KILLED).
+
+M1 trade relation check removed: KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯)
+M2 execute route lets any party queue: KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯)
+M3 resolve route without risk binding: KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯)
+M4 failed idempotent request keeps its reservation: KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯)
+M5 export checksum ignores the chain section: KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯)
+M6 hold-resolution note exported in clear: KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯)
+M7 idempotency reservation skipped (check-then-run): KILLED (exit 1; ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯)
