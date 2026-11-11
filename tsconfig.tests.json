@@ -20,9 +20,16 @@
       ],
       "@dockside/api": [
         "services/api/src/app.ts"
+      ],
+      "@dockside/near": [
+        "packages/near/src/index.ts"
       ]
     },
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "lib": [
+      "ES2023",
+      "DOM"
+    ]
   },
   "include": [
     "packages/*/test/**/*.ts",

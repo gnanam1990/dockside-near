@@ -1,0 +1,17 @@
+{
+  "name": "@dockside/near",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside NEAR adapter: JSON-RPC client, escrow contract views/calls and canonical signed payload builders (M02)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/core": "workspace:*",
+    "zod": "4.6.7"
+  }
+}
