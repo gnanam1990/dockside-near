@@ -169,7 +169,7 @@ export interface ApiErrorBody {
 }
 
 /* ------------------------------------------------------------------ */
-/* Planned read projections (TDD §3, §15; UI-SPEC §3). Not served yet.  */
+/* Shared display types (trade projections are typed in ./trade.ts).   */
 /* ------------------------------------------------------------------ */
 
 /** Provenance every rendered status must carry (UI-SPEC §1, §9). */
@@ -185,34 +185,4 @@ export interface MoneyAmount {
   readonly asset: string;
   readonly decimals: number;
   readonly network: Network;
-}
-
-export interface TradeSummary {
-  readonly tradeId: string;
-  readonly reference: string;
-  readonly supplierName: string;
-  readonly amount: MoneyAmount;
-  readonly revision: number;
-  readonly tradeState: string;
-  readonly payoutState: string;
-  readonly evidenceState: string;
-  readonly nextAction: string | null;
-  readonly destinationChangePending: boolean;
-  readonly evidenceFreshness: string;
-  readonly provenance: Provenance;
-}
-
-export interface TradeListResponse {
-  readonly trades: TradeSummary[];
-  readonly totalCount: number;
-}
-
-export interface TradeDetail extends TradeSummary {
-  readonly contractId: string | null;
-  readonly milestone: string;
-  readonly holdState: string | null;
-  readonly releaseIntentState: string | null;
-  readonly dryCompatibility: string;
-  readonly providerStatus: string | null;
-  readonly destinationReceipt: string | null;
 }

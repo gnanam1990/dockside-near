@@ -49,6 +49,7 @@
   "include": [
     "packages/*/test/**/*.ts",
     "services/*/test/**/*.ts",
+    "scripts/local-stack/**/*.ts",
     "vitest.config.ts"
   ]
 }

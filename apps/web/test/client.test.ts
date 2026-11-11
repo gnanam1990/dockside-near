@@ -14,6 +14,7 @@ import { loadConfig, randomIds, systemClock } from "@dockside/core";
 import { Database } from "@dockside/store";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type ActiveSession, DocksideClient } from "../src/lib/api/client";
+import { ENDPOINTS } from "../src/lib/api/endpoints";
 import type { ChallengeResponse, SessionGrant } from "../src/lib/api/types";
 import { type DeviceKeyRecord, generateDeviceKey } from "../src/lib/keys";
 
@@ -152,7 +153,7 @@ describe("web API client against the real control API", () => {
     const ch = await c.bootstrapChallenge("Unwired Co", k.publicKey);
     if (!ch.ok) throw new Error("challenge failed");
     await signIn(c, k, ch.data, "ORG_BOOTSTRAP", (id, sig) => c.bootstrapComplete(id, sig));
-    const trades = await c.listTrades();
+    const trades = await c.call(ENDPOINTS.listTrades);
     expect(trades.ok).toBe(false);
     if (!trades.ok)
       expect(trades.error).toEqual({ kind: "endpoint-unavailable", method: "GET", path: "/v1/trades" });

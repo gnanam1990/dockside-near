@@ -4,13 +4,17 @@ import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
 /**
- * Browser tests run the real stack: the built control API (services/api/dist, real
- * node:sqlite file in a fresh temp directory) and the production web build served by
- * `vite preview`, which proxies API paths so the page origin equals DOCKSIDE_ORIGIN.
- * Prerequisites: `pnpm run build` at the repo root and `vite build` here (the `e2e`
- * script does the latter).
+ * Browser tests run the real API process with every trade module (scripts/local-stack: the
+ * same createApp, a fresh SQLite file, the outbox worker and reconciler, isolated attestor and
+ * policy signers) over a SIMULATED NEAR chain (compiled escrow wasm on the M02 host), and the
+ * production web build served by `vite preview`, which proxies /v1, /healthz, /readyz and
+ * /relay so the page origin equals DOCKSIDE_ORIGIN. The tests reach the stack's control port
+ * only for administrator invitations/grants, funder deposits and chain fault switches.
+ * Prerequisites: `pnpm run build` and `pnpm run contract:build` at the repo root, and
+ * `vite build` here (the `e2e` script does the latter).
  */
 const API_PORT = Number(process.env["DOCKSIDE_E2E_API_PORT"] ?? 8791);
+const CONTROL_PORT = Number(process.env["DOCKSIDE_E2E_CONTROL_PORT"] ?? 8792);
 const WEB_PORT = Number(process.env["DOCKSIDE_E2E_WEB_PORT"] ?? 4391);
 const WEB = `http://127.0.0.1:${WEB_PORT}`;
 const API = `http://127.0.0.1:${API_PORT}`;
@@ -49,16 +53,17 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "node ../../services/api/dist/main.js",
+      command:
+        "node --experimental-transform-types --no-warnings --import ../../scripts/local-stack/register.mjs ../../scripts/local-stack/stack.ts",
       url: `${API}/healthz`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 90_000,
+      stdout: "ignore",
       env: {
-        DOCKSIDE_DB_PATH: join(dataDir, "e2e.sqlite"),
+        DOCKSIDE_STACK_DATA_DIR: dataDir,
         DOCKSIDE_ORIGIN: WEB,
-        DOCKSIDE_HOST: "127.0.0.1",
-        DOCKSIDE_PORT: String(API_PORT),
-        DOCKSIDE_NETWORK: "near-testnet",
+        DOCKSIDE_STACK_API_PORT: String(API_PORT),
+        DOCKSIDE_STACK_CONTROL_PORT: String(CONTROL_PORT),
       },
     },
     {
@@ -66,7 +71,7 @@ export default defineConfig({
       url: WEB,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { DOCKSIDE_API_URL: API },
+      env: { DOCKSIDE_API_URL: API, DOCKSIDE_RELAYER_URL: `http://127.0.0.1:${CONTROL_PORT}` },
     },
   ],
 });
