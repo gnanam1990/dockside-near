@@ -97,6 +97,27 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
+  packages/journal:
+    dependencies:
+      '@dockside/authority':
+        specifier: workspace:*
+        version: link:../authority
+      '@dockside/core':
+        specifier: workspace:*
+        version: link:../core
+      '@dockside/evidence':
+        specifier: workspace:*
+        version: link:../evidence
+      '@dockside/near':
+        specifier: workspace:*
+        version: link:../near
+      '@dockside/release':
+        specifier: workspace:*
+        version: link:../release
+      '@dockside/store':
+        specifier: workspace:*
+        version: link:../store
+
   packages/near:
     dependencies:
       '@dockside/core':
