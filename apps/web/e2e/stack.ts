@@ -37,7 +37,10 @@ export async function enroll(
   capability: string,
   name: string,
 ): Promise<Person> {
-  const inv = await control<{ invitationId: string; secret: string }>("/control/invitations", { org, capability });
+  const inv = await control<{ invitationId: string; secret: string }>("/control/invitations", {
+    org,
+    capability,
+  });
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto("/sign-in");
@@ -54,7 +57,10 @@ export async function enroll(
   const panel = page.getByTestId("me-panel");
   await expect(panel).not.toContainText("Pending grant");
   const principalId = (
-    await panel.locator("dt", { hasText: /^Principal$/ }).locator("xpath=following-sibling::dd").innerText()
+    await panel
+      .locator("dt", { hasText: /^Principal$/ })
+      .locator("xpath=following-sibling::dd")
+      .innerText()
   ).trim();
   expect(principalId).toMatch(/^prn_[0-9a-f]{32}$/);
   return { ctx, page, principalId };

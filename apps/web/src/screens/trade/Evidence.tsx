@@ -1,6 +1,6 @@
 import { type FormEvent, useRef, useState } from "react";
 import { useApiData, useApp, useMutationGate } from "../../app/app-context";
-import { AddressDisplay, IdentityList, TableScroller } from "../../components/Data";
+import { IdentityList, TableScroller } from "../../components/Data";
 import { Field } from "../../components/Forms";
 import { SignedAction } from "../../components/SignedAction";
 import { BlockedAction, Callout, FailureState } from "../../components/States";
@@ -125,7 +125,11 @@ function UploadForm({
         item. Stored content-addressed; visible to the trade's parties, inspector and risk resolver. Retention
         follows the organisation's policy.
       </p>
-      <Field id={`${fid}-file`} label={`File for ${slot.slotId}`} help="Use the file chooser; nothing is read until you upload.">
+      <Field
+        id={`${fid}-file`}
+        label={`File for ${slot.slotId}`}
+        help="Use the file chooser; nothing is read until you upload."
+      >
         {(aria) => (
           <input
             {...aria}
@@ -138,7 +142,11 @@ function UploadForm({
           />
         )}
       </Field>
-      <Field id={`${fid}-issuer`} label="Issue as" help="The capability you sign the issuance statement with.">
+      <Field
+        id={`${fid}-issuer`}
+        label="Issue as"
+        help="The capability you sign the issuance statement with."
+      >
         {(aria) => (
           <select {...aria} value={issuer} onChange={(e) => setIssuer(e.target.value)}>
             {issuerCaps.map((c) => (
@@ -150,7 +158,11 @@ function UploadForm({
         )}
       </Field>
       <div className="btn-row">
-        <button type="submit" className="btn btn--primary" disabled={!file || !gate.allowed || phase.k === "working"}>
+        <button
+          type="submit"
+          className="btn btn--primary"
+          disabled={!file || !gate.allowed || phase.k === "working"}
+        >
           {current ? `Replace item in ${slot.slotId}` : `Upload to ${slot.slotId}`}
         </button>
         {phase.k === "working" ? (
@@ -161,10 +173,18 @@ function UploadForm({
       </div>
       <p role="status" data-testid={`${fid}-status`}>
         {phase.k === "working" ? phase.step : null}
-        {phase.k === "done" ? `Recorded as ${phase.itemId}; manifest is now revision ${phase.revision}.` : null}
+        {phase.k === "done"
+          ? `Recorded as ${phase.itemId}; manifest is now revision ${phase.revision}.`
+          : null}
       </p>
       {phase.k === "conflict" ? (
-        <Callout tone="warning" icon="stale" title="Manifest changed while you were uploading" headingLevel={3} role="alert">
+        <Callout
+          tone="warning"
+          icon="stale"
+          title="Manifest changed while you were uploading"
+          headingLevel={3}
+          role="alert"
+        >
           <p>{phase.message}</p>
         </Callout>
       ) : null}
@@ -174,20 +194,35 @@ function UploadForm({
 }
 
 function ItemFacts({ item }: { item: ManifestItem }) {
-  const issuer = item["issuer"] as { principalId?: string; capability?: string; issuedAt?: number } | undefined;
+  const issuer = item["issuer"] as
+    | { principalId?: string; capability?: string; issuedAt?: number }
+    | undefined;
   const uploader = item["uploader"] as { principalId?: string; capability?: string } | undefined;
-  const derived = (item["derived"] as { artifactClass: string; digest: string; sourceDigest: string }[] | undefined) ?? [];
+  const derived =
+    (item["derived"] as { artifactClass: string; digest: string; sourceDigest: string }[] | undefined) ?? [];
   return (
     <IdentityList
       items={[
         ["Item", <code key="i">{item.itemId}</code>],
-        ["Version", `v${item.version}${item.predecessorItemId ? `, replaces ${item.predecessorItemId}` : ""}`],
+        [
+          "Version",
+          `v${item.version}${item.predecessorItemId ? `, replaces ${item.predecessorItemId}` : ""}`,
+        ],
         ["Detected content", `${item.detectedMime} (${item.contentClass}), ${item.byteLength} bytes`],
-        ["Original digest", <code key="d" className="wrap">{item.originalDigest}</code>],
+        [
+          "Original digest",
+          <code key="d" className="wrap">
+            {item.originalDigest}
+          </code>,
+        ],
         [
           "Derived artifacts",
           derived.length
-            ? derived.map((x) => `${x.artifactClass} ${x.digest.slice(0, 16)}… from ${x.sourceDigest.slice(0, 16)}…`).join("; ")
+            ? derived
+                .map(
+                  (x) => `${x.artifactClass} ${x.digest.slice(0, 16)}… from ${x.sourceDigest.slice(0, 16)}…`,
+                )
+                .join("; ")
             : "None",
         ],
         ["Uploader", `${uploader?.principalId ?? "?"} as ${uploader?.capability ?? "?"}`],
@@ -215,15 +250,29 @@ function HoldsPanel({ holds, onChange }: { holds: HoldWithRequests[]; onChange: 
       <h3 id="holds-title">HoldRecords</h3>
       <p className="small">
         A hold blocks release while ACTIVE and also after expiry (EXPIRED_UNRESOLVED). Only the trade's
-        separately authenticated risk/policy resolver can sign a resolution; deterministic policy can only SET.
+        separately authenticated risk/policy resolver can sign a resolution; deterministic policy can only
+        SET.
       </p>
-      {holds.length === 0 ? <p>No HoldRecord exists for this trade (source: hold journal and contract).</p> : null}
+      {holds.length === 0 ? (
+        <p>No HoldRecord exists for this trade (source: hold journal and contract).</p>
+      ) : null}
       {holds.map((h) => (
-        <article key={h.holdId} className="hold" data-testid="hold" data-status={h.status} aria-labelledby={`h-${h.holdId}`}>
+        <article
+          key={h.holdId}
+          className="hold"
+          data-testid="hold"
+          data-status={h.status}
+          aria-labelledby={`h-${h.holdId}`}
+        >
           <h4 id={`h-${h.holdId}`}>
             Hold <code>{h.holdId}</code>
           </h4>
-          <StatusBadge dimension="holdState" value={h.status} source="hold journal (contract-verified)" observedAt={t.receivedAt} />
+          <StatusBadge
+            dimension="holdState"
+            value={h.status}
+            source="hold journal (contract-verified)"
+            observedAt={t.receivedAt}
+          />
           <IdentityList
             items={[
               [
@@ -233,10 +282,24 @@ function HoldsPanel({ holds, onChange }: { holds: HoldWithRequests[]; onChange: 
                   : "Risk/policy resolver",
               ],
               ["Reason", h.reasonCode],
-              ["Manifest binding", h.manifestDigest ? <code key="m" className="wrap">{h.manifestDigest}</code> : "Not bound to a manifest"],
+              [
+                "Manifest binding",
+                h.manifestDigest ? (
+                  <code key="m" className="wrap">
+                    {h.manifestDigest}
+                  </code>
+                ) : (
+                  "Not bound to a manifest"
+                ),
+              ],
               ["Issued", formatUtc(h.issuedAt)],
               ["Expires", `${formatUtc(h.expiresAt)} (expiry does not clear the hold)`],
-              ["SET digest", <code key="s" className="wrap">{h.setDigest}</code>],
+              [
+                "SET digest",
+                <code key="s" className="wrap">
+                  {h.setDigest}
+                </code>,
+              ],
               [
                 "Resolution",
                 h.resolution
@@ -277,8 +340,19 @@ function HoldsPanel({ holds, onChange }: { holds: HoldWithRequests[]; onChange: 
               }}
             >
               <h5>Request resolution (buyer, non-authorizing)</h5>
-              <Field id={`note-${h.holdId}`} label="Message to the risk/policy resolver" help="Up to 500 characters. Stored as a digest only.">
-                {(aria) => <textarea {...aria} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />}
+              <Field
+                id={`note-${h.holdId}`}
+                label="Message to the risk/policy resolver"
+                help="Up to 500 characters. Stored as a digest only."
+              >
+                {(aria) => (
+                  <textarea
+                    {...aria}
+                    maxLength={500}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                )}
               </Field>
               <button type="submit" className="btn">
                 Request resolution
@@ -349,14 +423,27 @@ function HoldsPanel({ holds, onChange }: { holds: HoldWithRequests[]; onChange: 
               />
             )}
           </Field>
-          <Field id="hold-ttl" label="Hold lifetime (minutes)" help="After this time the hold reads EXPIRED_UNRESOLVED and still blocks release.">
-            {(aria) => <input {...aria} inputMode="numeric" className="mono" value={ttlMin} onChange={(e) => setTtlMin(e.target.value.replace(/[^0-9]/g, ""))} />}
+          <Field
+            id="hold-ttl"
+            label="Hold lifetime (minutes)"
+            help="After this time the hold reads EXPIRED_UNRESOLVED and still blocks release."
+          >
+            {(aria) => (
+              <input
+                {...aria}
+                inputMode="numeric"
+                className="mono"
+                value={ttlMin}
+                onChange={(e) => setTtlMin(e.target.value.replace(/[^0-9]/g, ""))}
+              />
+            )}
           </Field>
         </SignedAction>
       ) : null}
       {!isRisk ? (
         <p className="small" data-testid="no-resolver-ui">
-          Resolution signing is not offered to your session: only the trade's bound risk/policy resolver may sign.
+          Resolution signing is not offered to your session: only the trade's bound risk/policy resolver may
+          sign.
         </p>
       ) : null}
     </section>
@@ -377,10 +464,21 @@ function InspectorWorkbench({ onChange }: { onChange: () => void }) {
           ["Milestone", t.p.trade.milestone.description],
           ["Policy", `${t.p.evidence.policy.id} revision ${t.p.evidence.policy.revision}`],
           ["Manifest", `revision ${t.p.evidence.manifestRevision} (${t.p.evidence.status})`],
-          ["Attested manifest", att ? <code key="a" className="wrap">{att.manifestDigest}</code> : "Not attested"],
+          [
+            "Attested manifest",
+            att ? (
+              <code key="a" className="wrap">
+                {att.manifestDigest}
+              </code>
+            ) : (
+              "Not attested"
+            ),
+          ],
           [
             "Prior decision",
-            t.p.inspection ? `${t.p.inspection.decision} over ${t.p.inspection.manifestDigest.slice(0, 16)}…` : "None",
+            t.p.inspection
+              ? `${t.p.inspection.decision} over ${t.p.inspection.manifestDigest.slice(0, 16)}…`
+              : "None",
           ],
           ["Active holds", String(t.p.holds.blocking)],
         ]}
@@ -391,7 +489,9 @@ function InspectorWorkbench({ onChange }: { onChange: () => void }) {
         consequence={`Your signature records ${decision} over the current attested manifest; it is relayed to the contract. A FAIL or REVIEW can trigger a deterministic-policy hold.`}
         startLabel="Prepare inspection"
         signLabel="Sign inspection"
-        disabledReason={ready ? null : "Signing is disabled until the manifest is complete and its attestation is current."}
+        disabledReason={
+          ready ? null : "Signing is disabled until the manifest is complete and its attestation is current."
+        }
         prepare={() =>
           t.api.call("inspectionChallenge", {
             params: { id: t.tradeId },
@@ -407,7 +507,13 @@ function InspectorWorkbench({ onChange }: { onChange: () => void }) {
           <legend>Decision</legend>
           {(["PASS", "FAIL", "REVIEW"] as const).map((d) => (
             <label key={d} className="radio">
-              <input type="radio" name="decision" value={d} checked={decision === d} onChange={() => setDecision(d)} />
+              <input
+                type="radio"
+                name="decision"
+                value={d}
+                checked={decision === d}
+                onChange={() => setDecision(d)}
+              />
               {d}
             </label>
           ))}
@@ -461,9 +567,19 @@ export function EvidenceTab() {
                     const items = e.manifest.items.filter((i) => i.slotId === s.slotId);
                     const status = ev2?.status ?? "UNSUPPORTED";
                     return (
-                      <li key={s.slotId} className="slot" data-testid={`slot-${s.slotId}`} data-status={status}>
+                      <li
+                        key={s.slotId}
+                        className="slot"
+                        data-testid={`slot-${s.slotId}`}
+                        data-status={status}
+                      >
                         <h4>{s.slotId}</h4>
-                        <StatusBadge dimension="slotStatus" value={status} source="evidence service evaluation" observedAt={t.receivedAt} />
+                        <StatusBadge
+                          dimension="slotStatus"
+                          value={status}
+                          source="evidence service evaluation"
+                          observedAt={t.receivedAt}
+                        />
                         <IdentityList
                           items={[
                             ["Purpose", s.purpose],
@@ -473,12 +589,22 @@ export function EvidenceTab() {
                             ["Content", `${s.contentClass}: ${s.allowedMime.join(", ")}`],
                             [
                               "Limits",
-                              `${s.maxItemBytes} bytes per item, ${s.maxAggregateBytes} bytes in total; ${Object.entries(s.limits)
+                              `${s.maxItemBytes} bytes per item, ${s.maxAggregateBytes} bytes in total; ${Object.entries(
+                                s.limits,
+                              )
                                 .map(([k, v]) => `${k} ${v}`)
                                 .join(", ")}`,
                             ],
-                            ["Required derived", s.requiredDerived.map((d) => `${d.artifactClass} (${d.transformProfile})`).join(", ")],
-                            ["Freshness", `${Math.round(s.freshnessMs / 86_400_000)} days from issue; ${ev2?.freshUntil ? `current item fresh until ${formatUtc(ev2.freshUntil)}` : "no current item"}`],
+                            [
+                              "Required derived",
+                              s.requiredDerived
+                                .map((d) => `${d.artifactClass} (${d.transformProfile})`)
+                                .join(", "),
+                            ],
+                            [
+                              "Freshness",
+                              `${Math.round(s.freshnessMs / 86_400_000)} days from issue; ${ev2?.freshUntil ? `current item fresh until ${formatUtc(ev2.freshUntil)}` : "no current item"}`,
+                            ],
                             ["Replacement", `${s.replacement} (compare-and-swap on the manifest revision)`],
                             ["Recovery", RECOVERY[status] ?? "Unsupported slot status; nothing is inferred."],
                           ]}
@@ -491,7 +617,12 @@ export function EvidenceTab() {
                             <ItemFacts item={i} />
                           </details>
                         ))}
-                        <UploadForm slot={s} manifestRevision={e.manifest.revision} current={items[0]} onUploaded={changed} />
+                        <UploadForm
+                          slot={s}
+                          manifestRevision={e.manifest.revision}
+                          current={items[0]}
+                          onUploaded={changed}
+                        />
                       </li>
                     );
                   })}
@@ -513,7 +644,9 @@ export function EvidenceTab() {
                           <td className="tabular">{i + 1}</td>
                           <td className="mono wrap small">
                             {Object.entries(h)
-                              .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+                              .map(
+                                ([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`,
+                              )
                               .join(" ")}
                           </td>
                         </tr>
@@ -539,16 +672,26 @@ export function EvidenceTab() {
             <IdentityList
               items={[
                 ["Manifest revision", String(t.p.attestation.manifestRevision)],
-                ["Manifest digest", <code key="m" className="wrap">{t.p.attestation.manifestDigest}</code>],
-                ["Attestation digest", <code key="d" className="wrap">{t.p.attestation.digest}</code>],
+                [
+                  "Manifest digest",
+                  <code key="m" className="wrap">
+                    {t.p.attestation.manifestDigest}
+                  </code>,
+                ],
+                [
+                  "Attestation digest",
+                  <code key="d" className="wrap">
+                    {t.p.attestation.digest}
+                  </code>,
+                ],
                 ["Expires", formatUtc(t.p.attestation.expiresAt)],
               ]}
             />
           </>
         ) : (
           <p data-testid="attestation-none">
-            No current attestation. The bound ManifestAttestor signs only a complete manifest; any replacement or
-            stale slot requires a new attestation.
+            No current attestation. The bound ManifestAttestor signs only a complete manifest; any replacement
+            or stale slot requires a new attestation.
           </p>
         )}
         <Section what="attestor binding" state={att.state} outcome={att.outcome} reload={att.reload}>
@@ -557,7 +700,12 @@ export function EvidenceTab() {
               items={[
                 ["Service", `${a.binding.serviceId} (${a.binding.enrollmentId})`],
                 ["Key version", String(a.binding.keyVersion)],
-                ["Public key", <code key="k" className="wrap">{a.binding.publicKey}</code>],
+                [
+                  "Public key",
+                  <code key="k" className="wrap">
+                    {a.binding.publicKey}
+                  </code>,
+                ],
                 ["Capability", "MANIFEST_ATTEST, isolated signer custody (secret never shown)"],
                 [
                   "Binding issues",
@@ -573,8 +721,9 @@ export function EvidenceTab() {
       <section aria-labelledby="advisory-title" className="advisory">
         <h3 id="advisory-title">Advisory analysis</h3>
         <p>
-          <strong>This analysis cannot create or clear a payment hold.</strong> No advisory findings are served by
-          this API build; when present they appear here with source references and model version only.
+          <strong>This analysis cannot create or clear a payment hold.</strong> No advisory findings are
+          served by this API build; when present they appear here with source references and model version
+          only.
         </p>
       </section>
       <Section what="holds" state={holds.state} outcome={holds.outcome} reload={holds.reload}>

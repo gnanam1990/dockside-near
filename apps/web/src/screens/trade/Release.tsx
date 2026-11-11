@@ -14,7 +14,12 @@ import { digestOf } from "../../lib/signing";
 import { describeStatus } from "../../lib/status";
 import { BlockerList, Near, Section, useTrade } from "./common";
 
-const PRE_SUBMIT = ["VALUE_LOCKED", "DIRECT_TESTNET_AUTHORIZED", "FUNDED_AUTHORIZATION_REQUIRED", "FUNDED_AUTHORIZED"];
+const PRE_SUBMIT = [
+  "VALUE_LOCKED",
+  "DIRECT_TESTNET_AUTHORIZED",
+  "FUNDED_AUTHORIZATION_REQUIRED",
+  "FUNDED_AUTHORIZED",
+];
 
 function randomKey(): string {
   const b = new Uint8Array(12);
@@ -41,27 +46,38 @@ function readConsent(intentId: string): TypedJson | null {
   }
 }
 
-function ExitFlows({ intentId, contract, onChange }: { intentId: string; contract: ContractIntent | undefined; onChange: () => void }) {
+function ExitFlows({
+  intentId,
+  contract,
+  onChange,
+}: {
+  intentId: string;
+  contract: ContractIntent | undefined;
+  onChange: () => void;
+}) {
   const t = useTrade();
   const cancelRef = useRef<TypedJson | null>(null);
   const [reason, setReason] = useState("PARTIES_AGREE");
   const [pkg, setPkg] = useState<string | null>(null);
   const [pasted, setPasted] = useState("");
-  const [pastedCheck, setPastedCheck] = useState<{ ok: boolean; text: string; cancel?: TypedJson } | null>(null);
+  const [pastedCheck, setPastedCheck] = useState<{ ok: boolean; text: string; cancel?: TypedJson } | null>(
+    null,
+  );
   const [trigger, setTrigger] = useState("INTENT_EXPIRED");
   const pending = contract?.pendingCancel ?? null;
   const myConsent = readConsent(intentId);
   const role = t.has("BUYER") ? "BUYER_APPROVER" : "SUPPLIER_SIGNER";
 
-  const consentFlow = (getCancel: () => Promise<ApiOutcome<Prepared> | { ok: true; data: Prepared }>) => async () => {
-    const c = await getCancel();
-    if (!c.ok) return c as ApiOutcome<Prepared>;
-    cancelRef.current = c.data.payload;
-    return t.api.call<Prepared>("cancelConsentChallenge", {
-      params: { id: intentId },
-      body: { cancel: c.data.payload },
-    });
-  };
+  const consentFlow =
+    (getCancel: () => Promise<ApiOutcome<Prepared> | { ok: true; data: Prepared }>) => async () => {
+      const c = await getCancel();
+      if (!c.ok) return c as ApiOutcome<Prepared>;
+      cancelRef.current = c.data.payload;
+      return t.api.call<Prepared>("cancelConsentChallenge", {
+        params: { id: intentId },
+        body: { cancel: c.data.payload },
+      });
+    };
   const recordConsent = async (payload: TypedJson, signature: string) => {
     const out = await t.api.call<{ relay?: never }>("cancelConsent", {
       params: { id: intentId },
@@ -78,12 +94,18 @@ function ExitFlows({ intentId, contract, onChange }: { intentId: string; contrac
     <section aria-labelledby="exit-title" data-testid="exit-flows">
       <h3 id="exit-title">Before submission: cancel or abandon</h3>
       <p className="small">
-        Two different, non-interchangeable flows. Cancellation needs matching consents from the buyer approver and
-        the supplier signer. Abandonment is only for an expired intent after the signed policy trigger and grace,
-        and it does not cancel the trade or refund funds.
+        Two different, non-interchangeable flows. Cancellation needs matching consents from the buyer approver
+        and the supplier signer. Abandonment is only for an expired intent after the signed policy trigger and
+        grace, and it does not cancel the trade or refund funds.
       </p>
       {pending ? (
-        <Callout tone="warning" icon="pending" title="Cancellation pending on the contract" headingLevel={3} testId="pending-cancel">
+        <Callout
+          tone="warning"
+          icon="pending"
+          title="Cancellation pending on the contract"
+          headingLevel={3}
+          testId="pending-cancel"
+        >
           <p>
             Cancel digest <code className="wrap">{pending.digest}</code>, reason {pending.reasonCode}, expires{" "}
             {formatUtc(pending.expiresAt)}. Consents:{" "}
@@ -109,16 +131,27 @@ function ExitFlows({ intentId, contract, onChange }: { intentId: string; contrac
         record={recordConsent}
         onDone={onChange}
       >
-        <Field id="cancel-reason" label="Cancellation reason code" help="Uppercase code bound into the payload.">
+        <Field
+          id="cancel-reason"
+          label="Cancellation reason code"
+          help="Uppercase code bound into the payload."
+        >
           {(aria) => (
-            <input {...aria} className="mono" value={reason} onChange={(e) => setReason(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ""))} />
+            <input
+              {...aria}
+              className="mono"
+              value={reason}
+              onChange={(e) => setReason(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ""))}
+            />
           )}
         </Field>
       </SignedAction>
       {pkg ? (
         <div data-testid="cancel-package">
           <h4>Cancellation package for the other party</h4>
-          <p className="small">Send this exact text to the counterparty; they paste it below in their own session.</p>
+          <p className="small">
+            Send this exact text to the counterparty; they paste it below in their own session.
+          </p>
           <AddressDisplay value={pkg} label="cancellation package" />
         </div>
       ) : null}
@@ -152,7 +185,11 @@ function ExitFlows({ intentId, contract, onChange }: { intentId: string; contrac
                     ok: false,
                     text: `Digest ${d} does not match the cancellation pending on the contract; nothing to sign.`,
                   });
-                setPastedCheck({ ok: true, text: `Digest ${d} matches the contract's pending cancellation.`, cancel: j.cancel });
+                setPastedCheck({
+                  ok: true,
+                  text: `Digest ${d} matches the contract's pending cancellation.`,
+                  cancel: j.cancel,
+                });
               } catch {
                 setPastedCheck({ ok: false, text: "The package is not valid JSON." });
               }
@@ -172,7 +209,10 @@ function ExitFlows({ intentId, contract, onChange }: { intentId: string; contrac
             consequence={`Your signature (${role}) completes the cancellation if the other consent is still current; the reservation returns to AVAILABLE.`}
             startLabel="Prepare my consent"
             signLabel="Sign my consent"
-            prepare={consentFlow(async () => ({ ok: true, data: { purpose: "CANCEL_RELEASE_INTENT", payload: pastedCheck.cancel as TypedJson } }))}
+            prepare={consentFlow(async () => ({
+              ok: true,
+              data: { purpose: "CANCEL_RELEASE_INTENT", payload: pastedCheck.cancel as TypedJson },
+            }))}
             record={recordConsent}
             onDone={onChange}
           />
@@ -187,7 +227,10 @@ function ExitFlows({ intentId, contract, onChange }: { intentId: string; contrac
           startLabel="Prepare revocation"
           signLabel="Sign revocation"
           prepare={() =>
-            t.api.call("cancelConsentRevocationChallenge", { params: { id: intentId }, body: { consent: myConsent } })
+            t.api.call("cancelConsentRevocationChallenge", {
+              params: { id: intentId },
+              body: { consent: myConsent },
+            })
           }
           record={(payload, signature) =>
             t.api.call("cancelConsentRevocation", { params: { id: intentId }, body: { payload, signature } })
@@ -232,10 +275,15 @@ function ExecuteRelease({ intentId, onChange }: { intentId: string; onChange: ()
     <section aria-labelledby="execute-title" data-testid="execute-release">
       <h3 id="execute-title">Queue the direct testnet release</h3>
       <p>
-        The journal re-checks every release condition, holds the value lock and queues one operation; the worker
-        submits it once and the reconciler records the outcome from the chain.
+        The journal re-checks every release condition, holds the value lock and queues one operation; the
+        worker submits it once and the reconciler records the outcome from the chain.
       </p>
-      <button type="button" className="btn btn--primary" disabled={!gate.allowed} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className="btn btn--primary"
+        disabled={!gate.allowed}
+        onClick={() => setOpen(true)}
+      >
         Execute direct release
       </button>
       <ConfirmDialog
@@ -261,13 +309,21 @@ function ExecuteRelease({ intentId, onChange }: { intentId: string; onChange: ()
         <IdentityList
           items={[
             ["Amount", <Near key="a" yocto={tr.amountYocto} network={tr.network} />],
-            ["Recipient", <code key="r" className="wrap">{tr.payout.destination}</code>],
+            [
+              "Recipient",
+              <code key="r" className="wrap">
+                {tr.payout.destination}
+              </code>,
+            ],
             ["Network", tr.network],
             ["Revision", `r${tr.revision}`],
             ["Release intent", <code key="i">{intentId}</code>],
           ]}
         />
-        <p>This cannot be undone once submitted. If the outcome is not proven, value stays locked for reconciliation.</p>
+        <p>
+          This cannot be undone once submitted. If the outcome is not proven, value stays locked for
+          reconciliation.
+        </p>
       </ConfirmDialog>
       <p role="status" data-testid="execute-status">
         {result}
@@ -300,16 +356,54 @@ export function ReleaseTab() {
               <h3 id="checklist-title">Release checklist</h3>
               <IdentityList
                 items={[
-                  ["Active revision", `r${r.contract.revision} (terms digest ${tr.termsDigest.slice(0, 16)}…)`],
-                  ["Destination", <code key="d" className="wrap">{r.contract.payoutDestination}</code>],
-                  ["Destination change", r.contract.pendingDestinationChange ? "Pending — see Agreement" : "None pending"],
+                  [
+                    "Active revision",
+                    `r${r.contract.revision} (terms digest ${tr.termsDigest.slice(0, 16)}…)`,
+                  ],
+                  [
+                    "Destination",
+                    <code key="d" className="wrap">
+                      {r.contract.payoutDestination}
+                    </code>,
+                  ],
+                  [
+                    "Destination change",
+                    r.contract.pendingDestinationChange ? "Pending — see Agreement" : "None pending",
+                  ],
                   ["Evidence", `${t.p.evidence.status}, manifest revision ${t.p.evidence.manifestRevision}`],
-                  ["Attestation", t.p.attestation ? describeStatus("attestationStatus", t.p.attestation.status).label : "None"],
-                  ["Inspector", t.p.inspection ? describeStatus("inspectionDecision", t.p.inspection.decision).label : "No decision"],
+                  [
+                    "Attestation",
+                    t.p.attestation
+                      ? describeStatus("attestationStatus", t.p.attestation.status).label
+                      : "None",
+                  ],
+                  [
+                    "Inspector",
+                    t.p.inspection
+                      ? describeStatus("inspectionDecision", t.p.inspection.decision).label
+                      : "No decision",
+                  ],
                   ["HoldRecords blocking", String(t.p.holds.blocking)],
-                  ["Amount and profile", <span key="a"><Near yocto={tr.amountYocto} network={tr.network} /> direct testnet release, no fees</span>],
-                  ["Release intent", live ? `${live.releaseIntentId} (${describeStatus("releaseIntentState", live.state).label})` : "None"],
-                  ["Value lock", lockOp ? `Held by operation ${lockOp.operationId} (${lockOp.state})` : live ? "Held by the release intent" : "Not locked"],
+                  [
+                    "Amount and profile",
+                    <span key="a">
+                      <Near yocto={tr.amountYocto} network={tr.network} /> direct testnet release, no fees
+                    </span>,
+                  ],
+                  [
+                    "Release intent",
+                    live
+                      ? `${live.releaseIntentId} (${describeStatus("releaseIntentState", live.state).label})`
+                      : "None",
+                  ],
+                  [
+                    "Value lock",
+                    lockOp
+                      ? `Held by operation ${lockOp.operationId} (${lockOp.state})`
+                      : live
+                        ? "Held by the release intent"
+                        : "Not locked",
+                  ],
                 ]}
               />
               <h4>Missing conditions (contract and services)</h4>
@@ -339,11 +433,23 @@ export function ReleaseTab() {
                           <tr key={i.releaseIntentId}>
                             <td className="mono">{i.releaseIntentId}</td>
                             <td>
-                              <StatusBadge dimension="releaseIntentState" value={i.state} source="release journal" observedAt={r.observedAt} compact />
+                              <StatusBadge
+                                dimension="releaseIntentState"
+                                value={i.state}
+                                source="release journal"
+                                observedAt={r.observedAt}
+                                compact
+                              />
                             </td>
                             <td>
                               {c ? (
-                                <StatusBadge dimension="releaseIntentState" value={c.state} source="escrow contract view" observedAt={r.observedAt} compact />
+                                <StatusBadge
+                                  dimension="releaseIntentState"
+                                  value={c.state}
+                                  source="escrow contract view"
+                                  observedAt={r.observedAt}
+                                  compact
+                                />
                               ) : (
                                 "Not on the contract"
                               )}
@@ -352,7 +458,11 @@ export function ReleaseTab() {
                               <Near yocto={i.amountYocto} network={tr.network} />
                             </td>
                             <td className="mono wrap">{i.destination}</td>
-                            <td>{c?.approval ? `Approved ${formatUtc(c.approval.approvedAt)}, expires ${formatUtc(c.approval.expiresAt)}` : "None"}</td>
+                            <td>
+                              {c?.approval
+                                ? `Approved ${formatUtc(c.approval.approvedAt)}, expires ${formatUtc(c.approval.expiresAt)}`
+                                : "None"}
+                            </td>
                           </tr>
                         );
                       })}
@@ -366,15 +476,23 @@ export function ReleaseTab() {
                 id="lock"
                 onBusyChange={t.busy("lock")}
                 title="Lock release value"
-                intro={<p>Creates one release intent that reserves the full amount from every funder's available slice.</p>}
+                intro={
+                  <p>
+                    Creates one release intent that reserves the full amount from every funder's available
+                    slice.
+                  </p>
+                }
                 consequence="Your signature locks the exact release value for this trade. It does not approve or pay anything."
                 startLabel="Prepare release intent"
                 signLabel="Sign release intent"
                 prepare={async () => {
-                  const out = await t.api.call<Prepared & { releaseIntentId: string }>("prepareReleaseIntent", {
-                    params: { id: t.tradeId },
-                    body: { idempotencyKey: randomKey() },
-                  });
+                  const out = await t.api.call<Prepared & { releaseIntentId: string }>(
+                    "prepareReleaseIntent",
+                    {
+                      params: { id: t.tradeId },
+                      body: { idempotencyKey: randomKey() },
+                    },
+                  );
                   if (out.ok) intentRef.current = out.data.releaseIntentId;
                   return out;
                 }}
@@ -397,33 +515,56 @@ export function ReleaseTab() {
                     items={[
                       ["Amount", <Near key="a" yocto={tr.amountYocto} network={tr.network} />],
                       ["Asset", "Native NEAR"],
-                      ["Recipient", <code key="r" className="wrap">{tr.payout.destination}</code>],
+                      [
+                        "Recipient",
+                        <code key="r" className="wrap">
+                          {tr.payout.destination}
+                        </code>,
+                      ],
                       ["Network", tr.network],
                       ["Revision", `r${tr.revision}`],
                     ]}
                   />
                 }
-                prepare={() => t.api.call("approvalChallenge", { params: { id: live.releaseIntentId }, body: {} })}
+                prepare={() =>
+                  t.api.call("approvalChallenge", { params: { id: live.releaseIntentId }, body: {} })
+                }
                 record={(payload, signature) =>
-                  t.api.call("approveRelease", { params: { id: live.releaseIntentId }, body: { payload, signature } })
+                  t.api.call("approveRelease", {
+                    params: { id: live.releaseIntentId },
+                    body: { payload, signature },
+                  })
                 }
                 onDone={() => void changed()}
               />
             ) : null}
-            {t.has("BUYER") && live && (t.pinned("execute") || (live.state === "DIRECT_TESTNET_AUTHORIZED" && !lockOp)) ? (
+            {t.has("BUYER") &&
+            live &&
+            (t.pinned("execute") || (live.state === "DIRECT_TESTNET_AUTHORIZED" && !lockOp)) ? (
               <ExecuteRelease intentId={live.releaseIntentId} onChange={() => void changed()} />
             ) : null}
             {!t.has("BUYER") ? (
               <p className="small">Release approval is available only to the trade's bound buyer approver.</p>
             ) : null}
             {isParty && live && (preSubmit || t.pinned("exits")) ? (
-              <ExitFlows intentId={live.releaseIntentId} contract={contractLive} onChange={() => void changed()} />
+              <ExitFlows
+                intentId={live.releaseIntentId}
+                contract={contractLive}
+                onChange={() => void changed()}
+              />
             ) : null}
             {lockOp ? (
-              <Callout tone="unknown" icon="locked" title="Exits are closed: value is locked by a submitted operation" headingLevel={3} testId="exits-closed">
+              <Callout
+                tone="unknown"
+                icon="locked"
+                title="Exits are closed: value is locked by a submitted operation"
+                headingLevel={3}
+                testId="exits-closed"
+              >
                 <p>
-                  Operation <code>{lockOp.operationId}</code> is {describeStatus("operationState", lockOp.state).label}. Cancel
-                  and abandon are not available after submission; see Payout for reconciliation.
+                  Operation <code>{lockOp.operationId}</code> is{" "}
+                  {describeStatus("operationState", lockOp.state).label}. Cancel and abandon are not available
+                  after submission; see Payout for reconciliation.
                 </p>
               </Callout>
             ) : null}

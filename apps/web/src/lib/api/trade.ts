@@ -118,7 +118,11 @@ export interface TradeProjection {
   } | null;
   readonly holds: { readonly blocking: number; readonly items: HoldSummary[] };
   readonly release: {
-    readonly liveIntent: { readonly releaseIntentId: string; readonly state: string; readonly version: number } | null;
+    readonly liveIntent: {
+      readonly releaseIntentId: string;
+      readonly state: string;
+      readonly version: number;
+    } | null;
     readonly blockers: string[];
   };
   readonly operations: OperationSummary[];
@@ -213,7 +217,11 @@ export interface ContractIntent {
   readonly amount: string;
   readonly destination: string;
   readonly expiresAt: number;
-  readonly approval: { readonly digest: string; readonly approvedAt: number; readonly expiresAt: number } | null;
+  readonly approval: {
+    readonly digest: string;
+    readonly approvedAt: number;
+    readonly expiresAt: number;
+  } | null;
   readonly pendingCancel: {
     readonly digest: string;
     readonly reasonCode: string;
@@ -239,7 +247,11 @@ export interface ReleaseView {
     readonly liveIntent: string | null;
     readonly blockers: string[];
     readonly intents: ContractIntent[];
-    readonly revisions: { readonly revision: number; readonly digest: string; readonly activatedAt: number }[];
+    readonly revisions: {
+      readonly revision: number;
+      readonly digest: string;
+      readonly activatedAt: number;
+    }[];
     readonly pendingDestinationChange: Record<string, unknown> | null;
   };
   readonly observedAt: number;
@@ -375,7 +387,9 @@ export class TradeApi {
     return this.call<AttestorView>("tradeAttestor", { params: { id: tradeId } });
   }
   holds(tradeId: string) {
-    return this.call<{ blocking: number; holds: HoldWithRequests[] }>("tradeHolds", { params: { id: tradeId } });
+    return this.call<{ blocking: number; holds: HoldWithRequests[] }>("tradeHolds", {
+      params: { id: tradeId },
+    });
   }
   release(tradeId: string) {
     return this.call<ReleaseView>("tradeRelease", { params: { id: tradeId } });

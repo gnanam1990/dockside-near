@@ -9,6 +9,9 @@
       "@dockside/store": ["../../packages/store/src/index.ts"],
       "@dockside/authority": ["../../packages/authority/src/index.ts"],
       "@dockside/near": ["../../packages/near/src/index.ts"],
+      "@dockside/evidence": ["../../packages/evidence/src/index.ts"],
+      "@dockside/release": ["../../packages/release/src/index.ts"],
+      "@dockside/journal": ["../../packages/journal/src/index.ts"],
       "@dockside/api": ["../../services/api/src/app.ts"]
     }
   },

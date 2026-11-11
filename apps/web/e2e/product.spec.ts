@@ -87,12 +87,24 @@ test("T-036 buyer proposes, supplier countersigns in a separate session, contrac
   await expect(s.getByTestId("buyer-signature-check")).toContainText("verifies against the buyer key");
   await s.getByRole("button", { name: "Sign as supplier signer and submit" }).click();
   const submitted = s.getByTestId("trade-submitted");
-  await submitted.getByTestId("relay-panel").first().getByRole("button", { name: "Submit to the escrow contract" }).click();
-  await submitted.getByTestId("relay-panel").nth(1).getByRole("button", { name: "Submit to the escrow contract" }).click();
+  await submitted
+    .getByTestId("relay-panel")
+    .first()
+    .getByRole("button", { name: "Submit to the escrow contract" })
+    .click();
+  await submitted
+    .getByTestId("relay-panel")
+    .nth(1)
+    .getByRole("button", { name: "Submit to the escrow contract" })
+    .click();
   await expect(s.getByTestId("trade-registered")).toBeVisible();
 
   // Every party now sees the trade; the funder's wallet deposits the exact amount.
-  await control("/control/fund", { tradeId, from: info.accounts.buyer, amountYocto: "10000000000000000000000000" });
+  await control("/control/fund", {
+    tradeId,
+    from: info.accounts.buyer,
+    amountYocto: "10000000000000000000000000",
+  });
   await b.goto("/trades");
   await waitForScreen(b);
   await expect(b.getByTestId("trades-table")).toContainText(tradeId);
@@ -133,8 +145,12 @@ test("T-037 evidence slots show the exact predicate and recovery, refuse bad con
     buffer: pdf("Commercial invoice INV-1 total 10 NEAR"),
   });
   await invoice.getByRole("button", { name: "Upload to commercial-invoice" }).click();
-  await expect(invoice.getByTestId("upload-commercial-invoice-status")).toContainText("manifest is now revision");
-  await eventually(s, async () => expect(s.getByTestId("slot-commercial-invoice")).toHaveAttribute("data-status", "FILLED"));
+  await expect(invoice.getByTestId("upload-commercial-invoice-status")).toContainText(
+    "manifest is now revision",
+  );
+  await eventually(s, async () =>
+    expect(s.getByTestId("slot-commercial-invoice")).toHaveAttribute("data-status", "FILLED"),
+  );
 
   // Concurrent replacement: the inspector's page keeps showing the old manifest revision while the
   // supplier replaces the invoice in another session.
@@ -158,18 +174,25 @@ test("T-037 evidence slots show the exact predicate and recovery, refuse bad con
     buffer: pdf("Commercial invoice INV-1 revised total 10 NEAR"),
   });
   await inv2.getByRole("button", { name: "Replace item in commercial-invoice" }).click();
-  await expect(inv2.getByTestId("upload-commercial-invoice-status")).toContainText("manifest is now revision");
+  await expect(inv2.getByTestId("upload-commercial-invoice-status")).toContainText(
+    "manifest is now revision",
+  );
   await report.getByRole("button", { name: "Upload to inspection-report" }).click();
   await expect(report.getByText("Manifest changed while you were uploading")).toBeVisible();
   // Work is preserved: the same file is still selected; a fresh explicit action uploads it.
   await eventually(i, async () => {
     await report.getByRole("button", { name: "Upload to inspection-report" }).click();
-    await expect(report.getByTestId("upload-inspection-report-status")).toContainText("manifest is now revision", {
-      timeout: 5_000,
-    });
+    await expect(report.getByTestId("upload-inspection-report-status")).toContainText(
+      "manifest is now revision",
+      {
+        timeout: 5_000,
+      },
+    );
   });
   const photos = i.getByTestId("slot-cargo-photos");
-  await photos.getByLabel("File for cargo-photos").setInputFiles({ name: "cargo.png", mimeType: "image/png", buffer: png(32, 16) });
+  await photos
+    .getByLabel("File for cargo-photos")
+    .setInputFiles({ name: "cargo.png", mimeType: "image/png", buffer: png(32, 16) });
   await photos.getByRole("button", { name: "Upload to cargo-photos" }).click();
   await expect(photos.getByTestId("upload-cargo-photos-status")).toContainText("manifest is now revision");
 
@@ -226,7 +249,9 @@ test("T-054 deterministic policy SETs, buyer requests, only the risk session sig
   await rh.getByLabel("Resolution").selectOption("RETRY_INSPECTION");
   const holdId = (await rh.locator("h4 code").innerText()).trim();
   await signAction(r, `resolve-${holdId}`, "Prepare resolution", "Sign resolution");
-  await eventually(r, async () => expect(r.getByTestId("hold").first()).toHaveAttribute("data-status", "RESOLVED"));
+  await eventually(r, async () =>
+    expect(r.getByTestId("hold").first()).toHaveAttribute("data-status", "RESOLVED"),
+  );
 
   // Inspector decides again: PASS.
   await openTab(i, tradeId, "evidence");
@@ -285,7 +310,10 @@ test("T-036 buyer locks and approves; T-038 a lost outcome stays locked and neve
   await expect(review).toContainText("Opening this page approves nothing");
   await expectAccessible(b, "approval review");
   await review.getByRole("button", { name: "Sign approval" }).click();
-  await approve.getByTestId("relay-panel").getByRole("button", { name: "Submit to the escrow contract" }).click();
+  await approve
+    .getByTestId("relay-panel")
+    .getByRole("button", { name: "Submit to the escrow contract" })
+    .click();
   await expect(approve.getByTestId("done-approve")).toBeVisible();
 
   // Exits exist before submission and only for the parties.
@@ -311,7 +339,10 @@ test("T-036 buyer locks and approves; T-038 a lost outcome stays locked and neve
     await expect(op.getByTestId("op-locked")).toBeVisible();
   });
   const locked = b.getByTestId("operation").first();
-  test.info().annotations.push({ type: "locked-state-observed", description: String(await locked.getAttribute("data-state")) });
+  test.info().annotations.push({
+    type: "locked-state-observed",
+    description: String(await locked.getAttribute("data-state")),
+  });
   await expect(locked).not.toContainText("Paid (terminal evidence recorded)");
   await expect(locked).toContainText("Prohibited while");
   await expect(locked.getByRole("button", { name: "Request reconciliation" })).toHaveCount(0);
@@ -374,7 +405,12 @@ test("T-034 client boundary: no session token, invitation secret or evidence byt
         privateKeyField: /privateKey|PRIVATE KEY/.test(html),
       };
     });
-    expect(leaks).toEqual({ tokenInDom: false, tokenInLocal: false, evidenceText: false, privateKeyField: false });
+    expect(leaks).toEqual({
+      tokenInDom: false,
+      tokenInLocal: false,
+      evidenceText: false,
+      privateKeyField: false,
+    });
     const tree = await page.locator("body").ariaSnapshot();
     expect(tree).not.toContain("seals intact");
   }
