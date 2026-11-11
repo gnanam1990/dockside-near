@@ -1,8 +1,8 @@
 /** T-011 (complete fresh slots) and T-012 (unauthorized uploader/issuer) through the real upload path. */
 import { afterEach, describe, expect, it } from "vitest";
 import { closeHarnesses } from "../../authority/test/helpers.js";
-import { commercialPolicy, codeOf, DAY, fillAll, HOUR, makeWorld, pdf, png, type World } from "./world.js";
 import { policyDigest } from "../src/index.js";
+import { codeOf, commercialPolicy, DAY, fillAll, HOUR, makeWorld, pdf, png, type World } from "./world.js";
 
 let worlds: World[] = [];
 afterEach(() => {
@@ -19,7 +19,9 @@ const world = async () => {
 describe("T-011 evidence policy requires complete fresh slots", () => {
   it("rejects an empty, malformed or unknown-field policy", async () => {
     const w = await world();
-    expect(await codeOf(() => w.evidence.registerPolicy(commercialPolicy({ slots: [] })))).toBe("VALIDATION_FAILED");
+    expect(await codeOf(() => w.evidence.registerPolicy(commercialPolicy({ slots: [] })))).toBe(
+      "VALIDATION_FAILED",
+    );
     const p = commercialPolicy();
     const extra = { ...p, slots: [{ ...p.slots[0], complete: true }] } as never;
     expect(await codeOf(() => w.evidence.registerPolicy(extra))).toBe("UNKNOWN_FIELD");
@@ -186,9 +188,9 @@ describe("T-011 evidence policy requires complete fresh slots", () => {
 
   it("binding requires the accepted revision and the exact policy its terms sign", async () => {
     const w = await world();
-    expect(await codeOf(() => w.evidence.bindTrade(w.terms, { buyerSignature: "x", supplierSignature: "y" }))).toBe(
-      "INVALID_STATE",
-    );
+    expect(
+      await codeOf(() => w.evidence.bindTrade(w.terms, { buyerSignature: "x", supplierSignature: "y" })),
+    ).toBe("INVALID_STATE");
     // Registering a later policy revision does not alter an active trade in place.
     w.evidence.registerPolicy(commercialPolicy({ revision: 2 }));
     expect(w.evidence.evaluate(w.terms.tradeId).policy).toEqual({ id: "commercial-docs", revision: 1 });
@@ -227,25 +229,36 @@ describe("T-012 unauthorized uploader or issuer is rejected", () => {
         expectedManifestRevision: 0,
       });
     // Buyer key signing an issuance that claims the supplier capability.
-    expect(await codeOf(up(w.issue(w.buyer, "SUPPLIER_SIGNER", "commercial-invoice", inv)))).toBe("SIGNATURE_INVALID");
+    expect(await codeOf(up(w.issue(w.buyer, "SUPPLIER_SIGNER", "commercial-invoice", inv)))).toBe(
+      "SIGNATURE_INVALID",
+    );
     // Inspector is not an allowed issuer for the invoice slot.
     expect(await codeOf(up(w.issue(w.inspector, "INSPECTOR", "commercial-invoice", inv)))).toBe("FORBIDDEN");
     // Forged issuedAt: signature covers one time, the upload claims another.
     const real = w.issue(w.supplier, "SUPPLIER_SIGNER", "commercial-invoice", inv);
     expect(await codeOf(up({ ...real, issuedAt: real.issuedAt + 1 }))).toBe("SIGNATURE_INVALID");
-    expect(await codeOf(up(w.issue(w.supplier, "SUPPLIER_SIGNER", "commercial-invoice", inv, w.h.clock.now() + HOUR)))).toBe(
-      "NOT_YET_VALID",
-    );
     expect(
-      await codeOf(up(w.issue(w.supplier, "SUPPLIER_SIGNER", "commercial-invoice", inv, w.h.clock.now() - 31 * DAY))),
+      await codeOf(
+        up(w.issue(w.supplier, "SUPPLIER_SIGNER", "commercial-invoice", inv, w.h.clock.now() + HOUR)),
+      ),
+    ).toBe("NOT_YET_VALID");
+    expect(
+      await codeOf(
+        up(w.issue(w.supplier, "SUPPLIER_SIGNER", "commercial-invoice", inv, w.h.clock.now() - 31 * DAY)),
+      ),
     ).toBe("STALE_ITEM");
     // Signed for another slot (cross-slot) or a different document.
-    expect(await codeOf(up(w.issue(w.supplier, "SUPPLIER_SIGNER", "inspection-report", inv)))).toBe("SIGNATURE_INVALID");
+    expect(await codeOf(up(w.issue(w.supplier, "SUPPLIER_SIGNER", "inspection-report", inv)))).toBe(
+      "SIGNATURE_INVALID",
+    );
     expect(await codeOf(up(w.issue(w.supplier, "SUPPLIER_SIGNER", "commercial-invoice", pdf("other"))))).toBe(
       "SIGNATURE_INVALID",
     );
     // Revoked supplier key.
-    w.h.svc.revokeKey(w.supplierAdmin.ctx(), { keyVersionId: w.supplier.keyVersionId, reason: "compromise" });
+    w.h.svc.revokeKey(w.supplierAdmin.ctx(), {
+      keyVersionId: w.supplier.keyVersionId,
+      reason: "KEY_COMPROMISE",
+    });
     const clerkUp = w.evidence.upload(w.supplierClerk.ctx(), {
       tradeId: w.terms.tradeId,
       slotId: "commercial-invoice",
@@ -275,9 +288,9 @@ describe("T-012 unauthorized uploader or issuer is rejected", () => {
         }),
       ),
     ).toBe("SIGNATURE_INVALID");
-    // A's supplier session cannot upload into B (different principal than B binds).
+    // A's supplier session is unknown to B's deployment, and B's slot stays empty.
     expect(
-      await codeOf(
+      await codeOf(() =>
         b.evidence.upload(a.supplier.ctx("POST", "/v1/test", "{}", b.h.svc), {
           tradeId: b.terms.tradeId,
           slotId: "commercial-invoice",
@@ -286,6 +299,19 @@ describe("T-012 unauthorized uploader or issuer is rejected", () => {
           expectedManifestRevision: 0,
         }),
       ),
-    ).not.toBe("NO_ERROR");
+    ).toBe("UNAUTHENTICATED");
+    // Within one deployment, A's bound supplier is not the supplier B binds.
+    expect(
+      await codeOf(
+        a.evidence.upload(a.supplier.ctx(), {
+          tradeId: b.terms.tradeId,
+          slotId: "commercial-invoice",
+          content: inv,
+          issuer: issuerForA,
+          expectedManifestRevision: 0,
+        }),
+      ),
+    ).toBe("NOT_FOUND");
+    expect(b.evidence.evaluate(b.terms.tradeId).slots[0]?.status).toBe("MISSING");
   });
 });

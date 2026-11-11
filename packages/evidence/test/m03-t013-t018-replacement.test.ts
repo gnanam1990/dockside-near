@@ -1,6 +1,7 @@
 /** T-013 (revisioned, concurrent-safe replacement) and T-018 (changed evidence invalidates attestation). */
-import { Database } from "@dockside/store";
+
 import { randomIds } from "@dockside/core";
+import { Database } from "@dockside/store";
 import { afterEach, describe, expect, it } from "vitest";
 import { closeHarnesses } from "../../authority/test/helpers.js";
 import { EvidenceService } from "../src/index.js";
@@ -103,7 +104,7 @@ describe("T-013 evidence replacement is revisioned and concurrent-safe", () => {
       const ok = results.filter((r) => r.status === "fulfilled");
       const bad = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
       expect(ok).toHaveLength(1);
-      expect((bad[0]?.reason as { code?: string }).code).toBe("VERSION_CONFLICT");
+      expect((bad[0]?.reason as { code?: string } | undefined)?.code).toBe("VERSION_CONFLICT");
       expect(w.evidence.currentRevision(w.terms.tradeId)).toBe(rev + 1);
     } finally {
       db2.close();
@@ -117,7 +118,10 @@ describe("T-018 changed evidence invalidates attestation", () => {
     const rev = await fillAll(w);
     const att = await w.evidence.attest(w.terms.tradeId, w.attestor);
     expect(w.evidence.attestationStatus(att.id)).toBe("CURRENT");
-    const ins = w.evidence.recordInspection(w.terms.tradeId, ...w.inspect(att.manifestRevision, att.manifestDigest, "PASS"));
+    const ins = w.evidence.recordInspection(
+      w.terms.tradeId,
+      ...w.inspect(att.manifestRevision, att.manifestDigest, "PASS"),
+    );
     expect(w.evidence.currentInspection(w.terms.tradeId)?.id).toBe(ins.id);
     const digests = [att.manifestDigest];
 
@@ -139,13 +143,16 @@ describe("T-018 changed evidence invalidates attestation", () => {
     );
     expect(
       await codeOf(() =>
-        w.evidence.recordInspection(w.terms.tradeId, ...w.inspect(att.manifestRevision, att.manifestDigest, "PASS")),
+        w.evidence.recordInspection(
+          w.terms.tradeId,
+          ...w.inspect(att.manifestRevision, att.manifestDigest, "PASS"),
+        ),
       ),
     ).toBe("STALE_MANIFEST");
 
     // Remove that photo again.
     const photo2 = w.evidence.manifest(w.terms.tradeId).items.filter((i) => i.slotId === "cargo-photos")[1];
-    w.evidence.removeItem(w.supplier.ctx(), {
+    w.evidence.removeItem(w.inspector.ctx(), {
       tradeId: w.terms.tradeId,
       itemId: photo2?.itemId ?? "",
       expectedManifestRevision: rev + 1,
@@ -160,7 +167,8 @@ describe("T-018 changed evidence invalidates attestation", () => {
     expect(att2.manifestRevision).toBe(rev + 3);
     w.h.clock.advance(7 * DAY);
     expect(w.evidence.evaluate(w.terms.tradeId).status).toBe("INCOMPLETE");
-    expect(w.evidence.attestationStatus(att2.id)).toBe("SUPERSEDED");
+    expect(w.evidence.attestationStatus(att2.id)).toBe("EXPIRED");
+    expect(await codeOf(w.evidence.attest(w.terms.tradeId, w.attestor))).toBe("INCOMPLETE");
   });
 
   it("removing a required item leaves the slot MISSING and the manifest unattestable", async () => {
