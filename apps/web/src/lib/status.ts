@@ -58,11 +58,19 @@ export type Dimension =
   | "connection"
   | "keyStatus"
   | "principalStatus"
-  | "destinationReceipt";
+  | "destinationReceipt"
+  | "releaseIntentState"
+  | "operationState"
+  | "attestationStatus"
+  | "inspectionDecision"
+  | "slotStatus";
 
 const LOCK = "Value stays reserved. No retry, exit or terminal override is available.";
 
-export const VOCABULARY: Record<Dimension, Record<string, StatusMeaning>> = {
+export const VOCABULARY: Record<
+  Exclude<Dimension, "releaseIntentState" | "operationState" | "attestationStatus" | "inspectionDecision" | "slotStatus">,
+  Record<string, StatusMeaning>
+> = {
   payoutState: {
     VALUE_LOCKED: {
       label: "Value locked",
@@ -387,7 +395,9 @@ export const VOCABULARY: Record<Dimension, Record<string, StatusMeaning>> = {
 };
 
 export function describeStatus(dimension: Dimension, value: string): StatusMeaning {
-  const m = VOCABULARY[dimension][value];
+  const extra = EXTRA[dimension]?.[value];
+  if (extra) return extra;
+  const m = (VOCABULARY as Record<string, Record<string, StatusMeaning>>)[dimension]?.[value];
   if (m) return m;
   return {
     label: `Unrecognized ${dimension} "${value}"`,
@@ -397,3 +407,164 @@ export function describeStatus(dimension: Dimension, value: string): StatusMeani
       "This client does not support the value the server sent (unsupported schema). Nothing is inferred.",
   };
 }
+
+/* ------------------------------------------------------------------------- */
+/* Backend vocabularies served since M04/M05/M07 (release journal, operation  */
+/* journal, attestation, inspection, slot completeness).                      */
+/* ------------------------------------------------------------------------- */
+
+const P = VOCABULARY.payoutState;
+const req = (k: string): StatusMeaning => {
+  const m = P[k];
+  if (!m) throw new Error(`missing payout vocabulary ${k}`);
+  return m;
+};
+
+/** Release-intent journal states (@dockside/release JournalState). */
+const RELEASE_INTENT: Record<string, StatusMeaning> = {
+  PREPARED: {
+    label: "Intent prepared, not signed",
+    tone: "neutral",
+    icon: "pending",
+    sentence: "A release intent payload exists but no buyer signature has reached the contract; nothing is reserved.",
+  },
+  EXPIRED_UNSIGNED: {
+    label: "Prepared intent expired unsigned",
+    tone: "neutral",
+    icon: "expired",
+    sentence: "The prepared intent was never signed and no longer holds the slot.",
+  },
+  ...Object.fromEntries(
+    [
+      "VALUE_LOCKED",
+      "DIRECT_TESTNET_AUTHORIZED",
+      "FUNDED_AUTHORIZATION_REQUIRED",
+      "FUNDED_AUTHORIZED",
+      "SUBMITTING",
+      "PROCESSING",
+      "UNKNOWN",
+      "REVIEW",
+      "RECONCILING",
+      "ADJUDICATION",
+      "PAID",
+      "REFUNDED",
+      "FAILED",
+      "CANCELLED_PRE_SUBMIT",
+      "ABANDONED_PRE_SUBMIT",
+      "SUPERSEDED_PRE_SUBMIT",
+    ].map((k) => [k, req(k)]),
+  ),
+};
+
+/** Economic-operation journal states (@dockside/journal OPERATION_STATES). */
+const OPERATION: Record<string, StatusMeaning> = {
+  QUEUED: {
+    label: "Queued, not submitted",
+    tone: "neutral",
+    icon: "pending",
+    sentence: "The journal holds the value lock and an outbox row; no transaction has been broadcast.",
+    locked: true,
+  },
+  WITHDRAWN: {
+    label: "Withdrawn before submit",
+    tone: "neutral",
+    icon: "cancelled",
+    sentence: "The operation was withdrawn before any broadcast; nothing was submitted.",
+    terminal: true,
+  },
+  EXECUTING: {
+    label: "Executing",
+    tone: "warning",
+    icon: "processing",
+    sentence: `The signed transaction was persisted and broadcast once. ${LOCK}`,
+    locked: true,
+  },
+  ...Object.fromEntries(
+    ["SUBMITTING", "PROCESSING", "UNKNOWN", "REVIEW", "RECONCILING", "ADJUDICATION", "PAID", "REFUNDED", "FAILED"].map(
+      (k) => [k, req(k)],
+    ),
+  ),
+};
+
+const EXTRA: Partial<Record<Dimension, Record<string, StatusMeaning>>> = {
+  releaseIntentState: RELEASE_INTENT,
+  operationState: OPERATION,
+  attestationStatus: {
+    CURRENT: {
+      label: "Attestation current",
+      tone: "neutral",
+      icon: "complete",
+      sentence: "The bound ManifestAttestor signed the current complete manifest revision.",
+    },
+    SUPERSEDED: {
+      label: "Attestation superseded",
+      tone: "warning",
+      icon: "superseded",
+      sentence: "The manifest or trade revision changed after signing; a new attestation is required.",
+    },
+    EXPIRED: {
+      label: "Attestation expired",
+      tone: "warning",
+      icon: "expired",
+      sentence: "The attestation window ended; the attestor must sign the manifest again.",
+    },
+    STALE: {
+      label: "Attestation stale",
+      tone: "warning",
+      icon: "stale",
+      sentence: "The manifest no longer satisfies the EvidencePolicy (for example a slot went stale).",
+    },
+    INVALIDATED: {
+      label: "Attestation invalidated",
+      tone: "negative",
+      icon: "revoked",
+      sentence: "The bound attestor key was rotated, revoked or recovered; a new trade revision is required.",
+    },
+  },
+  inspectionDecision: {
+    PASS: {
+      label: "Inspector decision: PASS",
+      tone: "neutral",
+      icon: "complete",
+      sentence: "The bound inspector signed PASS over the current attested manifest.",
+    },
+    FAIL: {
+      label: "Inspector decision: FAIL",
+      tone: "negative",
+      icon: "failed",
+      sentence: "The bound inspector signed FAIL; release is blocked and the refund path may open.",
+    },
+    REVIEW: {
+      label: "Inspector decision: REVIEW",
+      tone: "warning",
+      icon: "review",
+      sentence: "The inspector asked for review; release is blocked until a later PASS.",
+    },
+  },
+  slotStatus: {
+    MISSING: {
+      label: "Missing",
+      tone: "warning",
+      icon: "incomplete",
+      sentence: "No current item fills this slot.",
+    },
+    UNDERFILLED: {
+      label: "Underfilled",
+      tone: "warning",
+      icon: "incomplete",
+      sentence: "Fewer current items than the slot's minimum.",
+    },
+    STALE: {
+      label: "Stale",
+      tone: "warning",
+      icon: "stale",
+      sentence: "The current item passed its freshness rule; upload a replacement.",
+    },
+    FILLED: {
+      label: "Filled",
+      tone: "neutral",
+      icon: "complete",
+      sentence: "Current items satisfy the slot's cardinality and freshness rules.",
+    },
+  },
+};

@@ -5,6 +5,7 @@ import {
   type Capability,
   capabilityAllows,
   DocksideError,
+  digestHexFor,
   fail,
   fromTypedJson,
   newNonce,
@@ -14,11 +15,14 @@ import {
   tradeRevisionDigest,
   tradeTermsCanonical,
   tradeTermsFromJson,
+  tradeTermsToJson,
+  verifyFor,
 } from "@dockside/core";
 import {
   type EvidenceService,
   type HoldService,
   type HoldView,
+  inspectionPayload,
   parseEvidencePolicy,
   policyCanonical,
   RESOLUTION_CODES,
@@ -400,6 +404,11 @@ export function tradeRoutes(d: AppDeps): Route[] {
           tradeDigest: out.tradeDigest,
           canonicalDigest: tradeRevisionDigest(terms),
           relay: m.escrow.registerTradeCall(termsArg(terms), b.buyerSignature, b.supplierSignature),
+          // The contract stores the EvidencePolicy the revision binds; relayed after register_trade.
+          policyRelay: m.escrow.registerEvidencePolicyCall(
+            terms.tradeId,
+            toTypedJson(policyCanonical(boundPolicy(d, terms).policy)),
+          ),
           signedPayload: toTypedJson(tradeTermsCanonical(terms)),
         };
       },
@@ -1064,6 +1073,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         return { requestId, state: m.journal.journal.op(params["id"] as string).state };
       },
     ),
+    ...proposalRoutes(d),
     r("POST", "/v1/trades/:id/freeze", true, z.object({ reason: code }).strict(), ({ ctx, params, body }) => {
       const c = must(ctx);
       act(c, "REQUEST_RECONCILIATION");
@@ -1074,5 +1084,303 @@ export function tradeRoutes(d: AppDeps): Route[] {
       const requestId = m.journal.freezeTrade(c, t.tradeId, (body as { reason: string }).reason);
       return { requestId, frozen: true };
     }),
+  ];
+}
+
+/* ------------------------- proposals and challenges (M08) ------------------------- */
+
+const DAY_MS = 24 * 3600_000;
+
+/** The EvidencePolicy a revision binds, as registered (digest checked against the terms). */
+function boundPolicy(d: AppDeps, t: TradeTerms) {
+  const row = d.db.get(
+    "SELECT digest, policy_json FROM evidence_policies WHERE policy_id = ? AND revision = ?",
+    t.evidencePolicy.id,
+    t.evidencePolicy.revision,
+  );
+  if (!row) fail("NOT_FOUND", "evidence policy not registered");
+  if (String(row["digest"]) !== t.evidencePolicy.digest)
+    fail("VALIDATION_FAILED", "registered evidence policy digest differs from the revision");
+  const json = JSON.parse(String(row["policy_json"])) as Record<string, unknown>;
+  return { policy: parseEvidencePolicy(json), json, digest: String(row["digest"]) };
+}
+
+/**
+ * Current authority of a human principal for a trade role. Every failure answers the same way, so
+ * the route does not reveal whether an id exists or which check failed.
+ */
+function humanBinding(d: AppDeps, principalId: string, capability: Capability, label: string) {
+  const deny = (): never => fail("VALIDATION_FAILED", `${label} is not an active ${capability} principal`);
+  const p = d.db.get("SELECT organization_id, kind, status FROM principals WHERE id = ?", principalId);
+  if (p?.["kind"] !== "HUMAN" || p["status"] !== "ACTIVE") return deny();
+  const g = d.db.get(
+    "SELECT 1 AS x FROM role_grants WHERE principal_id = ? AND capability = ? AND status = 'ACTIVE'",
+    principalId,
+    capability,
+  );
+  if (!g) return deny();
+  const k = d.db.get(
+    "SELECT id, public_key FROM key_versions WHERE principal_id = ? AND status = 'ACTIVE' ORDER BY version DESC LIMIT 1",
+    principalId,
+  );
+  if (!k) return deny();
+  return {
+    organizationId: String(p["organization_id"]),
+    principalId,
+    keyVersionId: String(k["id"]),
+    publicKey: String(k["public_key"]),
+  };
+}
+
+/** The buyer organisation's active service enrollment for a capability whose scope covers the policy. */
+function serviceBinding(
+  d: AppDeps,
+  organizationId: string,
+  capability: "MANIFEST_ATTEST" | "DETERMINISTIC_POLICY_SET",
+  policy: { id: string; revision: number },
+  explicitId: string | undefined,
+  schema: string,
+) {
+  const rows = d.db
+    .all(
+      "SELECT id, principal_id, service_id, scope_json FROM service_enrollments WHERE organization_id = ? AND capability = ? AND status = 'ACTIVE' ORDER BY created_at, id",
+      organizationId,
+      capability,
+    )
+    .filter((r) => {
+      const s = JSON.parse(String(r["scope_json"])) as Record<string, unknown>;
+      return (
+        s["organizationId"] === organizationId &&
+        s["tradeId"] === null &&
+        s["evidencePolicyId"] === policy.id &&
+        s["evidencePolicyRevision"] === policy.revision &&
+        (explicitId === undefined || r["id"] === explicitId)
+      );
+    });
+  const e = rows[0];
+  if (rows.length !== 1 || !e)
+    return fail(
+      "VALIDATION_FAILED",
+      `expected exactly one active ${capability} enrollment covering ${policy.id}@${policy.revision}`,
+      { candidates: rows.length },
+    );
+  const k = d.db.get(
+    "SELECT version, public_key FROM key_versions WHERE principal_id = ? AND status = 'ACTIVE' ORDER BY version DESC LIMIT 1",
+    String(e["principal_id"]),
+  );
+  if (!k) return fail("KEY_NOT_BOUND", `${capability} enrollment has no active key`);
+  return {
+    enrollmentId: String(e["id"]),
+    serviceId: String(e["service_id"]),
+    keyVersion: Number(k["version"]),
+    publicKey: String(k["public_key"]),
+    capability,
+    scope: {
+      organizationId,
+      tradeId: null,
+      evidencePolicyId: policy.id,
+      evidencePolicyRevision: policy.revision,
+    },
+    attestationSchema: schema,
+  };
+}
+
+function proposalJson(d: AppDeps, terms: TradeTerms) {
+  const canonicalTerms = tradeTermsCanonical(terms);
+  return {
+    tradeId: terms.tradeId,
+    terms: tradeTermsToJson(terms),
+    purpose: "TRADE_REVISION",
+    payload: toTypedJson(canonicalTerms),
+    digest: digestHexFor("TRADE_REVISION", canonicalTerms),
+    bindingIssues: d.authority.bindingStatus(terms).issues,
+  };
+}
+
+const anyId = z.string().regex(/^[a-z]{2,8}_[0-9a-f]{32}$/);
+
+function proposalRoutes(d: AppDeps): Route[] {
+  const r = route;
+  return [
+    /**
+     * Prepare (never store) the canonical revision-1 terms for a trade the calling buyer approver
+     * proposes. The server resolves each named principal's current key version and the buyer
+     * organisation's enrolled services, so every party signs exactly what the contract registers.
+     */
+    r(
+      "POST",
+      "/v1/trade-proposals",
+      true,
+      z
+        .object({
+          supplierPrincipalId: anyId,
+          inspectorPrincipalId: anyId,
+          riskResolverPrincipalId: anyId,
+          buyerAccountId: z.string().max(64),
+          supplierAccountId: z.string().max(64),
+          payoutDestination: z.string().max(64),
+          amountYocto: z.string().regex(/^[1-9][0-9]{0,38}$/),
+          milestone: z.object({ id: z.string().max(64), description: z.string().max(280) }).strict(),
+          evidencePolicy: z.object({ id: z.string().max(64), revision: z.number().int().min(1) }).strict(),
+          expiresInDays: z.number().int().min(1).max(180),
+          manifestAttestorEnrollmentId: anyId.optional(),
+          policySetterEnrollmentId: anyId.optional(),
+        })
+        .strict(),
+      ({ ctx, body }) => {
+        const c = must(ctx);
+        act(c, "ACCEPT_TRADE_REVISION");
+        const m = mods(d);
+        if (!c.capabilities.includes("BUYER_APPROVER"))
+          fail("FORBIDDEN", "only a buyer approver proposes a trade revision");
+        const b = body as {
+          supplierPrincipalId: string;
+          inspectorPrincipalId: string;
+          riskResolverPrincipalId: string;
+          buyerAccountId: string;
+          supplierAccountId: string;
+          payoutDestination: string;
+          amountYocto: string;
+          milestone: { id: string; description: string };
+          evidencePolicy: { id: string; revision: number };
+          expiresInDays: number;
+          manifestAttestorEnrollmentId?: string;
+          policySetterEnrollmentId?: string;
+        };
+        const policyRow = d.db.get(
+          "SELECT digest FROM evidence_policies WHERE policy_id = ? AND revision = ?",
+          b.evidencePolicy.id,
+          b.evidencePolicy.revision,
+        );
+        if (!policyRow) fail("NOT_FOUND", "evidence policy not registered");
+        const buyer = humanBinding(d, c.principal.id, "BUYER_APPROVER", "buyer");
+        if (buyer.keyVersionId !== c.keyVersion.id)
+          fail("KEY_NOT_BOUND", "propose from the session of your current active key version");
+        const supplier = humanBinding(d, b.supplierPrincipalId, "SUPPLIER_SIGNER", "supplier");
+        const inspector = humanBinding(d, b.inspectorPrincipalId, "INSPECTOR", "inspector");
+        const risk = humanBinding(d, b.riskResolverPrincipalId, "RISK_RESOLVER", "risk/policy resolver");
+        const network = d.config.DOCKSIDE_NETWORK;
+        const json = {
+          schemaVersion: 1,
+          profileVersion: "dockside-direct-testnet-v1",
+          tradeId: d.ids.next("trd"),
+          revision: 1,
+          predecessorDigest: null,
+          network,
+          escrowContractId: m.escrow.contractId,
+          buyer: { ...buyer, accountId: b.buyerAccountId },
+          supplier: { ...supplier, accountId: b.supplierAccountId },
+          asset: { kind: "NEAR_NATIVE", network },
+          amountYocto: b.amountYocto,
+          milestone: b.milestone,
+          evidencePolicy: { ...b.evidencePolicy, digest: String(policyRow["digest"]) },
+          inspector: {
+            principalId: inspector.principalId,
+            keyVersionId: inspector.keyVersionId,
+            publicKey: inspector.publicKey,
+            attestationSchema: "dockside/inspection-attestation@1",
+          },
+          manifestAttestor: serviceBinding(
+            d,
+            buyer.organizationId,
+            "MANIFEST_ATTEST",
+            b.evidencePolicy,
+            b.manifestAttestorEnrollmentId,
+            "dockside/manifest-attestation@1",
+          ),
+          policySetter: serviceBinding(
+            d,
+            buyer.organizationId,
+            "DETERMINISTIC_POLICY_SET",
+            b.evidencePolicy,
+            b.policySetterEnrollmentId,
+            "dockside/hold-set@1",
+          ),
+          riskResolver: {
+            principalId: risk.principalId,
+            keyVersionId: risk.keyVersionId,
+            publicKey: risk.publicKey,
+          },
+          payout: { network, recipientType: "NEAR_ACCOUNT", destination: b.payoutDestination },
+          refundPolicy: { id: "dockside-refund-v1", revision: 1 },
+          delayPolicy: { destinationChangeDelayMs: DAY_MS },
+          expiresAt: d.clock.now() + b.expiresInDays * DAY_MS,
+        };
+        return proposalJson(d, tradeTermsFromJson(json, { addressMode: "input" }));
+      },
+    ),
+    /** The counterparty reviews exact terms (and the proposer's signature) before signing. */
+    r(
+      "POST",
+      "/v1/trade-proposals/review",
+      true,
+      z.object({ terms: z.record(z.string(), z.unknown()), buyerSignature: sig.optional() }).strict(),
+      ({ ctx, body }) => {
+        const c = must(ctx);
+        act(c, "ACCEPT_TRADE_REVISION");
+        mods(d);
+        const b = body as { terms: unknown; buyerSignature?: string };
+        const terms = tradeTermsFromJson(b.terms);
+        if (c.principal.id !== terms.buyer.principalId && c.principal.id !== terms.supplier.principalId)
+          fail("FORBIDDEN", "only the buyer approver or supplier signer the terms bind may review them");
+        return {
+          ...proposalJson(d, terms),
+          buyerSignatureValid:
+            b.buyerSignature === undefined
+              ? null
+              : verifyFor(
+                  terms.buyer.publicKey,
+                  "TRADE_REVISION",
+                  tradeTermsCanonical(terms),
+                  b.buyerSignature,
+                ),
+        };
+      },
+    ),
+    r("GET", "/v1/trades/:id/evidence-policy", true, undefined, ({ ctx, params }) => {
+      const c = must(ctx);
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      const p = boundPolicy(d, t);
+      return { policy: p.json, digest: p.digest };
+    }),
+    /** Exact inspection payload over the current attested manifest, for the bound inspector to sign. */
+    r(
+      "POST",
+      "/v1/trades/:id/inspection-challenges",
+      true,
+      z
+        .object({
+          decision: z.enum(["PASS", "FAIL", "REVIEW"]),
+          reasonCodes: z.array(code).min(1).max(8),
+        })
+        .strict(),
+      ({ ctx, params, body }) => {
+        const c = must(ctx);
+        act(c, "ATTEST_INSPECTION");
+        const m = mods(d);
+        const t = loadTrade(m, c, params["id"] as string);
+        requireBound(c, t.inspector, "INSPECTOR", "inspector");
+        const att = m.evidence.currentAttestation(t.tradeId);
+        if (!att) return fail("INVALID_STATE", "no current manifest attestation to inspect");
+        const b = body as { decision: "PASS" | "FAIL" | "REVIEW"; reasonCodes: string[] };
+        const now = d.clock.now();
+        const payload = inspectionPayload(t, {
+          manifestRevision: att.manifestRevision,
+          manifestDigest: att.manifestDigest,
+          decision: b.decision,
+          reasonCodes: b.reasonCodes,
+          issuedAt: now,
+          expiresAt: Math.min(now + 7 * DAY_MS, att.expiresAt),
+          nonce: newNonce(),
+        });
+        return {
+          purpose: "INSPECTION_ATTESTATION",
+          payload: toTypedJson(payload),
+          digest: digestHexFor("INSPECTION_ATTESTATION", payload),
+          attestationDigest: att.digest,
+        };
+      },
+    ),
   ];
 }

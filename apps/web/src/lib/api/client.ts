@@ -113,7 +113,12 @@ export class DocksideClient {
 
   async call<T>(
     spec: EndpointSpec,
-    options: { params?: Record<string, string>; query?: Record<string, string>; body?: unknown } = {},
+    options: {
+      params?: Record<string, string>;
+      query?: Record<string, string>;
+      body?: unknown;
+      signal?: AbortSignal;
+    } = {},
   ): Promise<ApiOutcome<T>> {
     let path: string;
     try {
@@ -155,6 +160,7 @@ export class DocksideClient {
     try {
       const init: RequestInit = { method: spec.method, headers, credentials: "omit", cache: "no-store" };
       if (spec.method === "POST") init.body = bodyText;
+      if (options.signal) init.signal = options.signal;
       res = await this.fetchImpl(`${this.opts.baseUrl}${pathWithQuery}`, init);
     } catch (e) {
       const at = this.now();

@@ -21,11 +21,37 @@ export async function expectAccessible(page: Page, label: string): Promise<void>
 }
 
 export async function expectNoBodyOverflow(page: Page, label: string): Promise<void> {
-  const o = await page.evaluate(() => ({
-    scroll: document.documentElement.scrollWidth,
-    client: document.documentElement.clientWidth,
-  }));
-  expect(o.scroll, `horizontal body overflow on ${label}`).toBeLessThanOrEqual(o.client);
+  const o = await page.evaluate(() => {
+    const client = document.documentElement.clientWidth;
+    // Name the outermost elements that stick out, so a failure says where to look.
+    const culprits = [...document.querySelectorAll("body *")]
+      .map((e) => ({ e, r: e.getBoundingClientRect().right }))
+      .filter((x) => x.r > client + 0.5)
+      .sort((a, b) => b.r - a.r)
+      .slice(0, 6)
+      .map(({ e, r }) => {
+        let scroller = "none";
+        for (let p = e.parentElement; p; p = p.parentElement)
+          if (getComputedStyle(p).overflowX !== "visible") {
+            scroller = `${p.tagName.toLowerCase()}.${[...p.classList].join(".")}`;
+            break;
+          }
+        return `${e.tagName.toLowerCase()}.${[...e.classList].join(".")} ${Math.round(r)}px in ${scroller}`;
+      });
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n && culprits.length < 12; n = walker.nextNode()) {
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      const right = range.getBoundingClientRect().right;
+      let clipped = false;
+      for (let p = n.parentElement; p && p !== document.body; p = p.parentElement)
+        if (getComputedStyle(p).overflowX !== "visible") clipped = true;
+      if (right > client + 0.5 && !clipped)
+        culprits.push(`text "${(n.textContent ?? "").slice(0, 40)}" in ${n.parentElement?.tagName.toLowerCase()} ${Math.round(right)}px`);
+    }
+    return { scroll: document.documentElement.scrollWidth, client, culprits };
+  });
+  expect(o.scroll, `horizontal body overflow on ${label}: ${o.culprits.join(", ")}`).toBeLessThanOrEqual(o.client);
 }
 
 export async function waitForScreen(page: Page): Promise<void> {

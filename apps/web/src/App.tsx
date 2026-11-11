@@ -6,7 +6,7 @@ import { AuditScreen } from "./screens/Audit";
 import { InspectionsScreen, NotFoundScreen, PayoutsScreen } from "./screens/Operations";
 import { OrganizationScreen } from "./screens/Organization";
 import { SignInScreen } from "./screens/SignIn";
-import { TradeCreateScreen } from "./screens/TradeCreate";
+import { CountersignScreen, TradeCreateScreen } from "./screens/TradeCreate";
 import { TradesScreen } from "./screens/Trades";
 import { TradeWorkspaceScreen } from "./screens/TradeWorkspace";
 
@@ -19,6 +19,8 @@ function titleOf(r: Route): string {
       return "Sign in";
     case "trade-new":
       return "Create trade";
+    case "trade-countersign":
+      return "Countersign a proposal";
     case "trade":
       return `Trade ${r.tradeId} · ${r.tab}`;
     case "inspections":
@@ -43,6 +45,8 @@ function Screen({ route }: { route: Route }) {
       return <SignInScreen />;
     case "trade-new":
       return <TradeCreateScreen />;
+    case "trade-countersign":
+      return <CountersignScreen />;
     case "trade":
       return <TradeWorkspaceScreen tradeId={route.tradeId} tab={route.tab} />;
     case "inspections":
