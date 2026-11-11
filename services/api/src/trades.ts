@@ -40,8 +40,8 @@ import type { ReleaseService } from "@dockside/release";
 import { AuditLog } from "@dockside/store";
 import { z } from "zod";
 import type { AppDeps } from "./app.js";
-import { type Route, route } from "./routing.js";
 import { buildAuditExport } from "./export.js";
+import { type Route, route } from "./routing.js";
 
 /**
  * M07 trade surface: every route reads persisted service state and chain observations and
@@ -898,6 +898,108 @@ export function tradeRoutes(d: AppDeps): Route[] {
       if ((payload as Record<string, CanonicalValue>)["releaseIntentId"] !== params["id"])
         fail("VALIDATION_FAILED", "abandon names a different release intent");
       return call(await m.release.recordAbandon(c, { payload, signature: b.signature }));
+    }),
+
+    /* ------------------------- destination change (M09) ------------------------- */
+    // A successor revision that changes only payout.destination: both bound parties sign the same
+    // digest, the delay starts at the second consent, activation is a permissionless relay that
+    // the contract re-checks, and binding makes evidence and holds follow the new revision.
+    r("GET", "/v1/trades/:id/destination-change", true, undefined, async ({ ctx, params }) => {
+      const c = must(ctx);
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      const view = await m.release.sync(t.tradeId);
+      return {
+        tradeId: t.tradeId,
+        boundRevision: t.revision,
+        contractRevision: view.revision,
+        activeDestination: t.payout.destination,
+        delayMs: t.delayPolicy.destinationChangeDelayMs,
+        pending: view.pendingDestinationChange,
+        history: view.destinationHistory,
+        bindingRequired: view.revision > t.revision,
+      };
+    }),
+    r(
+      "POST",
+      "/v1/trades/:id/destination-change-challenges",
+      true,
+      z.object({ destination: z.string().min(2).max(64) }).strict(),
+      ({ ctx, params, body }) => {
+        const c = must(ctx);
+        act(c, "CONSENT_DESTINATION_REVISION");
+        const m = mods(d);
+        const t = loadTrade(m, c, params["id"] as string);
+        requireExitParty(c, t);
+        const s = m.release.successorTerms(t.tradeId, (body as { destination: string }).destination);
+        return {
+          purpose: "TRADE_REVISION",
+          payload: toTypedJson(s.canonical),
+          digest: digestHexFor("TRADE_REVISION", s.canonical),
+          revision: s.terms.revision,
+          predecessorDigest: tradeRevisionDigest(t),
+        };
+      },
+    ),
+    r(
+      "POST",
+      "/v1/trades/:id/destination-consents",
+      true,
+      z.object({ destination: z.string().min(2).max(64), signature: sig }).strict(),
+      async ({ ctx, params, body }) => {
+        const c = must(ctx);
+        act(c, "CONSENT_DESTINATION_REVISION");
+        const m = mods(d);
+        const t = loadTrade(m, c, params["id"] as string);
+        requireExitParty(c, t);
+        const b = body as { destination: string; signature: string };
+        const relay = await m.release.recordDestinationConsent(c, {
+          tradeId: t.tradeId,
+          destination: b.destination,
+          signature: b.signature,
+        });
+        log(c, "DESTINATION_CONSENT_RECORDED", "trade", t.tradeId);
+        return call(relay);
+      },
+    ),
+    r("POST", "/v1/trades/:id/destination-revocation-challenges", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "CONSENT_DESTINATION_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requireExitParty(c, t);
+      const p = await m.release.prepareDestinationRevocation(c, t.tradeId);
+      return { purpose: "DESTINATION_CHANGE_REVOKE", payload: p.typed, digest: p.digest };
+    }),
+    r("POST", "/v1/trades/:id/destination-revocations", true, signed, ({ ctx, params, body }) => {
+      const c = must(ctx);
+      act(c, "CONSENT_DESTINATION_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requireExitParty(c, t);
+      const b = body as { payload: unknown; signature: string };
+      const payload = canonical(b.payload);
+      if ((payload as Record<string, CanonicalValue>)["tradeId"] !== t.tradeId)
+        fail("VALIDATION_FAILED", "revocation names a different trade");
+      return call(m.release.recordDestinationRevocation(c, { payload, signature: b.signature }));
+    }),
+    r("POST", "/v1/trades/:id/destination-activation", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "CONSENT_DESTINATION_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requireExitParty(c, t);
+      return call(await m.release.prepareActivation(t.tradeId));
+    }),
+    r("POST", "/v1/trades/:id/destination-binding", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "CONSENT_DESTINATION_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requireExitParty(c, t);
+      const out = await m.release.bindActivatedRevision(t.tradeId);
+      log(c, "DESTINATION_REVISION_BOUND", "trade", t.tradeId);
+      return out;
     }),
 
     /* ------------------------- payout / refund / timeline ------------------------- */
