@@ -26,6 +26,9 @@
       ],
       "@dockside/evidence": [
         "packages/evidence/src/index.ts"
+      ],
+      "@dockside/release": [
+        "packages/release/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": false,

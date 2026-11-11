@@ -1,7 +1,9 @@
 import type { AuthContext, AuthorityService } from "@dockside/authority";
 import {
+  assertRevisionTransition,
   type CanonicalValue,
   type Clock,
+  changedMaterialFields,
   DocksideError,
   digestHexFor,
   fail,
@@ -303,6 +305,45 @@ export class EvidenceService {
         tradeDigest: accepted.digest,
         policyId: terms.evidencePolicy.id,
         policyRevision: terms.evidencePolicy.revision,
+      });
+      return { tradeDigest: accepted.digest };
+    });
+  }
+
+  /**
+   * Bind a successor revision activated on chain by the destination-change protocol (M04). Both
+   * parties signed it, it chains the active revision and it changes only the payout destination.
+   * Attestations, inspections and accepted-manifest digests of the predecessor stop being current;
+   * a replacement manifest revision must be attested under the new revision.
+   */
+  bindSuccessorRevision(
+    terms: TradeTerms,
+    sigs: { buyerSignature: string; supplierSignature: string },
+  ): { tradeDigest: string } {
+    const current = this.bound(terms.tradeId).terms;
+    if (assertRevisionTransition(current, terms) !== "SUCCESSOR")
+      fail("VERSION_CONFLICT", "terms are not the successor of the bound revision");
+    const changed = changedMaterialFields(current, terms).filter(
+      (f) => f !== "revision" && f !== "predecessorDigest",
+    );
+    if (changed.length !== 1 || changed[0] !== "payout" || current.payout.network !== terms.payout.network)
+      fail("IMMUTABLE_FIELD", "a successor bound here may change only payout.destination", {
+        fields: changed.join(","),
+      });
+    const accepted = this.authority.verifyTradeRevisionAcceptance(terms, sigs);
+    return this.db.transaction(() => {
+      this.db.run(
+        `INSERT INTO evidence_trade_successors (trade_id, trade_revision, terms_digest, terms_json, activated_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        terms.tradeId,
+        terms.revision,
+        accepted.digest,
+        JSON.stringify(tradeTermsToJson(terms)),
+        this.clock.now(),
+      );
+      this.log(null, "EVIDENCE_TRADE_SUCCESSOR_BOUND", "trade", terms.tradeId, {
+        tradeDigest: accepted.digest,
+        tradeRevision: terms.revision,
       });
       return { tradeDigest: accepted.digest };
     });
@@ -711,6 +752,7 @@ export class EvidenceService {
     if (!r) fail("NOT_FOUND", "attestation not found");
     const tradeId = String(r["trade_id"]);
     if (Number(r["manifest_revision"]) !== this.currentRevision(tradeId)) return "SUPERSEDED";
+    if (attestedTradeRevision(r) !== this.terms(tradeId).revision) return "SUPERSEDED";
     if (this.bindingIssue(this.terms(tradeId), "manifestAttestor")) return "INVALIDATED";
     if (this.clock.now() >= Number(r["expires_at"])) return "EXPIRED";
     if (this.evaluate(tradeId).status !== "COMPLETE") return "STALE";
@@ -733,10 +775,13 @@ export class EvidenceService {
    */
   currentAcceptedManifestDigest(tradeId: string): string | null {
     const r = this.db.get(
-      "SELECT manifest_digest FROM manifest_attestations WHERE trade_id = ? ORDER BY recorded_at DESC, rowid DESC LIMIT 1",
+      "SELECT manifest_digest, payload_json FROM manifest_attestations WHERE trade_id = ? ORDER BY recorded_at DESC, rowid DESC LIMIT 1",
       tradeId,
     );
-    if (!r || this.bindingIssue(this.terms(tradeId), "manifestAttestor")) return null;
+    const terms = this.terms(tradeId);
+    if (!r || this.bindingIssue(terms, "manifestAttestor")) return null;
+    // A successor revision moves the contract's accepted manifest to history.
+    if (attestedTradeRevision(r) !== terms.revision) return null;
     return String(r["manifest_digest"]);
   }
 
@@ -838,8 +883,13 @@ export class EvidenceService {
       Number(t["policy_revision"]),
     );
     if (!p) fail("INTERNAL", "bound policy missing");
-    const terms = tradeTermsFromJson(JSON.parse(String(t["terms_json"])));
-    if (tradeRevisionDigest(terms) !== t["terms_digest"])
+    const succ = this.db.get(
+      "SELECT terms_json, terms_digest FROM evidence_trade_successors WHERE trade_id = ? ORDER BY trade_revision DESC LIMIT 1",
+      tradeId,
+    );
+    const src = succ ?? t;
+    const terms = tradeTermsFromJson(JSON.parse(String(src["terms_json"])));
+    if (tradeRevisionDigest(terms) !== src["terms_digest"])
       fail("INTERNAL", "stored terms do not match their digest");
     return {
       terms,
@@ -1160,3 +1210,11 @@ export class EvidenceService {
 }
 
 export type { Struct };
+
+/** Trade revision named in a recorded attestation's signed header. */
+function attestedTradeRevision(r: Record<string, unknown>): number {
+  const typed = JSON.parse(String(r["payload_json"])) as { struct?: { tradeRevision?: { u64?: string } } };
+  const v = typed.struct?.tradeRevision?.u64;
+  if (v === undefined) fail("INTERNAL", "attestation payload lacks tradeRevision");
+  return Number(v);
+}

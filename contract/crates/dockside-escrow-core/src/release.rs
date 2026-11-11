@@ -38,7 +38,7 @@ pub const PROFILE_FUNDED: &str = "FUNDED_1CLICK";
 pub const MAX_INTENT_LIFETIME_MS: u64 = 14 * DAY_MS;
 pub const MAX_APPROVAL_LIFETIME_MS: u64 = 7 * DAY_MS;
 pub const MAX_EXIT_LIFETIME_MS: u64 = DAY_MS;
-/// Abandonment policy bound by the signed `dockside-direct-testnet-v1` profile (ADR-0009).
+/// Abandonment policy bound by the signed `dockside-direct-testnet-v1` profile (ADR-0006).
 pub const ABANDON_POLICY_ID: &str = "dockside-abandon-v1";
 pub const ABANDON_POLICY_REVISION: u64 = 1;
 pub const ABANDON_GRACE_MS: u64 = DAY_MS;

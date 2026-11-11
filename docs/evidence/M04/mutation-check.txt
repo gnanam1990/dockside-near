@@ -1,0 +1,11 @@
+# Contract mutation check (M04), cargo test -p dockside-escrow-core --locked --test <target> per mutant.
+# Each mutant is applied to contract/crates/dockside-escrow-core/src, the named test target is run, the file is restored.
+M1 release ignores holds: exit 101 (caught) test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.26s
+M2 CANCEL with one consent: exit 101 (caught) test result: FAILED. 3 passed; 7 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+M3 refund ignores unresolved release: exit 101 (caught) test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.61s
+M4 activation ignores unresolved release: exit 0 (SURVIVED) test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.14s
+M5 ABANDON without grace: exit 101 (caught) test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
+
+# M4 is an equivalent mutant: activate_destination_change calls supersede_live, which independently refuses
+# any live intent that is not pre-submit with the same VALUE_LOCKED error, so removing the first guard does not
+# change behaviour (the T-047 unresolved-state assertions still pass for that reason).
