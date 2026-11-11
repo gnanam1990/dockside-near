@@ -9,6 +9,7 @@ use dockside_escrow_core::typed::decode;
 use dockside_escrow_core::{register, Ctx, TradeRecord};
 use ed25519_dalek::{Signer, SigningKey, Verifier as _, VerifyingKey};
 pub mod evidence;
+pub mod release;
 pub use serde_json::{json, Value as J};
 use serde_json::Map;
 

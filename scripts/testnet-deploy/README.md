@@ -81,3 +81,35 @@ Check `fullyFunded`, `funders.<buyer>.available` and `conservation: true`. Fund 
 
 Commit sha, wasm sha256, deploy/init/register/fund transaction hashes, `get_config`/`get_ledger` output and
 the `verify-deploy.mjs` output. Only then can T-007's deployment/funding half move from `NOT_RUN`.
+
+## 7. Direct release on testnet (M04, BLOCKED until steps 1-5 exist)
+
+The release path needs the evidence of M03 on chain first: `register_evidence_policy`,
+`submit_manifest_attestation` (signed by the isolated ManifestAttestor process) and `submit_inspection`
+(signed by the enrolled inspector). Then, with every payload produced by `@dockside/release`
+`ReleaseService` and signed by the acting principal's own enrolled key:
+
+1. Buyer approver: `prepareIntent` -> sign `RELEASE_INTENT` -> `recordIntentSignature` returns the
+   `create_release_intent` call. Submit it from any account:
+
+   ```sh
+   near contract call-function as-transaction <escrow>.testnet create_release_intent file-args intent.json \
+     prepaid-gas '50.0 Tgas' attached-deposit '0 NEAR' sign-as <any-account>.testnet network-config testnet sign-with-keychain send
+   ```
+
+2. Buyer approver: `prepareApproval` -> sign `BUYER_APPROVAL` -> `recordApproval` returns `approve_release`.
+3. Anyone: `prepareExecution` returns `execute_release` (100 Tgas). The contract recomputes the whole
+   conjunction, transfers the exact amount to the revision-bound `payout.destination` and settles in
+   `on_release_transfer`.
+4. Read back `get_release`, `get_ledger` and the supplier account balance:
+
+   ```sh
+   near contract call-function as-read-only <escrow>.testnet get_release json-args '{"trade_id":"<trd_...>"}' network-config testnet now
+   ```
+
+Evidence to keep: the create/approve/execute transaction hashes, the callback receipt outcome, `get_release`
+showing `PAID`, `get_ledger` showing `released` per funder and `conservation: true`, and the supplier's
+balance delta. Only then can T-007's release half and the T-019 testnet positive path move from `NOT_RUN`.
+Destination change (`propose_destination_change`, `consent_destination_change`, `activate_destination_change`)
+and CANCEL/ABANDON follow the same pattern; activation needs the trade's real `destinationChangeDelayMs` to
+pass on chain.

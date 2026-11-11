@@ -17,6 +17,9 @@
       "path": "packages/evidence"
     },
     {
+      "path": "packages/release"
+    },
+    {
       "path": "services/api"
     }
   ]

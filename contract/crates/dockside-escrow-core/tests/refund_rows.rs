@@ -1,14 +1,14 @@
 //! dockside-refund-v1 revision 1, lower-layer rows (FR-14, INV-12; feeds T-008/T-009/T-050).
 //! Exercises initiator, signer, clock origin/duration, eligible amount computed by the
 //! contract, original-funder recipient, exact source bucket, revocation phase, dispute/REVIEW
-//! locking and execution outcomes. INSPECTION_FAIL / PERMANENT_HOLD are M04.
+//! locking and execution outcomes. INSPECTION_FAIL / PERMANENT_HOLD are covered in m04_refund_matrix.rs.
 
 mod common;
 use common::*;
 use dockside_escrow_core::refund::{RefundSignatures, RefundState};
 use dockside_escrow_core::TradeRecord;
 
-const NONE: RefundSignatures<'static> = RefundSignatures { buyer: None, supplier: None };
+const NONE: RefundSignatures<'static> = RefundSignatures { buyer: None, supplier: None, risk: None };
 
 fn req(rec: &TradeRecord, id_label: &str, reason: &str, funder: &str, amount: u128, bucket: &str, initiator: &str, now: u64) -> J {
     with_header(
@@ -153,20 +153,20 @@ fn trade_expiry_requires_expiry_initiator_signature_and_24h_challenge() {
     rec.fund(&w.as_caller(BUYER_ACCT).ctx(), 10 * NEAR, 1).unwrap();
     let early = req(&rec, "e0", "TRADE_EXPIRY", BUYER_ACCT, 10 * NEAR, "AVAILABLE", "BUYER", w.now);
     let sig = sign("buyer", "dockside/refund-request", &early);
-    assert_eq!(code(rec.request_refund(&w.ctx(), &early, RefundSignatures { buyer: Some(&sig), supplier: None })), "NOT_ELIGIBLE");
+    assert_eq!(code(rec.request_refund(&w.ctx(), &early, RefundSignatures { buyer: Some(&sig), supplier: None, risk: None })), "NOT_ELIGIBLE");
     w.now = rec.terms.expires_at + 1;
     let p = req(&rec, "e1", "TRADE_EXPIRY", BUYER_ACCT, 10 * NEAR, "AVAILABLE", "BUYER", w.now);
     let buyer = sign("buyer", "dockside/refund-request", &p);
     // Wrong signer for the named initiator, inspector posing as buyer, and missing signature.
     let supplier = sign("supplier", "dockside/refund-request", &p);
-    assert_eq!(code(rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&supplier), supplier: None })), "SIGNATURE_INVALID");
-    assert_eq!(code(rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&sign("inspector", "dockside/refund-request", &p)), supplier: None })), "SIGNATURE_INVALID");
+    assert_eq!(code(rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&supplier), supplier: None, risk: None })), "SIGNATURE_INVALID");
+    assert_eq!(code(rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&sign("inspector", "dockside/refund-request", &p)), supplier: None, risk: None })), "SIGNATURE_INVALID");
     assert_eq!(code(rec.request_refund(&w.ctx(), &p, NONE)), "SIGNATURE_INVALID");
     let mut risk = p.clone();
     set(&mut risk, &["initiatorRole"], s("RISK_RESOLVER"));
-    assert_eq!(code(rec.request_refund(&w.ctx(), &risk, RefundSignatures { buyer: None, supplier: None })), "FORBIDDEN");
+    assert_eq!(code(rec.request_refund(&w.ctx(), &risk, RefundSignatures { buyer: None, supplier: None, risk: None })), "FORBIDDEN");
     // A caller cannot redirect: the recipient is always the recorded original funder.
-    let id = rec.request_refund(&w.as_caller("anyone.testnet").ctx(), &p, RefundSignatures { buyer: Some(&buyer), supplier: None }).unwrap();
+    let id = rec.request_refund(&w.as_caller("anyone.testnet").ctx(), &p, RefundSignatures { buyer: Some(&buyer), supplier: None, risk: None }).unwrap();
     let r = &rec.refunds[&id];
     assert_eq!((r.clock_origin, r.deadline), (Some(rec.terms.expires_at), Some(rec.terms.expires_at + 24 * HOUR)));
     w.now += HOUR;
@@ -192,7 +192,7 @@ fn trade_expiry_undisputed_executes_to_the_original_funder() {
     w.now = rec.terms.expires_at;
     let p = req(&rec, "e2", "TRADE_EXPIRY", OTHER_FUNDER, 10 * NEAR, "AVAILABLE", "SUPPLIER", w.now);
     let sig = sign("supplier", "dockside/refund-request", &p);
-    let id = rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: None, supplier: Some(&sig) }).unwrap();
+    let id = rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: None, supplier: Some(&sig), risk: None }).unwrap();
     w.now += 24 * HOUR;
     let late = dispute(&rec, &id, "BUYER", w.now, "late");
     assert_eq!(code(rec.dispute_refund(&w.ctx(), &late, &sign("buyer", "dockside/refund-dispute", &late))), "INVALID_STATE");
@@ -210,7 +210,7 @@ fn mutual_cancel_needs_identical_dual_consent_and_one_hour_revocation_window() {
     rec.fund(&w.as_caller(BUYER_ACCT).ctx(), 10 * NEAR, 1).unwrap();
     let p = req(&rec, "m1", "MUTUAL_CANCEL", BUYER_ACCT, 10 * NEAR, "AVAILABLE", "BUYER", w.now);
     let b = sign("buyer", "dockside/refund-request", &p);
-    let id = rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&b), supplier: None }).unwrap();
+    let id = rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&b), supplier: None, risk: None }).unwrap();
     assert_eq!(rec.refunds[&id].state, RefundState::Requested, "one consent is not dual consent");
     w.now += 3 * HOUR;
     assert_eq!(code(rec.authorize_refund(&w.ctx(), &id)), "INVALID_STATE");
@@ -229,7 +229,7 @@ fn mutual_cancel_needs_identical_dual_consent_and_one_hour_revocation_window() {
     // Replayed revocation nonce is refused even on a new intent.
     let p2 = req(&rec, "m2", "MUTUAL_CANCEL", BUYER_ACCT, 10 * NEAR, "AVAILABLE", "SUPPLIER", w.now);
     let id2 = rec
-        .request_refund(&w.ctx(), &p2, RefundSignatures { buyer: Some(&sign("buyer", "dockside/refund-request", &p2)), supplier: Some(&sign("supplier", "dockside/refund-request", &p2)) })
+        .request_refund(&w.ctx(), &p2, RefundSignatures { buyer: Some(&sign("buyer", "dockside/refund-request", &p2)), supplier: Some(&sign("supplier", "dockside/refund-request", &p2)), risk: None })
         .unwrap();
     assert_eq!(rec.refunds[&id2].state, RefundState::Timelocked);
     w.now += HOUR;
@@ -246,14 +246,14 @@ fn key_loss_inspection_fail_and_unknown_rows_never_submit() {
         ("BUYER_KEY_LOSS", "NO_REFUND_SUBMIT"),
         ("SUPPLIER_KEY_LOSS", "NO_REFUND_SUBMIT"),
         ("INSPECTOR_KEY_LOSS", "NO_REFUND_SUBMIT"),
-        ("INSPECTION_FAIL", "REASON_NOT_ENABLED"),
-        ("PERMANENT_HOLD", "REASON_NOT_ENABLED"),
+        ("INSPECTION_FAIL", "NOT_ELIGIBLE"), // enabled in M04: needs a current inspector FAIL
+        ("PERMANENT_HOLD", "NOT_ELIGIBLE"), // enabled in M04: needs a RESOLVE_TO_REFUND resolution
         ("UNEXPECTED_ASSET_RECOVERY", "NOT_NATIVE_REFUND"),
         ("ADMIN_OVERRIDE", "VALIDATION_FAILED"),
     ] {
         let p = req(&rec, reason, reason, BUYER_ACCT, 10 * NEAR, "AVAILABLE", "BUYER", w.now);
         let sig = sign("buyer", "dockside/refund-request", &p);
-        assert_eq!(code(rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&sig), supplier: None })), expected, "{reason}");
+        assert_eq!(code(rec.request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&sig), supplier: None, risk: None })), expected, "{reason}");
     }
     assert_eq!(rec.ledger.funder(BUYER_ACCT).available, 10 * NEAR);
 }
@@ -298,7 +298,7 @@ fn refunded_available_value_demotes_remaining_value_to_partial() {
     assert!(rec.ledger.fully_funded());
     let p = req(&rec, "c1", "MUTUAL_CANCEL", OTHER_FUNDER, 4 * NEAR, "AVAILABLE", "BUYER", w.now);
     let id = rec
-        .request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&sign("buyer", "dockside/refund-request", &p)), supplier: Some(&sign("supplier", "dockside/refund-request", &p)) })
+        .request_refund(&w.ctx(), &p, RefundSignatures { buyer: Some(&sign("buyer", "dockside/refund-request", &p)), supplier: Some(&sign("supplier", "dockside/refund-request", &p)), risk: None })
         .unwrap();
     assert!(!rec.ledger.fully_funded(), "locked value no longer counts toward the trade amount");
     w.now += HOUR;

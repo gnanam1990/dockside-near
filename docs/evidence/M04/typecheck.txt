@@ -1,0 +1,8 @@
+
+> dockside@0.1.0 typecheck <worktree>
+> tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json && pnpm --filter @dockside/web run typecheck
+
+
+> @dockside/web@0.1.0 typecheck <worktree>\apps\web
+> tsc -p tsconfig.json && tsc -p tsconfig.node.json
+

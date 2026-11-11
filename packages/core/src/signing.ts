@@ -29,6 +29,18 @@ export const SIGNING_DOMAINS = {
   EVIDENCE_MANIFEST: { domain: "dockside/evidence-manifest", version: 1 },
   EVIDENCE_ISSUANCE: { domain: "dockside/evidence-issuance", version: 1 },
   AUDIT_EVENT: { domain: "dockside/audit-event", version: 1 },
+  // Release intents, exits and destination change (M04). Must equal contract domains.rs.
+  RELEASE_INTENT: { domain: "dockside/release-intent", version: 1 },
+  CANCEL_RELEASE_INTENT: { domain: "dockside/cancel-release-intent", version: 1 },
+  CANCEL_CONSENT: { domain: "dockside/cancel-consent", version: 1 },
+  REVOKE_CANCEL_CONSENT: { domain: "dockside/revoke-cancel-consent", version: 1 },
+  ABANDON_RELEASE_INTENT: { domain: "dockside/abandon-release-intent", version: 1 },
+  DESTINATION_CHANGE_REVOKE: { domain: "dockside/destination-change-revoke", version: 1 },
+  REFUND_AUTHORIZE: { domain: "dockside/refund-authorize", version: 1 },
+  // Digest-only domains (never signed on their own).
+  DESTINATION_SNAPSHOT: { domain: "dockside/destination-snapshot", version: 1 },
+  RESERVATION_SOURCE: { domain: "dockside/reservation-source", version: 1 },
+  HOLDS_VIEW: { domain: "dockside/holds-view", version: 1 },
 } as const;
 
 export type SigningPurpose = keyof typeof SIGNING_DOMAINS;
