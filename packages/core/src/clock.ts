@@ -54,6 +54,13 @@ export const ID_PREFIXES = {
   releaseIntent: "rli",
   releaseEvent: "rle",
   releaseSignature: "rsg",
+  economicOperation: "eop",
+  outbox: "obx",
+  observation: "obs",
+  operationTransition: "otr",
+  disposition: "dsp",
+  incident: "inc",
+  operatorRequest: "opr",
 } as const;
 export type IdPrefix = (typeof ID_PREFIXES)[keyof typeof ID_PREFIXES];
 

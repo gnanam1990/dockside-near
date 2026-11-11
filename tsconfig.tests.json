@@ -29,6 +29,9 @@
       ],
       "@dockside/release": [
         "packages/release/src/index.ts"
+      ],
+      "@dockside/journal": [
+        "packages/journal/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": false,

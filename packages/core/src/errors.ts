@@ -71,6 +71,10 @@ export const ERROR_CODES = {
   CANCEL_DISAGREEMENT: { http: 409, retry: "never" },
   DESTINATION_CHANGE_PENDING: { http: 409, retry: "never" },
   FUNDED_RAIL_BLOCKED: { http: 409, retry: "never" },
+  // Journal, outbox and reconciliation codes (M05).
+  TRADE_FROZEN: { http: 409, retry: "never" },
+  LEASE_LOST: { http: 409, retry: "later" },
+  ILLEGAL_TRANSITION: { http: 409, retry: "never" },
   INTERNAL: { http: 500, retry: "unknown" },
 } as const;
 

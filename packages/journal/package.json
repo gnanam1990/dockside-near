@@ -1,0 +1,21 @@
+{
+  "name": "@dockside/journal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside durable economic-operation journal, transactional outbox, fenced workers and reconciliation (M05)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/authority": "workspace:*",
+    "@dockside/core": "workspace:*",
+    "@dockside/evidence": "workspace:*",
+    "@dockside/near": "workspace:*",
+    "@dockside/release": "workspace:*",
+    "@dockside/store": "workspace:*"
+  }
+}
