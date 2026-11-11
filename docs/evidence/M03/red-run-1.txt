@@ -1,0 +1,40 @@
+
+ RUN  v4.1.12 <worktree>
+
+ ❯ packages/evidence/test/m03-t013-t018-replacement.test.ts (0 test)
+ ❯ packages/evidence/test/m03-t011-t012-slots.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evidence/test/m03-t011-t012-slots.test.ts [ packages/evidence/test/m03-t011-t012-slots.test.ts ]
+Error: Cannot find module '../src/index.js' imported from <worktree>/packages/evidence/test/world.ts
+ ❯ packages/evidence/test/world.ts:25:1
+     23| import { type Actor, bootstrap, enrollHuman, type Harness, makeHarness…
+     24| import { IsolatedSigner } from "@dockside/authority";
+     25| import {
+       | ^
+     26|   type EvidencePolicyInput,
+     27|   EvidenceService,
+ ❯ packages/evidence/test/m03-t011-t012-slots.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/evidence/test/m03-t013-t018-replacement.test.ts [ packages/evidence/test/m03-t013-t018-replacement.test.ts ]
+Error: Cannot find module '../src/index.js' imported from <worktree>/packages/evidence/test/m03-t013-t018-replacement.test.ts
+ ❯ packages/evidence/test/m03-t013-t018-replacement.test.ts:6:1
+      4| import { afterEach, describe, expect, it } from "vitest";
+      5| import { closeHarnesses } from "../../authority/test/helpers.js";
+      6| import { EvidenceService } from "../src/index.js";
+       | ^
+      7| import { codeOf, DAY, fillAll, makeWorld, pdf, png, type World } from …
+      8|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  21:10:14
+   Duration  631ms (transform 384ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+
+exit: 1
