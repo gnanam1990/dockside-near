@@ -1,0 +1,42 @@
+
+ RUN  v4.1.12 <repo>
+
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > the compiled worker exists (pretest build) 1ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: state machine, outbox and exactly-once submit > the service transition table is exactly the database rule table 459ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-057 refund uncertainty and revocation restore the exact bucket > revocation before execution restores excess strictly to QUARANTINED; the queued operation withdraws 530ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-057 refund uncertainty and revocation restore the exact bucket > revocation of a partial-funding return restores PARTIAL, not a generic bucket 382ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: state machine, outbox and exactly-once submit > T-029/NFR-01: operation and outbox are persisted before submit; duplicates join; one submit, one payout 1055ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > kill at outbox.claimed: restart pays exactly once from persisted state 2360ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-057 refund uncertainty and revocation restore the exact bucket > authoritative FAILED restores QUARANTINED; a new refund needs a new intent; it refunds once 1534ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: state machine, outbox and exactly-once submit > T-028: accepted then lost response stays UNKNOWN with the lock; a late success binds the original intent 1073ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-057 refund uncertainty and revocation restore the exact bucket > UNKNOWN after a lost response reconciles by the original transaction to REFUNDED, without retry 832ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: evidence hierarchy for PAID (T-031) > provider-style success alone is not PAID: hidden receipts give REVIEW; adjudication cannot force; late receipt reconciles 1590ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > kill at submit.returned: restart pays exactly once from persisted state 2178ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-057 refund uncertainty and revocation restore the exact bucket > contradictory success and failure evidence stays locked in REVIEW through reconciliation and adjudication 1415ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-057 refund uncertainty and revocation restore the exact bucket > release and refund exclude each other through the journal lock 457ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-030 provider refund reconciliation (funded-profile logic; corridor BLOCKED) > duplicate and late receipts count once each; exact return allocates to the original funders 1ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-030 provider refund reconciliation (funded-profile logic; corridor BLOCKED) > short refund leaves the unmatched amount locked; excess is quarantined; non-final waits 0ms
+ ✓ packages/journal/test/m05-refund-journal.test.ts > T-030 provider refund reconciliation (funded-profile logic; corridor BLOCKED) > a refund to any other target or asset counts for nothing and needs REVIEW 0ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: evidence hierarchy for PAID (T-031) > wrong recipient or amount in the receipt is a mismatch: REVIEW, incident, trade frozen 1181ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > kill at reconcile.observed: restart pays exactly once from persisted state 2212ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: authoritative FAILED and fresh intent (T-056) > runtime-returned transfer is FAILED with exact per-funder restoration; old intent is dead; new intent pays once 1531ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: authoritative FAILED and fresh intent (T-056) > contract rejection before any effect is FAILED; the parties exit the dead intent and start fresh 765ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: authoritative FAILED and fresh intent (T-056) > post-submit uncertainty never becomes FAILED: deferred settlement and a dead status source go to REVIEW 1081ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > kill at unknown.persisted: restart pays exactly once from persisted state 2296ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: fencing and late evidence (T-032) > a worker that lost its lease epoch can write nothing 760ms
+ ✓ packages/journal/test/m05-release-journal.test.ts > M05 journal: fencing and late evidence (T-032) > evidence after an authoritative FAILED is a conservation incident: trade and successors frozen, no second payout 1563ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > kill after the signed transaction is persisted but before broadcast: never rebroadcast; expiry proves FAILED; fresh intent pays 3392ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > kill at REVIEW and at the adjudication and reconciliation boundaries: the lock and states survive 3048ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > two worker processes race the same outbox row: one submit, one payout 848ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-029 restart resumes reconciliation without resubmit (release boundaries) > FAILED retry after a restart still needs a new intent with fresh attestation and approval 2598ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-057 refund submit and reconciliation boundaries survive process kills > kill at refund outbox.claimed: restart refunds the original funder exactly once (or never, if not broadcast) 2202ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-057 refund submit and reconciliation boundaries survive process kills > kill at refund submit.persisted: restart refunds the original funder exactly once (or never, if not broadcast) 2371ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-057 refund submit and reconciliation boundaries survive process kills > kill at refund submit.returned: restart refunds the original funder exactly once (or never, if not broadcast) 2160ms
+ ✓ packages/journal/test/m05-process-kill.test.ts > T-057 refund submit and reconciliation boundaries survive process kills > kill at refund reconcile.observed: restart refunds the original funder exactly once (or never, if not broadcast) 2121ms
+
+ Test Files  3 passed (3)
+      Tests  32 passed (32)
+   Start at  22:39:11
+   Duration  28.83s (transform 1.03s, setup 0ms, import 2.61s, tests 44.00s, environment 0ms)
+
+exit 0

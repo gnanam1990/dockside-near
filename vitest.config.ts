@@ -12,6 +12,7 @@ export default defineConfig({
       "@dockside/near": src("./packages/near/src/index.ts"),
       "@dockside/evidence": src("./packages/evidence/src/index.ts"),
       "@dockside/release": src("./packages/release/src/index.ts"),
+      "@dockside/journal": src("./packages/journal/src/index.ts"),
       "@dockside/api": src("./services/api/src/app.ts"),
     },
   },

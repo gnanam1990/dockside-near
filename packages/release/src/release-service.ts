@@ -201,6 +201,50 @@ export class ReleaseService {
   assertNoUnresolvedRelease(tradeId: string): void {
     const l = this.liveIntent(tradeId);
     if (l && (UNRESOLVED_STATES as readonly string[]).includes(l.state)) stateError(l.state);
+    this.assertEconomicJournal(tradeId, null, { frozen: false });
+  }
+
+  /**
+   * M05 economic-operation journal (0005_journal.sql). A trade frozen by a reconciliation
+   * incident admits no new intent, approval, submit or activation; an operation that holds the
+   * value lock admits no competing action; and an intent that already has an operation (queued,
+   * unresolved or authoritatively FAILED) can never be approved or submitted again: retry needs a
+   * new intent and fresh approval.
+   */
+  private assertEconomicJournal(tradeId: string, intentId: string | null, opts: { frozen: boolean }): void {
+    if (opts.frozen) {
+      const f = this.db.get("SELECT cause_id FROM trade_freezes WHERE trade_id = ? LIMIT 1", tradeId);
+      if (f)
+        fail("TRADE_FROZEN", "trade is frozen by a reconciliation incident", {
+          cause: String(f["cause_id"]),
+        });
+    }
+    const lock = this.db.get(
+      "SELECT state, kind FROM economic_operations WHERE trade_id = ? AND lock_held = 1 LIMIT 1",
+      tradeId,
+    );
+    if (lock)
+      fail(
+        "VALUE_LOCKED",
+        `an economic ${String(lock["kind"]).toLowerCase()} operation (${String(lock["state"])}) owns the value lock`,
+        {
+          state: String(lock["state"]),
+        },
+      );
+    if (intentId) {
+      const op = this.db.get(
+        "SELECT state FROM economic_operations WHERE kind = 'RELEASE' AND subject_id = ? AND state <> 'WITHDRAWN'",
+        intentId,
+      );
+      if (op)
+        fail(
+          "INVALID_STATE",
+          `release intent already has an economic operation (${String(op["state"])}); a retry needs a new intent`,
+          {
+            state: String(op["state"]),
+          },
+        );
+    }
   }
 
   private event(
@@ -454,6 +498,7 @@ export class ReleaseService {
         joined: true,
       };
     }
+    this.assertEconomicJournal(input.tradeId, null, { frozen: true });
     const view = await this.sync(input.tradeId);
     const ledger = await this.escrow.getLedger(input.tradeId);
     this.expireUnsigned(input.tradeId, false);
@@ -578,6 +623,7 @@ export class ReleaseService {
     const j = this.intent(input.releaseIntentId);
     const terms = this.evidence.terms(j.tradeId);
     this.requireParty(ctx, terms, "BUYER_APPROVER");
+    this.assertEconomicJournal(j.tradeId, input.releaseIntentId, { frozen: true });
     const missing = (await this.readiness(j.tradeId)).filter((m) => m !== "APPROVAL_MISSING");
     const cur = this.intent(input.releaseIntentId);
     if (cur.state !== "VALUE_LOCKED") stateError(cur.state);
@@ -614,6 +660,7 @@ export class ReleaseService {
     const terms = this.evidence.terms(j.tradeId);
     this.requireParty(ctx, terms, "BUYER_APPROVER");
     if (j.state !== "VALUE_LOCKED") stateError(j.state);
+    this.assertEconomicJournal(j.tradeId, id, { frozen: true });
     const v = this.verifyParty(terms, "BUYER_APPROVER", "BUYER_APPROVAL", input.payload, input.signature);
     const exp = Number((input.payload as Record<string, CanonicalValue>)["expiresAt"]);
     this.recordSignature(
@@ -633,6 +680,7 @@ export class ReleaseService {
   /** Relay for the direct release; refused unless the full conjunction holds on both sides. */
   async prepareExecution(releaseIntentId: string): Promise<FunctionCall> {
     const j = this.intent(releaseIntentId);
+    this.assertEconomicJournal(j.tradeId, releaseIntentId, { frozen: true });
     const missing = await this.readiness(j.tradeId);
     const cur = this.intent(releaseIntentId);
     if (!(PRE_SUBMIT_STATES as readonly string[]).includes(cur.state)) stateError(cur.state);
@@ -648,6 +696,7 @@ export class ReleaseService {
   ): Promise<{ terms: TradeTerms; x: ExitBinding; view: ReleaseView }> {
     const j = this.intent(releaseIntentId);
     const terms = this.evidence.terms(j.tradeId);
+    this.assertEconomicJournal(j.tradeId, null, { frozen: false });
     const view = await this.sync(j.tradeId);
     const c = view.intents.find((i) => i.releaseIntentId === releaseIntentId);
     if (!c) fail("NOT_FOUND", "release intent not on the contract");
@@ -885,6 +934,7 @@ export class ReleaseService {
   ): Promise<FunctionCall> {
     const cur = this.evidence.terms(input.tradeId);
     const role = this.partyRole(ctx, cur);
+    this.assertEconomicJournal(input.tradeId, null, { frozen: true });
     const { terms, canonical, digest } = this.successorTerms(input.tradeId, input.destination);
     const view = await this.sync(input.tradeId);
     if (view.intents.some((i) => i.state === "PAID"))
@@ -968,6 +1018,7 @@ export class ReleaseService {
   async prepareActivation(tradeId: string): Promise<FunctionCall> {
     const view = await this.sync(tradeId);
     this.assertNoUnresolvedRelease(tradeId);
+    this.assertEconomicJournal(tradeId, null, { frozen: true });
     const p = view.pendingDestinationChange;
     if (!p) fail("NOT_FOUND", "no pending destination change");
     if (p.status !== "CONSENTED") fail("INVALID_STATE", "both buyer and supplier consents are required");
