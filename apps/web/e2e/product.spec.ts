@@ -335,7 +335,7 @@ test("T-036 buyer locks and approves; T-038 a lost outcome stays locked and neve
   await eventually(b, async () => {
     const op = b.getByTestId("operation").first();
     const state = await op.getAttribute("data-state");
-    expect(["SUBMITTING", "EXECUTING", "PROCESSING", "UNKNOWN", "REVIEW"]).toContain(state);
+    expect(state).toBe("UNKNOWN");
     await expect(op.getByTestId("op-locked")).toBeVisible();
   });
   const locked = b.getByTestId("operation").first();
@@ -354,22 +354,46 @@ test("T-036 buyer locks and approves; T-038 a lost outcome stays locked and neve
     await expectAccessible(b, `locked payout @${vp.name}`);
   }
   await b.setViewportSize({ width: 1280, height: 900 });
-  // Only the risk/policy resolver may ask for reconciliation; exits are gone after submission.
+  // UNKNOWN: the reconciler keeps reading on its own schedule; no operator request is offered yet.
   const r = risk.page;
   await openTab(r, tradeId, "payout");
-  await eventually(r, async () => expect(r.getByTestId("op-locked")).toBeVisible());
-  await r.getByRole("button", { name: "Request reconciliation" }).click();
-  await expect(r.getByTestId("op-locked")).toContainText(/Reconciliation requested|Request refused/);
-  test.info().annotations.push({
-    type: "reconciliation-request",
-    description: (await r.getByTestId("op-locked").locator("[role=status]").innerText()).trim(),
-  });
+  await eventually(r, async () => expect(r.getByTestId("op-own-schedule")).toBeVisible());
+  await expect(r.getByRole("button", { name: "Request reconciliation" })).toHaveCount(0);
   await openTab(b, tradeId, "release");
   await expect(b.getByTestId("exit-flows")).toHaveCount(0);
   await expect(b.getByTestId("exits-closed")).toBeVisible();
 
-  // The status source returns; the reconciler proves the receipt and records PAID.
-  await control("/control/faults", { statusDown: false });
+  // The status source returns but the node withholds receipts: final transaction, missing
+  // evidence, so the reconciler moves to REVIEW (never PAID, never FAILED).
+  await control("/control/faults", { statusDown: false, hideAllReceipts: true });
+  await openTab(r, tradeId, "payout");
+  await eventually(
+    r,
+    async () => expect(r.getByTestId("operation").first()).toHaveAttribute("data-state", "REVIEW"),
+    90_000,
+  );
+  const inReview = r.getByTestId("operation").first();
+  await expect(inReview).toContainText("Locked for review");
+  await expect(inReview).not.toContainText("Paid (terminal evidence recorded)");
+  test.info().annotations.push({ type: "locked-state-observed", description: "REVIEW" });
+  await expect(inReview.getByRole("button", { name: "Open adjudication" })).toBeVisible();
+  for (const vp of VIEWPORTS) {
+    await r.setViewportSize({ width: vp.width, height: vp.height });
+    await waitForScreen(r);
+    await expectNoBodyOverflow(r, `review payout @${vp.name}`);
+    await expectAccessible(r, `review payout @${vp.name}`);
+  }
+  await r.setViewportSize({ width: 1280, height: 900 });
+
+  // Receipts become readable again; the risk resolver asks for reconciliation; the reconciler
+  // proves the receipt and records PAID.
+  await control("/control/faults", { hideAllReceipts: false });
+  await inReview.getByRole("button", { name: "Request reconciliation" }).click();
+  await expect(inReview.getByTestId("op-locked")).toContainText("Reconciliation requested");
+  test.info().annotations.push({
+    type: "reconciliation-request",
+    description: (await inReview.getByTestId("op-locked").locator("[role=status]").innerText()).trim(),
+  });
   await openTab(b, tradeId, "payout");
   await eventually(
     b,
@@ -414,4 +438,24 @@ test("T-034 client boundary: no session token, invitation secret or evidence byt
     const tree = await page.locator("body").ariaSnapshot();
     expect(tree).not.toContain("seals intact");
   }
+});
+
+test("T-040 every trade tab with live data fits, passes axe at every width, at 720 px (200% zoom approximation) and in dark mode", async () => {
+  const b = buyer.page;
+  const tabs = ["overview", "agreement", "evidence", "release", "payout", "refund", "timeline"];
+  for (const vp of [...VIEWPORTS, { name: "720-zoom", width: 720, height: 450 }]) {
+    await b.setViewportSize({ width: vp.width, height: vp.height });
+    for (const tab of tabs) {
+      await openTab(b, tradeId, tab);
+      await expectNoBodyOverflow(b, `${tab} @${vp.name}`);
+      await expectAccessible(b, `${tab} @${vp.name}`);
+    }
+  }
+  await b.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await b.setViewportSize({ width: 1280, height: 900 });
+  for (const tab of ["overview", "evidence", "payout"]) {
+    await openTab(b, tradeId, tab);
+    await expectAccessible(b, `dark ${tab}`);
+  }
+  await b.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
 });
