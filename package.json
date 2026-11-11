@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json",
+    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json && pnpm --filter @dockside/web run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome lint .",
@@ -23,7 +23,9 @@
     "clean": "node scripts/clean.mjs",
     "pretest": "pnpm run build && pnpm run contract:build",
     "api": "node services/api/dist/main.js",
-    "contract:build": "node scripts/build-contract.mjs"
+    "contract:build": "node scripts/build-contract.mjs",
+    "web:build": "pnpm --filter @dockside/web run build",
+    "web:e2e": "pnpm --filter @dockside/web run e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

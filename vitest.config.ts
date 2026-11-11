@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts", "services/*/test/**/*.test.ts"],
+    include: ["packages/*/test/**/*.test.ts", "services/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts"],
     environment: "node",
     pool: "forks",
     testTimeout: 60000,
