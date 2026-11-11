@@ -1,0 +1,52 @@
+# Red run (M04 contract tests against the main contract crate, before the M04 implementation)
+# command: cargo test -p dockside-escrow-core --locked --no-run   (contract/ from git archive main, tests/ from the M04 branch)
+# exit code: 101
+      1 error: could not compile `dockside-escrow-core` (test "holds_and_keys") due to 15 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "refund_rows") due to 25 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t007_t008_funding") due to 14 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t009_t010_t050_refund_matrix") due to 24 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t015_t019_release_conjunction") due to 43 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t016_hold_resolution") due to 14 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t020_t021_t047_destination") due to 49 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t022_t023_value_lock") due to 36 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t046_pre_submit_exits") due to 39 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t049_t017_t018_contract_evidence") due to 14 previous errors
+      1 error: could not compile `dockside-escrow-core` (test "t051_unexpected_assets") due to 16 previous errors
+      1 error[E0432]: unresolved import `dockside_escrow_core::destination`
+      6 error[E0432]: unresolved import `dockside_escrow_core::release`
+      1 error[E0433]: cannot find `release` in `dockside_escrow_core`
+     20 error[E0560]: struct `RefundSignatures<'_>` has no field named `risk`
+      2 error[E0599]: no method named `abandon_release_intent` found for mutable reference `&mut TradeRecord` in the current scope
+      4 error[E0599]: no method named `abandon_release_intent` found for struct `TradeRecord` in the current scope
+      2 error[E0599]: no method named `activate_destination_change` found for mutable reference `&mut TradeRecord` in the current scope
+      8 error[E0599]: no method named `activate_destination_change` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `approve_release` found for mutable reference `&mut TradeRecord` in the current scope
+      7 error[E0599]: no method named `approve_release` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `authorize_refund_signed` found for mutable reference `&mut TradeRecord` in the current scope
+      1 error[E0599]: no method named `available_slices` found for struct `Ledger` in the current scope
+     12 error[E0599]: no method named `complete_release` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `consent_destination_change` found for mutable reference `&mut TradeRecord` in the current scope
+      1 error[E0599]: no method named `consent_destination_change` found for struct `TradeRecord` in the current scope
+      2 error[E0599]: no method named `create_release_intent` found for mutable reference `&mut TradeRecord` in the current scope
+     12 error[E0599]: no method named `create_release_intent` found for struct `TradeRecord` in the current scope
+      3 error[E0599]: no method named `execute_release` found for mutable reference `&mut TradeRecord` in the current scope
+     15 error[E0599]: no method named `execute_release` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `holds_view_digest` found for reference `&TradeRecord` in the current scope
+      2 error[E0599]: no method named `holds_view_digest` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `propose_destination_change` found for mutable reference `&mut TradeRecord` in the current scope
+      1 error[E0599]: no method named `propose_destination_change` found for struct `TradeRecord` in the current scope
+     10 error[E0599]: no method named `release_blockers` found for struct `TradeRecord` in the current scope
+      3 error[E0599]: no method named `reservation_matches` found for struct `Ledger` in the current scope
+      5 error[E0599]: no method named `revoke_cancel_consent` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `revoke_destination_change` found for mutable reference `&mut TradeRecord` in the current scope
+      2 error[E0599]: no method named `revoke_destination_change` found for struct `TradeRecord` in the current scope
+      1 error[E0599]: no method named `submit_cancel_consent` found for mutable reference `&mut TradeRecord` in the current scope
+      5 error[E0599]: no method named `submit_cancel_consent` found for struct `TradeRecord` in the current scope
+      1 error[E0609]: no field `basis` on type `&RefundIntent`
+      1 error[E0609]: no field `destination` on type `&TradeRecord`
+      4 error[E0609]: no field `destination` on type `TradeRecord`
+      1 error[E0609]: no field `release` on type `&'a TradeRecord`
+      2 error[E0609]: no field `release` on type `&TradeRecord`
+      1 error[E0609]: no field `release` on type `&mut TradeRecord`
+      6 error[E0609]: no field `release` on type `TradeRecord`
+      1 error[E0609]: no field `revisions` on type `TradeRecord`

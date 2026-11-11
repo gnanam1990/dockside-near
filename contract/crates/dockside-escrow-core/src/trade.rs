@@ -40,6 +40,12 @@ pub struct TradeRecord {
     /// Consumed `<domain>|<nonce>` pairs.
     pub nonces: BTreeSet<String>,
     pub evidence: crate::evidence::EvidenceState,
+    /// Release intents, buyer approvals and pre-submit exits (M04).
+    pub release: crate::release::ReleaseState,
+    /// Every activated revision of this trade, oldest first.
+    pub revisions: alloc::vec::Vec<crate::destination::RevisionEntry>,
+    /// Pending and historical dual-consent destination changes.
+    pub destination: crate::destination::DestinationState,
 }
 
 pub fn digest_hex(domain: &str, v: &Value) -> R<(String, [u8; 32])> {
@@ -54,6 +60,9 @@ pub fn digest_hex(domain: &str, v: &Value) -> R<(String, [u8; 32])> {
 pub fn register(ctx: &Ctx<'_>, terms_typed: &J, buyer_signature: &str, supplier_signature: &str) -> R<TradeRecord> {
     let v = decode(terms_typed)?;
     let terms = parse_terms(&v, ctx.network, ctx.contract_id)?;
+    if terms.revision != 1 {
+        return err("NOT_SUPPORTED", "successor revisions are activated only through the destination-change protocol");
+    }
     ensure(terms.expires_at > ctx.now_ms, "EXPIRED", "trade has already expired")?;
     let (hex, d) = digest_hex(domains::TRADE_REVISION, &v)?;
     verify(ctx.verifier, &terms.key_of("buyer")?, &d, buyer_signature)?;
@@ -61,13 +70,16 @@ pub fn register(ctx: &Ctx<'_>, terms_typed: &J, buyer_signature: &str, supplier_
     Ok(TradeRecord {
         ledger: Ledger::new(terms.amount_yocto),
         terms,
-        terms_digest: hex,
+        terms_digest: hex.clone(),
         registered_at: ctx.now_ms,
         refunds: BTreeMap::new(),
         holds: BTreeMap::new(),
         revoked_roles: BTreeSet::new(),
         nonces: BTreeSet::new(),
         evidence: Default::default(),
+        release: Default::default(),
+        revisions: alloc::vec![crate::destination::RevisionEntry { revision: 1, digest: hex.clone(), activated_at: ctx.now_ms }],
+        destination: Default::default(),
     })
 }
 

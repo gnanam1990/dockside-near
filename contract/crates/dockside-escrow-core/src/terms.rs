@@ -5,7 +5,7 @@
 //! verifies both party signatures over it before any of these fields carry authority.
 
 use crate::crypto::parse_public_key;
-use crate::error::{ensure, err, R};
+use crate::error::{ensure, R};
 use crate::typed::{is_hex64, is_id, Obj};
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -279,9 +279,6 @@ pub fn parse_terms(v: &Value, network: &str, contract_id: &str) -> R<Terms> {
         )?;
     }
     ensure(t.manifest_attestor.attestation_schema == "dockside/manifest-attestation@1", "UNSUPPORTED_VERSION", "attestor schema")?;
-    if t.revision != 1 {
-        return err("NOT_SUPPORTED", "successor revisions are activated through the destination-change protocol (M04)");
-    }
     Ok(t)
 }
 

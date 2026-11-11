@@ -165,14 +165,92 @@ impl Escrow {
         payload: J,
         buyer_signature: Option<String>,
         supplier_signature: Option<String>,
+        risk_signature: Option<String>,
     ) -> String {
         self.mutate(&trade_id, |t, ctx| {
             t.request_refund(
                 ctx,
                 &payload,
-                RefundSignatures { buyer: buyer_signature.as_deref(), supplier: supplier_signature.as_deref() },
+                RefundSignatures {
+                    buyer: buyer_signature.as_deref(),
+                    supplier: supplier_signature.as_deref(),
+                    risk: risk_signature.as_deref(),
+                },
             )
         })
+    }
+
+    /// INSPECTION_FAIL authorization signed by the separate risk/policy principal.
+    pub fn authorize_refund_signed(&mut self, trade_id: String, payload: J, signature: String) {
+        self.mutate(&trade_id, |t, ctx| t.authorize_refund_signed(ctx, &payload, &signature))
+    }
+
+    /* ------------------------- release intents ------------------------- */
+
+    /// Buyer-signed release intent: locks the exact trade value. Exact duplicates join.
+    pub fn create_release_intent(&mut self, trade_id: String, payload: J, buyer_signature: String) -> J {
+        let (id, joined) = self.mutate(&trade_id, |t, ctx| t.create_release_intent(ctx, &payload, &buyer_signature));
+        serde_json::json!({ "releaseIntentId": id, "joined": joined })
+    }
+
+    /// Buyer approval bound to the intent, current manifest, inspector PASS and holds view.
+    pub fn approve_release(&mut self, trade_id: String, payload: J, signature: String) -> String {
+        self.mutate(&trade_id, |t, ctx| t.approve_release(ctx, &payload, &signature))
+    }
+
+    /// Recheck the full release conjunction, enter SUBMITTING and transfer the exact amount to the
+    /// revision-bound supplier destination. Anyone may relay; authority is the recorded state.
+    pub fn execute_release(&mut self, trade_id: String, release_intent_id: String) -> Promise {
+        let (dest, amount, attempt) = self.mutate(&trade_id, |t, ctx| t.execute_release(ctx, &release_intent_id));
+        let to: AccountId = dest
+            .parse()
+            .unwrap_or_else(|_| fail(Error { code: "INVALID_ADDRESS", message: "destination account invalid".into() }));
+        Promise::new(to).transfer(NearToken::from_yoctonear(amount)).then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(SETTLE_GAS)
+                .on_release_transfer(trade_id, release_intent_id, attempt),
+        )
+    }
+
+    /// Settlement callback: a successful transfer is PAID; a runtime-refunded failure is FAILED.
+    #[private]
+    pub fn on_release_transfer(&mut self, trade_id: String, release_intent_id: String, attempt_id: String) -> bool {
+        let transferred = env::promise_results_count() == 1 && env::promise_result_checked(0, 64).is_ok();
+        self.mutate(&trade_id, |t, ctx| t.complete_release(ctx, &release_intent_id, &attempt_id, transferred));
+        transferred
+    }
+
+    /// One party's CANCEL consent; the matching second consent executes the cancel atomically.
+    pub fn submit_cancel_consent(&mut self, trade_id: String, cancel: J, consent: J, signature: String) -> String {
+        self.mutate(&trade_id, |t, ctx| t.submit_cancel_consent(ctx, &cancel, &consent, &signature)).to_owned()
+    }
+
+    pub fn revoke_cancel_consent(&mut self, trade_id: String, payload: J, signature: String) {
+        self.mutate(&trade_id, |t, ctx| t.revoke_cancel_consent(ctx, &payload, &signature))
+    }
+
+    pub fn abandon_release_intent(&mut self, trade_id: String, payload: J, signature: String) {
+        self.mutate(&trade_id, |t, ctx| t.abandon_release_intent(ctx, &payload, &signature))
+    }
+
+    /* ------------------------ destination change ----------------------- */
+
+    pub fn propose_destination_change(&mut self, trade_id: String, successor_terms: J, proposer_role: String, signature: String) -> String {
+        self.mutate(&trade_id, |t, ctx| t.propose_destination_change(ctx, &successor_terms, &proposer_role, &signature))
+    }
+
+    /// Returns the time (ms) at which activation becomes possible.
+    pub fn consent_destination_change(&mut self, trade_id: String, successor_digest: String, role: String, signature: String) -> u64 {
+        self.mutate(&trade_id, |t, ctx| t.consent_destination_change(ctx, &successor_digest, &role, &signature))
+    }
+
+    pub fn revoke_destination_change(&mut self, trade_id: String, payload: J, signature: String) {
+        self.mutate(&trade_id, |t, ctx| t.revoke_destination_change(ctx, &payload, &signature))
+    }
+
+    pub fn activate_destination_change(&mut self, trade_id: String, successor_digest: String) -> J {
+        let (digest, successor) = self.mutate(&trade_id, |t, ctx| t.activate_destination_change(ctx, &successor_digest));
+        serde_json::json!({ "termsDigest": digest, "successorIntent": successor })
     }
 
     pub fn cosign_refund(&mut self, trade_id: String, refund_intent_id: String, role: String, signature: String) {
@@ -269,6 +347,10 @@ impl Escrow {
 
     pub fn get_evidence(&self, trade_id: String) -> J {
         views::evidence(self.read(&trade_id), env::block_timestamp_ms())
+    }
+
+    pub fn get_release(&self, trade_id: String) -> J {
+        views::release(self.read(&trade_id), env::block_timestamp_ms())
     }
 
     pub fn get_holds(&self, trade_id: String) -> J {
