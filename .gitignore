@@ -1,0 +1,11 @@
+node_modules/
+dist/
+target/
+.data/
+*.log
+.env
+.env.*
+coverage/
+playwright-report/
+test-results/
+neardev/

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "project": "Dockside",
+  "version": "2.0.0",
+  "status": "SPECIFICATION_ONLY",
+  "implementation": "NOT_RUN",
+  "productTests": "NOT_RUN",
+  "runtimeTests": "NOT_RUN",
+  "integrationTests": "NOT_RUN",
+  "deployment": "NOT_RUN",
+  "eventSubmission": "NOT_RUN",
+  "publication": "NOT_RUN",
+  "marketValidation": "UNPROVEN",
+  "updatedAt": "2026-11-11",
+  "counts": {
+    "functional": 16,
+    "nonfunctional": 7,
+    "invariants": 16,
+    "modules": 10,
+    "testCases": 57
+  },
+  "gates": {
+    "officialClientCompatibility": { "status": "NOT_RUN" },
+    "independentPartyAuthority": { "status": "NOT_RUN" },
+    "evidencePolicyCompleteness": { "status": "NOT_RUN" },
+    "onchainHoldEnforcement": { "status": "NOT_RUN" },
+    "releaseIntentValueLock": { "status": "NOT_RUN" },
+    "originalFunderRefund": { "status": "NOT_RUN" },
+    "testnetEscrow": { "status": "NOT_RUN" },
+    "inspectorEnrollment": { "status": "NOT_RUN" },
+    "liveMainnetSettlement": { "status": "NOT_RUN" },
+    "destinationReceiptReconciliation": { "status": "NOT_RUN" }
+  }
+}
