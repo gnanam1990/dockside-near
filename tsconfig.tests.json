@@ -23,6 +23,9 @@
       ],
       "@dockside/near": [
         "packages/near/src/index.ts"
+      ],
+      "@dockside/evidence": [
+        "packages/evidence/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": false,

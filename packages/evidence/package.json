@@ -1,0 +1,20 @@
+{
+  "name": "@dockside/evidence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside EvidencePolicy, authorized uploads, manifest revisions, ManifestAttestor and inspector attestations, HoldRecords and advisory model findings (M03)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/authority": "workspace:*",
+    "@dockside/core": "workspace:*",
+    "@dockside/near": "workspace:*",
+    "@dockside/store": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

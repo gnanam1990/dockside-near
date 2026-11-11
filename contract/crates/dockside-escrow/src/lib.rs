@@ -132,6 +132,21 @@ impl Escrow {
         })
     }
 
+    /// Store the EvidencePolicy whose digest the registered trade revision binds.
+    pub fn register_evidence_policy(&mut self, trade_id: String, policy: J) -> String {
+        self.mutate(&trade_id, |t, _ctx| t.register_evidence_policy(&policy))
+    }
+
+    /// ManifestAttestation by the exact bound attestor; the contract derives completeness.
+    pub fn submit_manifest_attestation(&mut self, trade_id: String, payload: J, signature: String) -> String {
+        self.mutate(&trade_id, |t, ctx| t.submit_manifest_attestation(ctx, &payload, &signature))
+    }
+
+    /// Independent inspector decision over the current contract-accepted manifest.
+    pub fn submit_inspection(&mut self, trade_id: String, payload: J, signature: String) -> String {
+        self.mutate(&trade_id, |t, ctx| t.submit_inspection(ctx, &payload, &signature))
+    }
+
     pub fn set_hold(&mut self, trade_id: String, payload: J, signature: String) -> String {
         self.mutate(&trade_id, |t, ctx| t.set_hold(ctx, &payload, &signature))
     }
@@ -250,6 +265,10 @@ impl Escrow {
 
     pub fn get_refunds(&self, trade_id: String) -> J {
         views::refunds(self.read(&trade_id))
+    }
+
+    pub fn get_evidence(&self, trade_id: String) -> J {
+        views::evidence(self.read(&trade_id), env::block_timestamp_ms())
     }
 
     pub fn get_holds(&self, trade_id: String) -> J {

@@ -45,6 +45,11 @@ export const ID_PREFIXES = {
   trade: "trd",
   refundIntent: "rfd",
   hold: "hld",
+  evidenceItem: "evi",
+  manifestAttestation: "mat",
+  inspection: "ins",
+  finding: "fnd",
+  holdResolutionRequest: "hrq",
   correlation: "cor",
 } as const;
 export type IdPrefix = (typeof ID_PREFIXES)[keyof typeof ID_PREFIXES];
