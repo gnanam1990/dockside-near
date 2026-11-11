@@ -1,8 +1,43 @@
 import { createServer } from "node:http";
 import { AuthorityService } from "@dockside/authority";
-import { loadConfig, randomIds, redactConfig, systemClock } from "@dockside/core";
+import { type DocksideConfig, loadConfig, randomIds, redactConfig, systemClock } from "@dockside/core";
+import { EvidenceService, HoldService, LocalObjectStore } from "@dockside/evidence";
+import { JournalService } from "@dockside/journal";
+import { EscrowContract, JsonRpcNearClient } from "@dockside/near";
+import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
 import { createApp } from "./app.js";
+import type { TradeModules } from "./trades.js";
+
+/**
+ * Trade modules need an escrow contract and a NEAR RPC endpoint. Without both, the API serves the
+ * M01 authority surface only and trade routes answer "no such endpoint" (never invented data).
+ */
+function tradeModules(
+  config: DocksideConfig,
+  db: Database,
+  authority: AuthorityService,
+): TradeModules | undefined {
+  const contract = config.DOCKSIDE_ESCROW_CONTRACT_ID;
+  const endpoint = config.DOCKSIDE_NEAR_RPC_URL;
+  if (contract === undefined || endpoint === undefined) return undefined;
+  const rpc = new JsonRpcNearClient({
+    endpoint,
+    allowedHosts: [new URL(endpoint).hostname],
+    timeoutMs: 10_000,
+    maxResponseBytes: 4 * 1024 * 1024,
+  });
+  const escrow = new EscrowContract(rpc, contract);
+  const deps = { db, clock: systemClock, ids: randomIds, authority };
+  const evidence = new EvidenceService({
+    ...deps,
+    objects: new LocalObjectStore(config.DOCKSIDE_OBJECT_STORE_DIR, `api-${process.pid}-${Date.now()}`),
+  });
+  const holds = new HoldService({ ...deps, evidence });
+  const release = new ReleaseService({ ...deps, evidence, holds, escrow });
+  const journal = new JournalService({ db, clock: systemClock, ids: randomIds, escrow, release });
+  return { evidence, holds, release, journal, escrow };
+}
 
 /** Local entry point. Configuration comes only from DOCKSIDE_* environment variables. */
 function main(): void {
@@ -23,14 +58,26 @@ function main(): void {
       requestProofSkewMs: config.DOCKSIDE_REQUEST_PROOF_SKEW_MS,
     },
   });
+  const modules = tradeModules(config, db, authority);
   const log = (line: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(line)}\n`);
-  const server = createServer(createApp({ config, db, authority, clock: systemClock, ids: randomIds, log }));
+  const server = createServer(
+    createApp({
+      config,
+      db,
+      authority,
+      clock: systemClock,
+      ids: randomIds,
+      log,
+      ...(modules ? { modules } : {}),
+    }),
+  );
   server.listen(config.DOCKSIDE_PORT, config.DOCKSIDE_HOST, () => {
     const addr = server.address();
     log({
       event: "listening",
       address: addr,
       migrationsApplied: migrated.applied,
+      tradeModules: modules ? "CONFIGURED" : "NOT_CONFIGURED",
       config: redactConfig(config),
     });
   });

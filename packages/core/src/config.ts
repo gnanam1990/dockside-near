@@ -30,6 +30,18 @@ const schema = z
       .string()
       .transform(codec((s) => parseNearAccountId(s, {})))
       .optional(),
+    /** NEAR JSON-RPC endpoint for the escrow views (M07 trade routes). Host must be https or loopback. */
+    DOCKSIDE_NEAR_RPC_URL: z
+      .string()
+      .url()
+      .refine((u) => {
+        const url = new URL(u);
+        const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+        return url.protocol === "https:" || (url.protocol === "http:" && local);
+      }, "RPC endpoint must be https, or http on a loopback host")
+      .optional(),
+    /** Directory for content-addressed evidence objects (M03 LocalObjectStore). */
+    DOCKSIDE_OBJECT_STORE_DIR: z.string().min(1).default(".data/objects"),
     DOCKSIDE_CHALLENGE_TTL_MS: z.coerce
       .number()
       .int()

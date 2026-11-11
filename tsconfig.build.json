@@ -24,6 +24,12 @@
     },
     {
       "path": "services/api"
+    },
+    {
+      "path": "packages/payout"
+    },
+    {
+      "path": "services/worker"
     }
   ]
 }

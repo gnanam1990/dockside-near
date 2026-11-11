@@ -1,0 +1,16 @@
+{
+  "name": "@dockside/payout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside optional 1Click payout compatibility interfaces (M06 skeleton; funded rail BLOCKED)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/core": "workspace:*"
+  }
+}
