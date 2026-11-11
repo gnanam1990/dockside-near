@@ -24,7 +24,11 @@ export async function resolve(specifier, context, next) {
       throw new Error(`${specifier} is not built (${mapped}); run \`pnpm run build\` first`);
     return { url: url.href, shortCircuit: true, format: "module" };
   }
-  if ((specifier.startsWith("./") || specifier.startsWith("../")) && specifier.endsWith(".js") && context.parentURL) {
+  if (
+    (specifier.startsWith("./") || specifier.startsWith("../")) &&
+    specifier.endsWith(".js") &&
+    context.parentURL
+  ) {
     const js = new URL(specifier, context.parentURL);
     if (js.protocol === "file:" && !existsSync(fileURLToPath(js))) {
       const ts = new URL(`${specifier.slice(0, -3)}.ts`, context.parentURL);

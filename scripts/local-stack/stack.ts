@@ -266,7 +266,8 @@ async function main(): Promise<void> {
   let queue: Promise<unknown> = Promise.resolve();
   const submit = (signerId: string, call: FunctionCall) => {
     const run = async () => {
-      if (call.receiverId !== CONTRACT) throw Object.assign(new Error("receiver"), { code: "WRONG_RECEIVER" });
+      if (call.receiverId !== CONTRACT)
+        throw Object.assign(new Error("receiver"), { code: "WRONG_RECEIVER" });
       const signer = new SimTxSigner(signerId);
       const block = await tx.latestBlock();
       const nonce = (await tx.accessKeyNonce(signerId, signer.publicKey).catch(() => 0n)) + 1n;
@@ -337,8 +338,18 @@ async function main(): Promise<void> {
   }, 1000);
 
   /* M05 outbox worker and reconciler (journal engines over the production NEAR clients). */
-  const ports = { escrow: new EscrowContract(rpc(), CONTRACT), tx: new NearTxClient(rpc()), txValidityBlocks: 100 };
-  const engineCfg = { holder: "stack-worker", leaseTtlMs: 30_000, baseBackoffMs: 500, maxBackoffMs: 2_000, watchMs: DAY };
+  const ports = {
+    escrow: new EscrowContract(rpc(), CONTRACT),
+    tx: new NearTxClient(rpc()),
+    txValidityBlocks: 100,
+  };
+  const engineCfg = {
+    holder: "stack-worker",
+    leaseTtlMs: 30_000,
+    baseBackoffMs: 500,
+    maxBackoffMs: 2_000,
+    watchMs: DAY,
+  };
   const wj = new Journal(db, systemClock, randomIds);
   const reconciler = new Reconciler(wj, ports, engineCfg);
   const worker = new WorkerLoop({
@@ -399,7 +410,10 @@ async function main(): Promise<void> {
             contractId: CONTRACT,
             accounts: { buyer: BUYER_ACCT, treasury: TREASURY, supplier: SUPPLIER_ACCT },
             organizations: Object.fromEntries(
-              Object.entries(admins).map(([k, a]) => [k, { organizationId: a.grant.organizationId, name: a.organizationName }]),
+              Object.entries(admins).map(([k, a]) => [
+                k,
+                { organizationId: a.grant.organizationId, name: a.organizationName },
+              ]),
             ),
             services: { manifestAttestor: attestor.enrollmentId, deterministicPolicy: policy.enrollmentId },
             evidencePolicy: { id: POLICY.policyId, revision: POLICY.revision },
@@ -430,7 +444,8 @@ async function main(): Promise<void> {
           const b = await readBody(req);
           if (typeof b["statusDown"] === "boolean") chain.faults.statusDown = b["statusDown"];
           if (typeof b["down"] === "boolean") chain.faults.down = b["down"];
-          if (typeof b["dropSendResponses"] === "number") chain.faults.dropSendResponses = b["dropSendResponses"];
+          if (typeof b["dropSendResponses"] === "number")
+            chain.faults.dropSendResponses = b["dropSendResponses"];
           if (typeof b["hideAllReceipts"] === "boolean") hideAllReceipts = b["hideAllReceipts"];
           return json(res, 200, { ...chain.faults, hideReceipts: undefined, hideAllReceipts });
         }
