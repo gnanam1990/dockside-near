@@ -1,0 +1,103 @@
+
+> dockside@0.1.0 contract:test <worktree>
+> cargo test --manifest-path contract/Cargo.toml --locked --workspace --exclude dockside-escrow
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+
+running 4 tests
+test tests::type_tags_separate_numeric_forms ... ok
+test tests::depth_limit ... ok
+test tests::struct_order_is_bytewise_and_duplicates_fail ... ok
+test tests::domains_are_validated ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test reproduces_typescript_vectors ... ok
+test verifies_typescript_signature_over_trade_revision ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test expiry_never_clears_a_hold ... ok
+test revoked_bound_keys_lose_authority_immediately ... ok
+test deterministic_policy_and_risk_may_set_but_no_one_else ... ok
+test only_the_bound_risk_resolver_can_resolve ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+
+
+running 9 tests
+test excess_return_revocation_restores_quarantined_exactly ... ok
+test partial_funding_return_goes_only_to_the_original_funder_after_cooling ... ok
+test failed_transfer_restores_the_exact_source_bucket_and_needs_a_new_intent ... ok
+test trade_expiry_undisputed_executes_to_the_original_funder ... ok
+test refunded_available_value_demotes_remaining_value_to_partial ... ok
+test policy_revision_replay_and_header_mutations_fail ... ok
+test key_loss_inspection_fail_and_unknown_rows_never_submit ... ok
+test trade_expiry_requires_expiry_initiator_signature_and_24h_challenge ... ok
+test mutual_cancel_needs_identical_dual_consent_and_one_hour_revocation_window ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+
+running 7 tests
+test partial_funding_stays_unavailable_until_complete ... ok
+test excess_is_quarantined_by_original_funder ... ok
+test funding_rejects_dust_and_expired_trades ... ok
+test exact_funding_is_accepted_and_recorded_per_original_funder ... ok
+test registration_verifies_both_parties_over_the_recomputed_digest ... ok
+test registration_fails_closed_on_schema_contract_and_network ... ok
+test conservation_property_over_random_deposit_sequences ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.93s
+
+
+running 3 tests
+test a_revoked_resolver_cannot_clear_an_existing_hold ... ok
+test expired_unresolved_blocks_until_a_valid_risk_resolution ... ok
+test resolution_nonces_are_single_use_across_holds ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+
+running 9 tests
+test complete_manifest_signed_by_the_bound_attestor_is_accepted_and_completeness_is_derived ... ok
+test holds_bind_the_current_manifest_once_one_exists ... ok
+test policy_must_match_the_signed_revision_and_be_registered_first ... ok
+test caller_completeness_flags_and_projection_fields_are_rejected ... ok
+test t017_only_the_bound_inspector_attests_the_current_usable_manifest ... ok
+test t018_replacement_supersedes_attestation_inspection_and_predecessor_items ... ok
+test signature_expiry_replay_wrong_attestor_and_revocation ... ok
+test issuer_time_freshness_aggregate_and_duplicates_are_enforced_with_valid_issuer_signatures ... ok
+test every_item_predicate_is_recomputed_by_the_contract ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.62s
+
+
+running 2 tests
+test recorded_asset_is_review_only_with_claimed_sender_and_no_funder ... ok
+test native_refund_entry_points_reject_unexpected_assets ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+   Doc-tests dockside_canonical
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests dockside_escrow_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit: 0

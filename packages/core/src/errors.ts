@@ -38,6 +38,20 @@ export const ERROR_CODES = {
   UPSTREAM_ERROR: { http: 502, retry: "later" },
   UPSTREAM_INVALID: { http: 502, retry: "never" },
   CONTRACT_REJECTED: { http: 409, retry: "never" },
+  // Evidence, inspection and hold codes (M03). The escrow contract raises the same names.
+  INCOMPLETE: { http: 409, retry: "after-refresh" },
+  OVER_CARDINALITY: { http: 409, retry: "never" },
+  STALE_ITEM: { http: 409, retry: "never" },
+  STALE_MANIFEST: { http: 409, retry: "after-refresh" },
+  STALE_REVISION: { http: 409, retry: "after-refresh" },
+  MANIFEST_NOT_CURRENT: { http: 409, retry: "after-refresh" },
+  UNSUPPORTED_CONTENT: { http: 415, retry: "never" },
+  MALICIOUS_CONTENT: { http: 422, retry: "never" },
+  POLICY_MISMATCH: { http: 409, retry: "never" },
+  DIGEST_MISMATCH: { http: 409, retry: "never" },
+  SOURCE_MISMATCH: { http: 409, retry: "never" },
+  WRONG_CONTRACT: { http: 409, retry: "never" },
+  WRONG_NETWORK: { http: 409, retry: "never" },
   INTERNAL: { http: 500, retry: "unknown" },
 } as const;
 

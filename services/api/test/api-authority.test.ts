@@ -24,7 +24,7 @@ import {
   type TypedJson,
   toHex,
 } from "@dockside/core";
-import { Database } from "@dockside/store";
+import { Database, loadMigrations } from "@dockside/store";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 
@@ -167,7 +167,7 @@ describe("M01 authority API over HTTP", () => {
     const ready = await call("/readyz");
     expect(ready.json).toMatchObject({
       ready: true,
-      schemaVersion: 2,
+      schemaVersion: loadMigrations().length,
       network: "near-testnet",
       fundedPayouts: "BLOCKED",
     });
