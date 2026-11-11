@@ -1,0 +1,20 @@
+# near-sdk 5.30.1 'unit-testing' feature on this host (x86_64-pc-windows-gnu, no C toolchain)
+# Probe crate: near-sdk = "=5.30.1", dev-dependency features = ["unit-testing"]; command: cargo test
+## Attempt 1 (default PATH)
+   Compiling aws-lc-rs v1.19.0
+error: error calling dlltool 'dlltool.exe': program not found
+error: could not compile `getrandom` (lib) due to 1 previous error
+## Attempt 2 (rustlib self-contained dlltool on PATH)
+error: dlltool could not create import library with <home>\.rustup\toolchains\1.97.1-x86_64-pc-windows-gnu\lib\rustlib\x86_64-pc-windows-gnu\bin\self-contained\dlltool.exe -d <tmp>\nearprobe\target\debug\deps\rustcpPbTyz\bcryptprimitives.dll_imports.def -D bcryptprimitives.dll -l <tmp>\nearprobe\target\debug\deps\rustcpPbTyz\bcryptprimitives.dll_imports.lib -m i386:x86-64 -f --64 --no-leading-underscore --temp-prefix bcryptprimitives.dll:
+error: could not compile `getrandom` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: dlltool could not create import library with <home>\.rustup\toolchains\1.97.1-x86_64-pc-windows-gnu\lib\rustlib\x86_64-pc-windows-gnu\bin\self-contained\dlltool.exe -d <tmp>\nearprobe\target\debug\deps\rustcdqsOb8\kernel32.dll_imports.def -D kernel32.dll -l <tmp>\nearprobe\target\debug\deps\rustcdqsOb8\kernel32.dll_imports.lib -m i386:x86-64 -f --64 --no-leading-underscore --temp-prefix kernel32.dll:
+error: could not compile `windows-sys` (lib) due to 1 previous error
+  Downloaded windows_x86_64_gnu v0.52.6
+  Downloaded linux-raw-sys v0.12.1
+
+[exited with code 0]
+## Same probe crate, wasm build (no unit-testing): cargo build --target wasm32-unknown-unknown --release
+    Finished `release` profile [optimized] target(s) in 32.15s
+-rw-r--r-- 2 <user> 197121 41010 Nov 11 20:17 target/wasm32-unknown-unknown/release/nearprobe.wasm
+Conclusion: near-sdk host unit tests (testing_env!/MockedBlockchain) are BLOCKED here; aws-lc-sys additionally needs a C compiler + cmake. Authority logic is host-tested in dockside-escrow-core instead.

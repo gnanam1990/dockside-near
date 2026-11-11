@@ -34,6 +34,10 @@ export const ERROR_CODES = {
   INVALID_STATE: { http: 409, retry: "never" },
   CONFIG_INVALID: { http: 500, retry: "never" },
   MIGRATION_FAILED: { http: 500, retry: "never" },
+  UPSTREAM_TIMEOUT: { http: 504, retry: "unknown" },
+  UPSTREAM_ERROR: { http: 502, retry: "later" },
+  UPSTREAM_INVALID: { http: 502, retry: "never" },
+  CONTRACT_REJECTED: { http: 409, retry: "never" },
   INTERNAL: { http: 500, retry: "unknown" },
 } as const;
 

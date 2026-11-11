@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/dockside-canonical"]
+members = ["crates/dockside-canonical", "crates/dockside-escrow-core", "crates/dockside-escrow"]
 
 [workspace.package]
 edition = "2021"
