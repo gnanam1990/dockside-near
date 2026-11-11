@@ -120,6 +120,62 @@ export const holdViewSchema = z.array(
     .strict(),
 );
 
+const manifestViewSchema = z
+  .object({
+    revision: z.number().int(),
+    digest: z.string(),
+    attestationDigest: z.string(),
+    acceptedAt: z.number().int(),
+    expiresAt: z.number().int(),
+    minFreshUntil: z.number().int(),
+    items: z.array(z.string()),
+    status: z.enum(["VALID", "SUPERSEDED", "INVALIDATED"]),
+    consumed: z.boolean(),
+  })
+  .strict();
+
+/** Contract view of the EvidencePolicy, the accepted manifest, its history and the inspection. */
+export const evidenceViewSchema = z
+  .object({
+    policy: z
+      .object({
+        policyId: z.string(),
+        revision: z.number().int(),
+        digest: z.string(),
+        attestationLifetimeMs: z.number().int(),
+        slots: z.array(
+          z
+            .object({
+              slotId: z.string(),
+              digest: z.string(),
+              minItems: z.number().int(),
+              maxItems: z.number().int(),
+            })
+            .strict(),
+        ),
+      })
+      .strict()
+      .nullable(),
+    current: manifestViewSchema.nullable(),
+    usable: z.boolean(),
+    history: z.array(manifestViewSchema),
+    inspection: z
+      .object({
+        decision: z.enum(["PASS", "FAIL", "REVIEW"]),
+        reasonCodes: z.array(z.string()),
+        manifestDigest: z.string(),
+        manifestRevision: z.number().int(),
+        digest: z.string(),
+        recordedAt: z.number().int(),
+        expiresAt: z.number().int(),
+        invalidated: z.boolean(),
+      })
+      .strict()
+      .nullable(),
+    currentInspectionDecision: z.enum(["PASS", "FAIL", "REVIEW"]).nullable(),
+  })
+  .strict();
+
 export const unexpectedAssetSchema = z.array(
   z
     .object({
@@ -176,6 +232,9 @@ export class EscrowContract {
   getHolds(tradeId: string) {
     return this.view("get_holds", { trade_id: tradeId }, holdViewSchema);
   }
+  getEvidence(tradeId: string) {
+    return this.view("get_evidence", { trade_id: tradeId }, evidenceViewSchema);
+  }
   getUnexpectedAssets(fromIndex = 0, limit = 50) {
     return this.view("get_unexpected_assets", { from_index: fromIndex, limit }, unexpectedAssetSchema);
   }
@@ -208,6 +267,20 @@ export class EscrowContract {
   fundCall(tradeId: string, amountYocto: bigint): FunctionCall {
     if (amountYocto <= 0n) fail("INVALID_AMOUNT", "deposit must be positive");
     return this.call("fund", { trade_id: tradeId }, 30n, amountYocto);
+  }
+
+  /** Store the EvidencePolicy whose digest the registered revision binds (anyone may relay it). */
+  registerEvidencePolicyCall(tradeId: string, policy: TypedJson): FunctionCall {
+    return this.call("register_evidence_policy", { trade_id: tradeId, policy }, 100n);
+  }
+
+  /** ManifestAttestation signed by the bound attestor; the contract recomputes every predicate. */
+  submitManifestAttestationCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("submit_manifest_attestation", { trade_id: tradeId, payload, signature }, 200n);
+  }
+
+  submitInspectionCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("submit_inspection", { trade_id: tradeId, payload, signature });
   }
 
   setHoldCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
