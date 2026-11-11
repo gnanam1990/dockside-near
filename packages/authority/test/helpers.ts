@@ -181,7 +181,7 @@ export function enrollHuman(
   h: Harness,
   admin: Actor,
   capability: Capability,
-  displayName = capability,
+  displayName: string = capability,
 ): Actor {
   const inv = h.svc.createInvitation(admin.ctx(), { capability });
   const person = new Actor(h);
