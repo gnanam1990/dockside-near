@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "metadataFile": "project-metadata.json",
+  "registryFile": "requirements.json",
+  "coreFile": "CORE-CONTRACT.md",
+  "testPlanFile": "TEST-PLAN.md",
+  "inventoryFile": "PACK-INVENTORY.json",
+  "requiredFiles": [
+    { "path": "START-HERE.md", "minBytes": 500 },
+    { "path": "MASTER-PROMPT.md", "minBytes": 1000 },
+    { "path": "PRD.md", "minBytes": 3000 },
+    { "path": "TDD.md", "minBytes": 4000 },
+    { "path": "UI-SPEC.md", "minBytes": 3000 },
+    { "path": "TEST-PLAN.md", "minBytes": 3000 },
+    { "path": "SECURITY.md", "minBytes": 1500 },
+    { "path": "DELIVERY.md", "minBytes": 1500 },
+    { "path": "SOURCES.md", "minBytes": 500 }
+  ]
+}

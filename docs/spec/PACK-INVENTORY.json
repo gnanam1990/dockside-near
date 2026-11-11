@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "sha256",
+  "files": [
+    {
+      "path": "BUILD-STATUS.md",
+      "bytes": 744,
+      "sha256": "dddbad1dc9022c2c801ef81f090a271a61c61bb69b57f6e898400935351e308d"
+    },
+    {
+      "path": "CORE-CONTRACT.md",
+      "bytes": 10333,
+      "sha256": "a367364601d2dff9468729c86061505156741dd36d0d0ac94ff9a80d13ea7767"
+    },
+    {
+      "path": "CORRIDOR-CONTRACT.md",
+      "bytes": 5030,
+      "sha256": "bfcb995822815ee6f1194141e3cb99215069d7cd807d5385994cb8aa5f3cbe44"
+    },
+    {
+      "path": "DELIVERY.md",
+      "bytes": 3762,
+      "sha256": "07567a31e72494db373764cb6cb3fc8d1af833f239e472858b78ec99eb14162e"
+    },
+    {
+      "path": "EVENT-NOTES.md",
+      "bytes": 1561,
+      "sha256": "2aa80405adcbf25c4f08bcf415c2ea88b71788cfef57ff5dd12ce76192af4e03"
+    },
+    {
+      "path": "IMPLEMENTATION-PLAN.md",
+      "bytes": 2450,
+      "sha256": "d6a5675eb4863f279b75f73f8a2d2514acbc4e6c4701d21875d393151f7083a8"
+    },
+    {
+      "path": "MASTER-PROMPT.md",
+      "bytes": 5714,
+      "sha256": "6c3bb32f4cb570f41ed65c5d24b1fd6fe0a07ecf6d274f8d0de2f8df22a2d188"
+    },
+    {
+      "path": "pack-check.json",
+      "bytes": 677,
+      "sha256": "96481e7f62d6e01d3d29aad79a9f9cf984d9fb06ba0fed0f0549c850e4e2c478"
+    },
+    {
+      "path": "PACK-QA.md",
+      "bytes": 2925,
+      "sha256": "c92bb68041b73d464bb0c940d551d7e087bd82077c65d639e66bf3d4710d0d8e"
+    },
+    {
+      "path": "PRD.md",
+      "bytes": 17088,
+      "sha256": "c3993f7116f8aafa3c9c0e1652543e746c54b2a72124e23fac1b74008c477ce9"
+    },
+    {
+      "path": "project-metadata.json",
+      "bytes": 1078,
+      "sha256": "cd9da32b709885a0237f729a9d9339a759b564990350aa31df3b498e1dfbb349"
+    },
+    {
+      "path": "prompts/M00-foundation-contracts.md",
+      "bytes": 1191,
+      "sha256": "633ebd41e940787339590f4a898bfab7c8e0a9544c695f2e72647381ff9ed0a2"
+    },
+    {
+      "path": "prompts/M01-organization-authority.md",
+      "bytes": 1317,
+      "sha256": "1f4de6e4bf432bc9c05d5ae76c5b6528e2d9d65947abed82aaf0092df66803c6"
+    },
+    {
+      "path": "prompts/M02-near-escrow-refund.md",
+      "bytes": 1364,
+      "sha256": "2be8afc9d35a08d2fca31c4808a17de8b583dbb021fc924f6edd2ac1c6e31d20"
+    },
+    {
+      "path": "prompts/M03-evidence-inspection-hold.md",
+      "bytes": 1751,
+      "sha256": "6baeda2ef4f589d049d8e36da63671751f2312fe25160e387bc6172aed2e1fd8"
+    },
+    {
+      "path": "prompts/M04-integrated-release-destination.md",
+      "bytes": 1795,
+      "sha256": "69ac5c2fc8bdb79009b940513f10bc64a2908ad43765c68dd04a76f5f60eea36"
+    },
+    {
+      "path": "prompts/M05-journal-reconciliation.md",
+      "bytes": 1295,
+      "sha256": "c0448140de22f66fa87c6665a59c89afe0490c685f02a25f8db4a3e2dc889193"
+    },
+    {
+      "path": "prompts/M06-payout-adapter-authorization.md",
+      "bytes": 1439,
+      "sha256": "636be2fbee9dbbb990697bcd6e9b4978a1c7cf36b53321693c7976869ff175c4"
+    },
+    {
+      "path": "prompts/M07-integrated-api-audit.md",
+      "bytes": 1255,
+      "sha256": "05ef46bdbb76d5201b268e676d706cec6e330ca03c26307a51c45167eba2d61f"
+    },
+    {
+      "path": "prompts/M08-professional-ui.md",
+      "bytes": 1117,
+      "sha256": "c36d7e2126fbe05b99ad30d8d14c8e595d99c42020ac48f9b87ad94ed16816f1"
+    },
+    {
+      "path": "prompts/M09-hardening-e2e-delivery.md",
+      "bytes": 1383,
+      "sha256": "3e1e5fa8a223cc0e509d505ac628677016a7a20f5ddc1403040b4525ca0acafc"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1538,
+      "sha256": "98b94a0dea82d0ee08b5b43dd77a07aa08c7669fc6b47ff5e7792bcec331de3a"
+    },
+    {
+      "path": "REAL-PRODUCT-GATE.md",
+      "bytes": 5705,
+      "sha256": "621298363587f398f42760e67a4833b71c9db0193262a3928b3cc954b904995f"
+    },
+    {
+      "path": "REFUND-POLICY.md",
+      "bytes": 9448,
+      "sha256": "b55f13c385765d3f8c4dbb624e9a10019cee89017be3ca98ab0a25346a970109"
+    },
+    {
+      "path": "requirements.json",
+      "bytes": 21484,
+      "sha256": "c0f97825b1f398aa6154aa3d7670b42b015751e47954e053dbcb966748aa1fc0"
+    },
+    {
+      "path": "scripts/check-build-pack.mjs",
+      "bytes": 33599,
+      "sha256": "befab469d23feaf4b77abb8554dbecd94a2095ef6470c1d6dc70d4c042caa9dc"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 8635,
+      "sha256": "3f3ca84ba29511d52621c55281513f32063b214bbcb5caffb236ee4fbf03fd80"
+    },
+    {
+      "path": "SOURCES.md",
+      "bytes": 2149,
+      "sha256": "31ca4ac4784e5ce6a20a0189d088eacace3380bc3fb83942c5d7c2167b1ce6c6"
+    },
+    {
+      "path": "START-HERE.md",
+      "bytes": 3863,
+      "sha256": "7813d46a8aa272d6d1a4a04576d1f03895fef8e692e4e54fa63c888cb659ce08"
+    },
+    {
+      "path": "TDD.md",
+      "bytes": 38633,
+      "sha256": "2bcdb275634621b1f067b9aa00710b3a4fba1a480daf29359e698ee634a762a9"
+    },
+    {
+      "path": "templates/BUILD-HANDOFF.md",
+      "bytes": 727,
+      "sha256": "834c1ad6558fcdc1f473be7864320f34b0e13bf356b9f47e208fb027c9554fe9"
+    },
+    {
+      "path": "templates/DECISION-RECORD.md",
+      "bytes": 584,
+      "sha256": "61a7442ae009a971a8e33b348e913c97092c29541cc87504ef6341cecbaf22ea"
+    },
+    {
+      "path": "templates/PR-BODY.md",
+      "bytes": 1076,
+      "sha256": "70124fc18f43ce4c6c40450a0ad7e59c715e2a9a042edb5a63e4a071dc0302ad"
+    },
+    {
+      "path": "TEST-PLAN.md",
+      "bytes": 20024,
+      "sha256": "0b6e86b23ca41f51f7bc309fdc68aa03182e463e506fe55382b4601e6de1a493"
+    },
+    {
+      "path": "UI-SPEC.md",
+      "bytes": 21852,
+      "sha256": "19a0e72682e65b4723702afb31f33ed4b58b8d407c4cec9fd1f20f0e443fed0f"
+    }
+  ]
+}
