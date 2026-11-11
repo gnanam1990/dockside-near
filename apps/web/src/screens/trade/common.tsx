@@ -1,10 +1,10 @@
 import { createContext, type ReactNode, useContext } from "react";
 import { Link } from "../../app/router";
 import { MoneyValue } from "../../components/Data";
+import { FailureState, LoadingState } from "../../components/States";
 import type { ApiOutcome } from "../../lib/api/client";
 import type { Relation, TradeApi, TradeProjection } from "../../lib/api/trade";
 import type { Network } from "../../lib/api/types";
-import { FailureState, LoadingState } from "../../components/States";
 
 /** Trade workspace context: the authoritative projection, its age, and a refresh signal. */
 export interface TradeCtx {
