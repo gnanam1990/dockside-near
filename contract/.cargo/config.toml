@@ -1,0 +1,5 @@
+# The wasm contract must be built with `--cfg near` (what cargo-near sets): without it,
+# near-sdk-env compiles its "local" fallbacks into the wasm and env::panic_str aborts without
+# reporting its message to the runtime. `-s` strips symbols from the deployed artifact.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", "near", "-C", "link-arg=-s"]

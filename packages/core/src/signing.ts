@@ -20,6 +20,10 @@ export const SIGNING_DOMAINS = {
   HOLD_SET: { domain: "dockside/hold-set", version: 1 },
   HOLD_RESOLVE: { domain: "dockside/hold-resolve", version: 1 },
   BUYER_APPROVAL: { domain: "dockside/buyer-approval", version: 1 },
+  REFUND_REQUEST: { domain: "dockside/refund-request", version: 1 },
+  REFUND_REVOKE: { domain: "dockside/refund-revoke", version: 1 },
+  REFUND_DISPUTE: { domain: "dockside/refund-dispute", version: 1 },
+  BOUND_KEY_REVOCATION: { domain: "dockside/bound-key-revocation", version: 1 },
   AUDIT_EVENT: { domain: "dockside/audit-event", version: 1 },
 } as const;
 
