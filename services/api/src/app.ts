@@ -16,12 +16,14 @@ import {
 } from "@dockside/core";
 import { AuditLog, type Database, isUniqueViolation, loadMigrations, type SqlValue } from "@dockside/store";
 import { z } from "zod";
+import { addressKey, RateLimiter, sessionKey } from "./limits.js";
 import { type HandlerInput, type Route, route } from "./routing.js";
 import { type TradeModules, tradeRoutes } from "./trades.js";
 
+export { buildAuditExport, stableStringify, verifyAuditExport } from "./export.js";
+export { hardenServer, RateLimiter, SERVER_LIMITS } from "./limits.js";
 export { type Handler, type HandlerInput, type Route, route } from "./routing.js";
-export { type TradeModules, relationsOf } from "./trades.js";
-export { buildAuditExport, verifyAuditExport, stableStringify } from "./export.js";
+export { relationsOf, type TradeModules } from "./trades.js";
 
 /**
  * Dockside control API — M01 authority surface. node:http, strict JSON bodies, exact
@@ -43,6 +45,8 @@ export interface AppDeps {
    * NOT_FOUND "no such endpoint" with reason TRADE_MODULES_NOT_CONFIGURED.
    */
   readonly modules?: TradeModules;
+  /** Request limiter; one per process by default (M09). */
+  readonly limiter?: RateLimiter;
 }
 
 /* ------------------------------ schemas ------------------------------ */
@@ -393,6 +397,9 @@ function parseProofHeader(raw: string | undefined): RequestProof {
 export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerResponse) => void {
   const routes = buildRoutes(d);
   const origin = d.config.DOCKSIDE_ORIGIN;
+  const limiter = d.limiter ?? new RateLimiter(d.clock);
+  const unauthLimit = d.config.DOCKSIDE_RATE_LIMIT_UNAUTH_PER_MIN;
+  const sessionLimit = d.config.DOCKSIDE_RATE_LIMIT_SESSION_PER_MIN;
   return (req, res) => {
     const started = Date.now();
     securityHeaders(res, origin);
@@ -415,6 +422,17 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
             ? req.method
             : fail("VALIDATION_FAILED", "method not allowed");
         const route = routes.find((r) => r.method === method && r.pattern.test(url.pathname));
+        const authz = req.headers.authorization;
+        const presentedSessionToken = authz?.startsWith("Dockside-Session ")
+          ? authz.slice("Dockside-Session ".length)
+          : undefined;
+        // Limits apply before any body is read or signature verified. Health probes are exempt.
+        const probe = method === "GET" && (url.pathname === "/healthz" || url.pathname === "/readyz");
+        if (!probe) {
+          if (route?.auth && presentedSessionToken !== undefined)
+            limiter.take(sessionKey(presentedSessionToken), sessionLimit);
+          else limiter.take(addressKey(req.socket.remoteAddress), unauthLimit);
+        }
         if (!route) fail("NOT_FOUND", "no such endpoint");
         const params = (route.pattern.exec(url.pathname)?.groups ?? {}) as Record<string, string>;
         const reqOrigin = req.headers.origin;
@@ -427,22 +445,24 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
         if (method === "POST" && !(req.headers["content-type"] ?? "").startsWith("application/json")) {
           fail("VALIDATION_FAILED", "content-type must be application/json");
         }
-        const authz = req.headers.authorization;
-        const presentedSessionToken = authz?.startsWith("Dockside-Session ")
-          ? authz.slice("Dockside-Session ".length)
-          : undefined;
         let ctx: AuthContext | null = null;
         if (route.auth) {
           if (presentedSessionToken === undefined)
             fail("UNAUTHENTICATED", "Authorization: Dockside-Session <token> required");
-          const p = parseProofHeader(req.headers["dockside-proof"] as string | undefined);
-          ctx = d.authority.authenticate({
-            sessionToken: presentedSessionToken,
-            proof: p,
-            method,
-            path: url.pathname + url.search,
-            body: raw,
-          });
+          try {
+            const p = parseProofHeader(req.headers["dockside-proof"] as string | undefined);
+            ctx = d.authority.authenticate({
+              sessionToken: presentedSessionToken,
+              proof: p,
+              method,
+              path: url.pathname + url.search,
+              body: raw,
+            });
+          } catch (e) {
+            // Invented tokens get a fresh session window each; failures also count per address.
+            limiter.take(addressKey(req.socket.remoteAddress), unauthLimit);
+            throw e;
+          }
         }
         const body = method === "POST" ? (raw.byteLength ? parseStrictJson(raw) : {}) : undefined;
         const validated = route.schema ? parseWith(route.schema, body) : body;
@@ -465,6 +485,8 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
         const out = await route.handler(input);
         send(method === "POST" ? 201 : 200, out);
       } catch (e) {
+        if (e instanceof DocksideError && e.code === "RATE_LIMITED")
+          res.setHeader("Retry-After", String(e.details["retryAfterSeconds"] ?? 60));
         if (e instanceof DocksideError) send(e.httpStatus, { error: e.toJSON() });
         else send(500, { error: { code: "INTERNAL", message: "internal error", details: {} } });
       }

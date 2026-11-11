@@ -6,7 +6,7 @@ import { JournalService } from "@dockside/journal";
 import { EscrowContract, JsonRpcNearClient } from "@dockside/near";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
-import { createApp } from "./app.js";
+import { createApp, hardenServer } from "./app.js";
 import type { TradeModules } from "./trades.js";
 
 /**
@@ -60,16 +60,18 @@ function main(): void {
   });
   const modules = tradeModules(config, db, authority);
   const log = (line: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(line)}\n`);
-  const server = createServer(
-    createApp({
-      config,
-      db,
-      authority,
-      clock: systemClock,
-      ids: randomIds,
-      log,
-      ...(modules ? { modules } : {}),
-    }),
+  const server = hardenServer(
+    createServer(
+      createApp({
+        config,
+        db,
+        authority,
+        clock: systemClock,
+        ids: randomIds,
+        log,
+        ...(modules ? { modules } : {}),
+      }),
+    ),
   );
   server.listen(config.DOCKSIDE_PORT, config.DOCKSIDE_HOST, () => {
     const addr = server.address();
