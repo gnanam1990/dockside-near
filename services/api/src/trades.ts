@@ -146,6 +146,15 @@ function requireBound(
     fail("KEY_NOT_BOUND", `session key is not the ${label} key version this revision binds`);
 }
 
+/** CANCEL/ABANDON: the designated buyer approver or supplier signer, checked before any state. */
+function requireExitParty(ctx: AuthContext, t: TradeTerms): void {
+  if (ctx.principal.id === t.buyer.principalId)
+    requireBound(ctx, t.buyer, "BUYER_APPROVER", "buyer approver");
+  else if (ctx.principal.id === t.supplier.principalId)
+    requireBound(ctx, t.supplier, "SUPPLIER_SIGNER", "supplier signer");
+  else fail("FORBIDDEN", "only the designated buyer approver or supplier signer");
+}
+
 function holdTrade(m: TradeModules, ctx: AuthContext, holdId: string): { hold: HoldView; terms: TradeTerms } {
   let hold: HoldView;
   try {
@@ -767,7 +776,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "SIGN_CANCEL_RELEASE_INTENT");
         const m = mods(d);
-        intentTrade(m, c, params["id"] as string);
+        requireExitParty(c, intentTrade(m, c, params["id"] as string));
         const p = await m.release.prepareCancel(c, {
           releaseIntentId: params["id"] as string,
           reasonCode: (body as { reasonCode: string }).reasonCode,
@@ -784,7 +793,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "SIGN_CANCEL_RELEASE_INTENT");
         const m = mods(d);
-        intentTrade(m, c, params["id"] as string);
+        requireExitParty(c, intentTrade(m, c, params["id"] as string));
         const cancel = canonical((body as { cancel: unknown }).cancel);
         if ((cancel as Record<string, CanonicalValue>)["releaseIntentId"] !== params["id"])
           fail("VALIDATION_FAILED", "cancel names a different release intent");
@@ -801,7 +810,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "SIGN_CANCEL_RELEASE_INTENT");
         const m = mods(d);
-        intentTrade(m, c, params["id"] as string);
+        requireExitParty(c, intentTrade(m, c, params["id"] as string));
         const b = body as { cancel: unknown; consent: unknown; signature: string };
         const cancel = canonical(b.cancel);
         if ((cancel as Record<string, CanonicalValue>)["releaseIntentId"] !== params["id"])
@@ -824,7 +833,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "SIGN_CANCEL_RELEASE_INTENT");
         const m = mods(d);
-        intentTrade(m, c, params["id"] as string);
+        requireExitParty(c, intentTrade(m, c, params["id"] as string));
         const p = await m.release.prepareConsentRevocation(c, {
           releaseIntentId: params["id"] as string,
           consent: canonical((body as { consent: unknown }).consent),
@@ -841,7 +850,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "SIGN_CANCEL_RELEASE_INTENT");
         const m = mods(d);
-        intentTrade(m, c, params["id"] as string);
+        requireExitParty(c, intentTrade(m, c, params["id"] as string));
         const b = body as { payload: unknown; signature: string };
         const payload = canonical(b.payload);
         if ((payload as Record<string, CanonicalValue>)["releaseIntentId"] !== params["id"])
@@ -862,7 +871,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "SIGN_ABANDON_RELEASE_INTENT");
         const m = mods(d);
-        intentTrade(m, c, params["id"] as string);
+        requireExitParty(c, intentTrade(m, c, params["id"] as string));
         const p = await m.release.prepareAbandon(c, {
           releaseIntentId: params["id"] as string,
           trigger: (body as { trigger: never }).trigger,
@@ -874,7 +883,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
       const c = must(ctx);
       act(c, "SIGN_ABANDON_RELEASE_INTENT");
       const m = mods(d);
-      intentTrade(m, c, params["id"] as string);
+      requireExitParty(c, intentTrade(m, c, params["id"] as string));
       const b = body as { payload: unknown; signature: string };
       const payload = canonical(b.payload);
       if ((payload as Record<string, CanonicalValue>)["releaseIntentId"] !== params["id"])
@@ -998,7 +1007,12 @@ export function tradeRoutes(d: AppDeps): Route[] {
       act(c, "REQUEST_RECONCILIATION");
       riskOperator(c);
       const m = mods(d);
-      operationTrade(m, c, params["id"] as string);
+      requireBound(
+        c,
+        operationTrade(m, c, params["id"] as string).riskResolver,
+        "RISK_RESOLVER",
+        "risk/policy resolver",
+      );
       const requestId = m.journal.requestReconciliation(c, params["id"] as string);
       return { requestId, state: m.journal.journal.op(params["id"] as string).state };
     }),
@@ -1012,7 +1026,12 @@ export function tradeRoutes(d: AppDeps): Route[] {
         act(c, "REQUEST_RECONCILIATION");
         riskOperator(c);
         const m = mods(d);
-        operationTrade(m, c, params["id"] as string);
+        requireBound(
+          c,
+          operationTrade(m, c, params["id"] as string).riskResolver,
+          "RISK_RESOLVER",
+          "risk/policy resolver",
+        );
         const requestId = m.journal.openAdjudication(
           c,
           params["id"] as string,
@@ -1031,7 +1050,12 @@ export function tradeRoutes(d: AppDeps): Route[] {
         act(c, "REQUEST_RECONCILIATION");
         riskOperator(c);
         const m = mods(d);
-        operationTrade(m, c, params["id"] as string);
+        requireBound(
+          c,
+          operationTrade(m, c, params["id"] as string).riskResolver,
+          "RISK_RESOLVER",
+          "risk/policy resolver",
+        );
         const requestId = m.journal.identifySource(
           c,
           params["id"] as string,
@@ -1046,6 +1070,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
       riskOperator(c);
       const m = mods(d);
       const t = loadTrade(m, c, params["id"] as string);
+      requireBound(c, t.riskResolver, "RISK_RESOLVER", "risk/policy resolver");
       const requestId = m.journal.freezeTrade(c, t.tradeId, (body as { reason: string }).reason);
       return { requestId, frozen: true };
     }),
