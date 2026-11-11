@@ -32,6 +32,12 @@
       ],
       "@dockside/journal": [
         "packages/journal/src/index.ts"
+      ],
+      "@dockside/payout": [
+        "packages/payout/src/index.ts"
+      ],
+      "@dockside/worker": [
+        "services/worker/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": false,

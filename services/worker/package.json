@@ -1,0 +1,19 @@
+{
+  "name": "@dockside/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside worker process: outbox delivery and reconciliation loop over the M05 journal",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/core": "workspace:*",
+    "@dockside/journal": "workspace:*",
+    "@dockside/near": "workspace:*",
+    "@dockside/store": "workspace:*"
+  }
+}

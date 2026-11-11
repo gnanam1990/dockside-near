@@ -11,9 +11,17 @@ import {
   type IdGenerator,
   parseStrictJson,
   parseWith,
+  sha256,
+  toHex,
 } from "@dockside/core";
-import { AuditLog, type Database, loadMigrations } from "@dockside/store";
+import { AuditLog, type Database, isUniqueViolation, loadMigrations, type SqlValue } from "@dockside/store";
 import { z } from "zod";
+import { type HandlerInput, type Route, route } from "./routing.js";
+import { type TradeModules, tradeRoutes } from "./trades.js";
+
+export { type Handler, type HandlerInput, type Route, route } from "./routing.js";
+export { type TradeModules, relationsOf } from "./trades.js";
+export { buildAuditExport, verifyAuditExport, stableStringify } from "./export.js";
 
 /**
  * Dockside control API — M01 authority surface. node:http, strict JSON bodies, exact
@@ -29,22 +37,12 @@ export interface AppDeps {
   readonly clock: Clock;
   readonly ids: IdGenerator;
   readonly log?: (line: Record<string, unknown>) => void;
-}
-
-type Handler = (req: {
-  params: Record<string, string>;
-  query: URLSearchParams;
-  body: unknown;
-  ctx: AuthContext | null;
-  presentedSessionToken: string | undefined;
-}) => unknown;
-
-interface Route {
-  method: "GET" | "POST";
-  pattern: RegExp;
-  auth: boolean;
-  schema?: z.ZodType;
-  handler: Handler;
+  /**
+   * M03-M05 services over persisted state and chain observations (M07). Absent when the
+   * process has no escrow contract / RPC configuration; trade routes then answer
+   * NOT_FOUND "no such endpoint" with reason TRADE_MODULES_NOT_CONFIGURED.
+   */
+  readonly modules?: TradeModules;
 }
 
 /* ------------------------------ schemas ------------------------------ */
@@ -97,18 +95,7 @@ function must(ctx: AuthContext | null): AuthContext {
 
 export function buildRoutes(d: AppDeps): Route[] {
   const a = d.authority;
-  const r = (
-    method: Route["method"],
-    path: string,
-    auth: boolean,
-    schema: z.ZodType | undefined,
-    handler: Handler,
-  ): Route => {
-    const pattern = new RegExp(`^${path.replace(/:([a-zA-Z]+)/g, "(?<$1>[a-z]{2,8}_[0-9a-f]{32})")}$`);
-    return schema === undefined
-      ? { method, pattern, auth, handler }
-      : { method, pattern, auth, schema, handler };
-  };
+  const r = route;
   return [
     r("GET", "/healthz", false, undefined, () => ({ status: "ok" })),
     r("GET", "/readyz", false, undefined, () => {
@@ -340,6 +327,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       const limit = Math.min(Number(query.get("limit") ?? "200") || 200, 1000);
       return { events: new AuditLog(d.db, d.clock, d.ids).list({ organizationId: c.organizationId }, limit) };
     }),
+    ...tradeRoutes(d),
   ];
 }
 
@@ -357,10 +345,10 @@ function securityHeaders(res: ServerResponse, origin: string): void {
     res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
 }
 
-function readBody(req: IncomingMessage): Promise<Uint8Array> {
+function readBody(req: IncomingMessage, max: number): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const declared = Number(req.headers["content-length"] ?? "0");
-    if (declared > MAX_BODY_BYTES) {
+    if (declared > max) {
       reject(new DocksideError("LIMIT_EXCEEDED", "request body too large"));
       req.resume();
       return;
@@ -369,7 +357,7 @@ function readBody(req: IncomingMessage): Promise<Uint8Array> {
     let size = 0;
     req.on("data", (c: Buffer) => {
       size += c.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > max) {
         reject(new DocksideError("LIMIT_EXCEEDED", "request body too large"));
         req.destroy();
         return;
@@ -434,7 +422,8 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
           fail("WRONG_ORIGIN", "cross-origin request rejected");
         if (req.headers["sec-fetch-site"] === "cross-site")
           fail("WRONG_ORIGIN", "cross-site request rejected");
-        const raw = method === "POST" ? await readBody(req) : new Uint8Array(0);
+        const raw =
+          method === "POST" ? await readBody(req, route.maxBody ?? MAX_BODY_BYTES) : new Uint8Array(0);
         if (method === "POST" && !(req.headers["content-type"] ?? "").startsWith("application/json")) {
           fail("VALIDATION_FAILED", "content-type must be application/json");
         }
@@ -457,13 +446,23 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
         }
         const body = method === "POST" ? (raw.byteLength ? parseStrictJson(raw) : {}) : undefined;
         const validated = route.schema ? parseWith(route.schema, body) : body;
-        const out = route.handler({
+        const input: HandlerInput = {
           params,
           query: url.searchParams,
           body: validated,
           ctx,
           presentedSessionToken,
-        });
+        };
+        const idemKey = req.headers["idempotency-key"];
+        if (method === "POST" && ctx && idemKey !== undefined) {
+          const out = await idempotent(d.db, d.clock, ctx, url.pathname, String(idemKey), raw, () =>
+            route.handler(input),
+          );
+          if (out.replayed) res.setHeader("Idempotent-Replay", "true");
+          send(201, out.result);
+          return;
+        }
+        const out = await route.handler(input);
         send(method === "POST" ? 201 : 200, out);
       } catch (e) {
         if (e instanceof DocksideError) send(e.httpStatus, { error: e.toJSON() });
@@ -471,4 +470,76 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
       }
     })();
   };
+}
+
+/* ------------------------------ idempotency ------------------------------ */
+
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{8,128}$/;
+const PENDING = '{"pending":true}';
+
+type IdemRow = { request_digest: string; response_json: string } & Record<string, SqlValue>;
+
+/**
+ * Optional `Idempotency-Key` on authenticated POSTs. The key is scoped to the principal and the
+ * exact path, and bound to the SHA-256 of the exact body. The key is reserved before the handler
+ * runs, so concurrent duplicates cannot both execute; an exact repeat replays the stored response;
+ * a different body under the same key fails closed. A failed request releases its reservation and
+ * stores nothing, so a replay can never turn a denied request into a stored success.
+ */
+async function idempotent(
+  db: Database,
+  clock: Clock,
+  ctx: AuthContext,
+  path: string,
+  key: string,
+  raw: Uint8Array,
+  run: () => unknown,
+): Promise<{ replayed: boolean; result: unknown }> {
+  if (!IDEMPOTENCY_KEY.test(key)) fail("VALIDATION_FAILED", "Idempotency-Key malformed");
+  const scope = `api:${ctx.principal.id}:POST ${path}`;
+  const digest = toHex(sha256(raw));
+  const existing = (): IdemRow | undefined =>
+    db.get<IdemRow>(
+      "SELECT request_digest, response_json FROM idempotency_keys WHERE scope = ? AND idem_key = ?",
+      scope,
+      key,
+    );
+  const decide = (row: IdemRow) => {
+    if (row.request_digest !== digest)
+      fail("IDEMPOTENCY_CONFLICT", "Idempotency-Key was used with a different request");
+    if (row.response_json === PENDING)
+      fail("VERSION_CONFLICT", "a request with this Idempotency-Key is in progress");
+    return { replayed: true, result: JSON.parse(row.response_json) as unknown };
+  };
+  const prior = existing();
+  if (prior) return decide(prior);
+  try {
+    db.run(
+      "INSERT INTO idempotency_keys (scope, idem_key, request_digest, response_json, created_at) VALUES (?, ?, ?, ?, ?)",
+      scope,
+      key,
+      digest,
+      PENDING,
+      clock.now(),
+    );
+  } catch (e) {
+    const row = isUniqueViolation(e) ? existing() : undefined;
+    if (row) return decide(row);
+    throw e;
+  }
+  let result: unknown;
+  try {
+    result = await run();
+  } catch (e) {
+    db.run(
+      "DELETE FROM idempotency_keys WHERE scope = ? AND idem_key = ? AND response_json = ?",
+      scope,
+      key,
+      PENDING,
+    );
+    throw e;
+  }
+  const json = JSON.stringify(result, (_k, v) => (typeof v === "bigint" ? v.toString(10) : v));
+  db.run("UPDATE idempotency_keys SET response_json = ? WHERE scope = ? AND idem_key = ?", json, scope, key);
+  return { replayed: false, result: JSON.parse(json) as unknown };
 }

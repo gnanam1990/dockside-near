@@ -1,0 +1,119 @@
+
+ RUN  v4.1.12 <home>/Documents/Codex/Projects/wt/dockside-m07
+
+ ✓ packages/payout/test/m06-dry-compatibility.test.ts > M06 dry compatibility decision logic (skeleton) > classifies NOT_RUN, UNKNOWN, INCOMPATIBLE and PASS 1ms
+ ✓ packages/payout/test/m06-dry-compatibility.test.ts > M06 dry compatibility decision logic (skeleton) > every bound field mismatch is INCOMPATIBLE, including refundTo pointing at an executor 0ms
+ ✓ packages/payout/test/m06-dry-compatibility.test.ts > M06 dry compatibility decision logic (skeleton) > only PASS exposes DRY_COMPATIBLE; the shipped adapter never probes 0ms
+ ✓ packages/payout/test/m06-dry-compatibility.test.ts > M06 dry compatibility decision logic (skeleton) > the funded rail is blocked and the authorization design binds every economic field 1ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /healthz is served with the same auth requirement 1ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /readyz is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/bootstrap/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/bootstrap/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/sessions/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/sessions/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/me is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations/accept is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/invitations/:id/grant is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/principals/:id/capabilities is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/keys/:id/revoke is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/keys/rotation/challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/keys/rotation/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/prove is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/:id/complete is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/:id/cancel-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/recoveries/cancel is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/prove is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/activate is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/rotate is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/recover is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/service-enrollments/:id/revoke is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/service-enrollments/:id is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/audit is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/evidence-policies is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/sync is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/attestor is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/evidence is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/evidence is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/inspections is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/inspections is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/holds is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/hold-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/holds is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/holds/:id/resolution-requests is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/holds/:id/resolution-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/holds/:id/resolution is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/release is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/release-intents is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/signature is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/approval-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/approval is served with the same auth requirement 2ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/execute is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consent-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consents is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consent-revocation-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/cancel-consent-revocations is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/abandon-challenges is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/release-intents/:id/abandon is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/payout is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/refund is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/timeline is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/payouts is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/trades/:id/audit-export is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented GET /v1/operations/:id is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/operations/:id/reconciliation-requests is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/operations/:id/adjudication-requests is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/operations/:id/source-hints is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > implemented POST /v1/trades/:id/freeze is served with the same auth requirement 0ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > every served route is in the catalog 1ms
+ ✓ apps/web/test/endpoints.test.ts > endpoint catalog matches services/api > refuses identifiers the router would not accept 1ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > reports health and readiness with the migrated schema 25ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > bootstraps with a canonical signature and with a NEP-413 wallet signature 81ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > requires a fresh proof for every authenticated request 95ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > runs the invitation flow across separate HTTP sessions and blocks self-consumption 147ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > fails closed on wrong origin, duplicate keys, unknown fields, oversize bodies and wrong content type 90ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > sets security headers and never leaks stacks 16ms
+ ✓ services/api/test/api-authority.test.ts > M01 authority API over HTTP > keeps sessions valid across a server and database restart 49ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > lists the trade only for principals related to it 33ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > uploads evidence and records the bound inspector's PASS over HTTP 246ms
+ ✓ services/api/test/m07-t035-concurrency.test.ts > T-035: concurrent workers and requests cannot duplicate authority > racing release-intent preparations under different keys leave one value lock 107ms
+ ✓ services/api/test/m07-t035-concurrency.test.ts > T-035: concurrent workers and requests cannot duplicate authority > the same Idempotency-Key raced concurrently executes once 89ms
+ ✓ services/api/test/m07-t034-redaction.test.ts > T-034: secrets and private evidence are redacted at the server boundaries > injects canaries through uploads, notes, invitations, malformed input, headers and queries 148ms
+ ✓ services/worker/test/worker-loop.test.ts > services/worker loop > delivers once and reconciles to PAID; overlapping ticks share one pass 283ms
+ ✓ services/worker/test/worker-loop.test.ts > services/worker loop > refuses a busy-loop interval 1ms
+ ✓ services/api/test/m07-t035-concurrency.test.ts > T-035: concurrent workers and requests cannot duplicate authority > racing execute requests queue exactly one economic operation 46ms
+ ✓ services/api/test/m07-t034-redaction.test.ts > T-034: secrets and private evidence are redacted at the server boundaries > nothing secret reaches logs, API history, the audit log, the export or the database 149ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > risk SETs a hold, the buyer's review request changes nothing, only risk RESOLVEs 114ms
+ ✓ services/api/test/m07-t034-redaction.test.ts > T-034: secrets and private evidence are redacted at the server boundaries > identifiers of another organisation's records are indistinguishable from unknown ones 160ms
+ ✓ services/api/test/m07-t035-concurrency.test.ts > T-035: concurrent workers and requests cannot duplicate authority > two engines on separate connections submit once and settle once 370ms
+ ✓ services/api/test/m07-t035-concurrency.test.ts > T-035: concurrent workers and requests cannot duplicate authority > racing hold resolutions and key revocations each take effect once 61ms
+ ✓ services/api/test/m07-t035-concurrency.test.ts > T-035: concurrent workers and requests cannot duplicate authority > concurrent exports are each internally consistent and verifiable 96ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > buyer locks, approves and queues the release; the worker reaches PAID with provenance 555ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > T-033: the auditor's checksummed export links revisions, authorities, holds, release, attempt and receipt 26ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > T-033: any change, reordering-insensitive, to the export breaks the checksum 12ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-053: every API release path stays denied under ACTIVE and EXPIRED_UNRESOLVED holds > ACTIVE policy hold: buyer gets HOLD_ACTIVE, everyone else is denied, nothing is queued 982ms
+ ✓ services/api/test/m07-t033-integrated-export.test.ts > M07 integrated API: evidence to PAID over HTTP > export authority: auditor and party admins yes, uploader no, outsider sees nothing 205ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-053: every API release path stays denied under ACTIVE and EXPIRED_UNRESOLVED holds > EXPIRED_UNRESOLVED: expiry never clears the hold at any boundary 927ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-053: every API release path stays denied under ACTIVE and EXPIRED_UNRESOLVED holds > after RESOLVE the old approval is stale; only a fresh intent and approval release (positive control) 581ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-052: only the current, separately authenticated risk/policy resolver resolves > the buyer files and views a review request; it authorizes nothing 107ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-052: only the current, separately authenticated risk/policy resolver resolves > rejects resolution signatures from every non-risk principal at the API and the contract 176ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-052: only the current, separately authenticated risk/policy resolver resolves > a risk session cannot be reused by another key, and proofs cannot be replayed 54ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-052: only the current, separately authenticated risk/policy resolver resolves > only exact fields verify: reason, manifest, expiry, hold and nonce are all bound 93ms
+ ✓ services/api/test/m07-t052-t053-holds.test.ts > T-052: only the current, separately authenticated risk/policy resolver resolves > a revoked risk key resolves nothing, through any session or the service 46ms
+ ✓ services/api/test/m07-t003-authority-matrix.test.ts > T-003: integrated authority matrix denies cross-role action > every forbidden actor is denied on every mutating route and nothing changes 4094ms
+ ✓ services/api/test/m07-t003-authority-matrix.test.ts > T-003: integrated authority matrix denies cross-role action > read routes disclose nothing to unrelated principals and require a session 724ms
+ ✓ services/api/test/m07-t003-authority-matrix.test.ts > T-003: integrated authority matrix denies cross-role action > no route can force a terminal status or release a value lock 2ms
+ ✓ services/api/test/m07-t003-authority-matrix.test.ts > T-003: integrated authority matrix denies cross-role action > the contract boundary refuses the same cross-role signatures directly 6ms
+
+ Test Files  9 passed (9)
+      Tests  110 passed (110)
+   Start at  23:07:27
+   Duration  6.69s (transform 2.02s, setup 0ms, import 5.40s, tests 14.94s, environment 1ms)
+

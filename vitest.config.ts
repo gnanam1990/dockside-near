@@ -13,6 +13,8 @@ export default defineConfig({
       "@dockside/evidence": src("./packages/evidence/src/index.ts"),
       "@dockside/release": src("./packages/release/src/index.ts"),
       "@dockside/journal": src("./packages/journal/src/index.ts"),
+      "@dockside/payout": src("./packages/payout/src/index.ts"),
+      "@dockside/worker": src("./services/worker/src/index.ts"),
       "@dockside/api": src("./services/api/src/app.ts"),
     },
   },

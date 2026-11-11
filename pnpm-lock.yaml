@@ -127,6 +127,12 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
+  packages/payout:
+    dependencies:
+      '@dockside/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/release:
     dependencies:
       '@dockside/authority':
@@ -159,12 +165,39 @@ importers:
       '@dockside/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@dockside/evidence':
+        specifier: workspace:*
+        version: link:../../packages/evidence
+      '@dockside/journal':
+        specifier: workspace:*
+        version: link:../../packages/journal
+      '@dockside/near':
+        specifier: workspace:*
+        version: link:../../packages/near
+      '@dockside/release':
+        specifier: workspace:*
+        version: link:../../packages/release
       '@dockside/store':
         specifier: workspace:*
         version: link:../../packages/store
       zod:
         specifier: 4.6.7
         version: 4.6.7
+
+  services/worker:
+    dependencies:
+      '@dockside/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@dockside/journal':
+        specifier: workspace:*
+        version: link:../../packages/journal
+      '@dockside/near':
+        specifier: workspace:*
+        version: link:../../packages/near
+      '@dockside/store':
+        specifier: workspace:*
+        version: link:../../packages/store
 
 packages:
 

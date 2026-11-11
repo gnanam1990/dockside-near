@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Dockside control API (M01 authority endpoints)",
+  "description": "Dockside control API (M01 authority endpoints, M07 integrated trade/audit surface)",
   "exports": {
     ".": {
       "types": "./dist/app.d.ts",
@@ -13,6 +13,10 @@
   "dependencies": {
     "@dockside/authority": "workspace:*",
     "@dockside/core": "workspace:*",
+    "@dockside/evidence": "workspace:*",
+    "@dockside/journal": "workspace:*",
+    "@dockside/near": "workspace:*",
+    "@dockside/release": "workspace:*",
     "@dockside/store": "workspace:*",
     "zod": "4.6.7"
   }
