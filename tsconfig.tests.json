@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@dockside/core": ["packages/core/src/index.ts"],
+      "@dockside/store": ["packages/store/src/index.ts"],
+      "@dockside/authority": ["packages/authority/src/index.ts"]
+    },
+    "allowImportingTsExtensions": false
+  },
+  "include": ["packages/*/test/**/*.ts", "services/*/test/**/*.ts", "vitest.config.ts"]
+}

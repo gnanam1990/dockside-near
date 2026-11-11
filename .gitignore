@@ -9,3 +9,5 @@ coverage/
 playwright-report/
 test-results/
 neardev/
+*.tsbuildinfo
+.dockside-secrets/
