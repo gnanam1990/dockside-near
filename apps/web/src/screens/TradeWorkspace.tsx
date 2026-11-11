@@ -417,7 +417,7 @@ function OperationDetail({ operationId }: { operationId: string }) {
                   terminal override. The reconciler reads the contract, the original transaction and its
                   receipts next.
                 </p>
-                {isRisk ? (
+                {isRisk && (o.state === "REVIEW" || o.state === "ADJUDICATION") ? (
                   <div className="btn-row">
                     <button
                       type="button"
@@ -432,7 +432,7 @@ function OperationDetail({ operationId }: { operationId: string }) {
                             setMsg(
                               r.ok
                                 ? `Reconciliation requested; operation is ${r.data.state}.`
-                                : "Request refused.",
+                                : `Request refused: ${r.error.kind === "http" ? r.error.message : r.error.kind}.`,
                             );
                             t.refresh();
                           })
@@ -440,33 +440,42 @@ function OperationDetail({ operationId }: { operationId: string }) {
                     >
                       Request reconciliation
                     </button>
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() =>
-                        void t.api
-                          .call<{ state: string }>("requestAdjudication", {
-                            params: { id: o.operationId },
-                            body: { note: "Opened from the payout workspace" },
-                          })
-                          .then((r) => {
-                            setMsg(
-                              r.ok
-                                ? `Adjudication opened; operation is ${r.data.state}.`
-                                : "Request refused.",
-                            );
-                            t.refresh();
-                          })
-                      }
-                    >
-                      Open adjudication
-                    </button>
+                    {o.state === "REVIEW" ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() =>
+                          void t.api
+                            .call<{ state: string }>("requestAdjudication", {
+                              params: { id: o.operationId },
+                              body: { note: "Opened from the payout workspace" },
+                            })
+                            .then((r) => {
+                              setMsg(
+                                r.ok
+                                  ? `Adjudication opened; operation is ${r.data.state}.`
+                                  : `Request refused: ${r.error.kind === "http" ? r.error.message : r.error.kind}.`,
+                              );
+                              t.refresh();
+                            })
+                        }
+                      >
+                        Open adjudication
+                      </button>
+                    ) : null}
                   </div>
-                ) : (
+                ) : null}
+                {isRisk && o.state !== "REVIEW" && o.state !== "ADJUDICATION" ? (
+                  <p className="small" data-testid="op-own-schedule">
+                    While {o.state}, the reconciler keeps reading the chain on its own schedule; operator
+                    requests open only from REVIEW or ADJUDICATION.
+                  </p>
+                ) : null}
+                {!isRisk ? (
                   <p className="small">
                     Only the trade's risk/policy resolver may request reconciliation or adjudication.
                   </p>
-                )}
+                ) : null}
                 <p role="status">{msg}</p>
               </Callout>
             ) : null}
