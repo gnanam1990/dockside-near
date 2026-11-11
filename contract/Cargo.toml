@@ -14,3 +14,8 @@ lto = true
 debug = false
 panic = "abort"
 overflow-checks = true
+
+# Host tests sign and verify many Ed25519 payloads; optimize dependencies (not the crates under
+# test, which keep debug assertions and overflow checks) so generated-sequence tests stay fast.
+[profile.dev.package."*"]
+opt-level = 2

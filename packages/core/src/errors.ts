@@ -75,6 +75,8 @@ export const ERROR_CODES = {
   TRADE_FROZEN: { http: 409, retry: "never" },
   LEASE_LOST: { http: 409, retry: "later" },
   ILLEGAL_TRANSITION: { http: 409, retry: "never" },
+  // Hardening (M09).
+  RATE_LIMITED: { http: 429, retry: "later" },
   INTERNAL: { http: 500, retry: "unknown" },
 } as const;
 

@@ -27,8 +27,8 @@ import { mkdtempSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createApp, hardenServer } from "@dockside/api";
 import { type AuthContext, AuthorityService, IsolatedSigner } from "@dockside/authority";
-import { createApp } from "@dockside/api";
 import {
   type Capability,
   generateEd25519KeyPair,
@@ -361,16 +361,18 @@ async function main(): Promise<void> {
   worker.start();
 
   /* The API itself. */
-  const api = createServer(
-    createApp({
-      config,
-      db,
-      authority,
-      clock: systemClock,
-      ids: randomIds,
-      log,
-      modules: { evidence, holds, release, journal, escrow },
-    }),
+  const api = hardenServer(
+    createServer(
+      createApp({
+        config,
+        db,
+        authority,
+        clock: systemClock,
+        ids: randomIds,
+        log,
+        modules: { evidence, holds, release, journal, escrow },
+      }),
+    ),
   );
   await new Promise<void>((r) => api.listen(API_PORT, HOST, r));
 

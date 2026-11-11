@@ -5,8 +5,8 @@
  */
 import {
   type CanonicalValue,
-  digestHexFor,
   type SigningPurpose as CorePurpose,
+  digestHexFor,
   toTypedJson,
   verifyFor,
 } from "@dockside/core";
