@@ -45,6 +45,8 @@ let intentId = "";
 let operationId = "";
 let holdId = "";
 let revoked: Actor;
+let unboundBuyer: Actor;
+let unboundRisk: Actor;
 
 beforeAll(async () => {
   a = await apiWorld();
@@ -61,6 +63,9 @@ beforeAll(async () => {
   c.ok(c.escrow.setHoldCall(c.t, toTypedJson(hold.setPayload), hold.setSignature));
   holdId = hold.id;
   revoked = enrollHuman(c.w.h, c.w.buyerAdmin, "EVIDENCE_UPLOADER", "Former clerk");
+  // Same organisation and capability as the bound buyer / risk resolver, but not bound by the trade.
+  unboundBuyer = enrollHuman(c.w.h, c.w.buyerAdmin, "BUYER_APPROVER", "Second buyer approver");
+  unboundRisk = enrollHuman(c.w.h, c.w.buyerAdmin, "RISK_RESOLVER", "Second risk resolver");
   const r = await a.http(c.w.buyerAdmin, "POST", `/v1/keys/${revoked.keyVersionId}/revoke`, {
     reason: "OFFBOARDED",
   });
@@ -199,6 +204,8 @@ describe("T-003: integrated authority matrix denies cross-role action", () => {
     const actors: [string, Actor | null][] = [
       ...(Object.entries(a.actors) as [string, Actor][]),
       ["revoked", revoked],
+      ["unboundBuyer", unboundBuyer],
+      ["unboundRisk", unboundRisk],
       ["unauthenticated", null],
     ];
     const before = fingerprint();
