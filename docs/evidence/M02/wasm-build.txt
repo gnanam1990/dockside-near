@@ -1,0 +1,2 @@
+    Finished `release` profile [optimized] target(s) in 3.94s
+dockside_escrow.wasm 448730 bytes sha256 8751e6e1485b634a2ea00ed678a467aaaf05d811b3037ee02994ad1dac72e668

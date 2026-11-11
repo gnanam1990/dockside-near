@@ -18,11 +18,12 @@
     "format:check": "biome format .",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run security",
     "security": "node scripts/secret-scan.mjs",
-    "contract:test": "cargo test --manifest-path contract/Cargo.toml",
+    "contract:test": "cargo test --manifest-path contract/Cargo.toml --locked --workspace --exclude dockside-escrow",
     "vectors": "pnpm run build && node scripts/generate-vectors.mjs",
     "clean": "node scripts/clean.mjs",
-    "pretest": "pnpm run build",
-    "api": "node services/api/dist/main.js"
+    "pretest": "pnpm run build && pnpm run contract:build",
+    "api": "node services/api/dist/main.js",
+    "contract:build": "node scripts/build-contract.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
