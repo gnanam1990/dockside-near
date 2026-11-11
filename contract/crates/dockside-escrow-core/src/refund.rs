@@ -1,9 +1,12 @@
 //! Direct escrow refunds under `dockside-refund-v1` revision 1 (FR-14, INV-12).
 //!
-//! Lower-layer rows implemented here: TRADE_EXPIRY, MUTUAL_CANCEL, PARTIAL_FUNDING_RETURN,
-//! EXCESS_FUNDING_RETURN. The key-loss rows authorize no refund submit (recovery first).
-//! INSPECTION_FAIL and PERMANENT_HOLD need the integrated inspection/hold/release boundary
-//! and are rejected here until M04 enables them. Unexpected assets are never a native row.
+//! Rows: TRADE_EXPIRY, MUTUAL_CANCEL, PARTIAL_FUNDING_RETURN, EXCESS_FUNDING_RETURN (M02) and,
+//! at the integrated release boundary (M04), INSPECTION_FAIL (current inspector FAIL, 48-hour
+//! supplier appeal window, separate risk/policy authorization) and PERMANENT_HOLD (risk/policy
+//! RESOLVE_TO_REFUND resolution plus supplier consent, 48-hour cooling). The key-loss rows authorize
+//! no refund submit (recovery first). Unexpected assets are never a native row. No row can be
+//! requested, authorized or executed while a release intent is SUBMITTING, PROCESSING, UNKNOWN,
+//! REVIEW, RECONCILING or ADJUDICATION.
 //!
 //! The contract computes the eligible amount and source bucket from its own ledger; the
 //! caller's request must restate them exactly (a stale or invented view fails). Value is
@@ -99,6 +102,10 @@ pub struct RefundIntent {
     pub request_expires_at: u64,
     pub dispute: Option<Dispute>,
     pub history: Vec<(String, u64)>,
+    /// Digest of the authoritative fact the row rests on: the inspector FAIL attestation or the
+    /// RESOLVE_TO_REFUND hold resolution.
+    pub basis: Option<String>,
+    pub risk_signed: bool,
 }
 
 impl RefundIntent {
@@ -111,7 +118,10 @@ impl RefundIntent {
 pub struct RefundSignatures<'a> {
     pub buyer: Option<&'a str>,
     pub supplier: Option<&'a str>,
+    pub risk: Option<&'a str>,
 }
+
+pub const CHALLENGE_48H_MS: u64 = 48 * HOUR_MS;
 
 fn role_key(role: &str) -> R<&'static str> {
     match role {
@@ -123,9 +133,56 @@ fn role_key(role: &str) -> R<&'static str> {
 }
 
 impl TradeRecord {
+    /// The most recent hold resolution (by resolution time, then hold id).
+    pub fn latest_hold_resolution(&self) -> Option<&crate::holds::Hold> {
+        self.holds
+            .values()
+            .filter(|h| h.resolution.is_some())
+            .max_by(|a, b| {
+                let ra = a.resolution.as_ref().map(|r| r.resolved_at).unwrap_or(0);
+                let rb = b.resolution.as_ref().map(|r| r.resolved_at).unwrap_or(0);
+                ra.cmp(&rb).then_with(|| a.id.cmp(&b.id))
+            })
+    }
+
+    /// Basis of a PERMANENT_HOLD refund: the latest resolution is RESOLVE_TO_REFUND and no hold blocks.
+    pub fn permanent_hold_basis(&self) -> R<String> {
+        let h = self
+            .latest_hold_resolution()
+            .ok_or_else(|| crate::error::Error { code: "NOT_ELIGIBLE", message: "no resolved HoldRecord".into() })?;
+        let r = h.resolution.as_ref().expect("filtered");
+        ensure(r.code == "RESOLVE_TO_REFUND", "NOT_ELIGIBLE", "the latest hold resolution is not RESOLVE_TO_REFUND")?;
+        ensure(self.blocking_holds() == 0, "HOLD_ACTIVE", "another hold is ACTIVE or EXPIRED_UNRESOLVED")?;
+        Ok(r.digest.clone())
+    }
+
+    /// Basis of an INSPECTION_FAIL refund: the current inspector decision on the current manifest is FAIL.
+    pub fn inspection_fail_basis(&self, now_ms: u64) -> R<(String, u64)> {
+        let i = self
+            .evidence
+            .current_inspection(now_ms)
+            .ok_or_else(|| crate::error::Error { code: "NOT_ELIGIBLE", message: "no current inspection attestation".into() })?;
+        ensure(i.decision == "FAIL", "NOT_ELIGIBLE", "the current inspection is not FAIL")?;
+        Ok((i.digest.clone(), i.recorded_at))
+    }
+
+    fn unlocked_accepted(&self, f: &crate::ledger::FunderLedger) -> R<(Bucket, u128)> {
+        ensure(self.ledger.funders.values().all(|x| x.reserved == 0), "VALUE_LOCKED", "a release intent holds value")?;
+        if f.available > 0 {
+            Ok((Bucket::Available, f.available))
+        } else if f.partial > 0 {
+            Ok((Bucket::Partial, f.partial))
+        } else {
+            err("NOTHING_ELIGIBLE", "funder has no unreleased, unlocked accepted value")
+        }
+    }
+
     /// Eligible (bucket, amount) for `funder` under `reason`, from the contract's own ledger.
     pub fn eligible(&self, reason: &str, funder: &str, now_ms: u64) -> R<(Bucket, u128)> {
         let f = self.ledger.funder(funder);
+        if NATIVE_REASONS.contains(&reason) {
+            self.require_no_unresolved_release()?;
+        }
         match reason {
             "PARTIAL_FUNDING_RETURN" => {
                 ensure(!self.ledger.fully_funded(), "NOT_ELIGIBLE", "trade is fully funded; partial return no longer applies")?;
@@ -152,8 +209,13 @@ impl TradeRecord {
             "BUYER_KEY_LOSS" | "SUPPLIER_KEY_LOSS" | "INSPECTOR_KEY_LOSS" => {
                 err("NO_REFUND_SUBMIT", "key-loss rows are recovery-first and authorize no refund")
             }
-            "INSPECTION_FAIL" | "PERMANENT_HOLD" => {
-                err("REASON_NOT_ENABLED", "this row is enabled with the integrated release boundary (M04)")
+            "INSPECTION_FAIL" => {
+                self.inspection_fail_basis(now_ms)?;
+                self.unlocked_accepted(&f)
+            }
+            "PERMANENT_HOLD" => {
+                self.permanent_hold_basis()?;
+                self.unlocked_accepted(&f)
             }
             "UNEXPECTED_ASSET_RECOVERY" => err("NOT_NATIVE_REFUND", "unexpected assets use the separate asset-recovery review"),
             _ => err("VALIDATION_FAILED", "unknown refund reason"),
@@ -188,6 +250,9 @@ impl TradeRecord {
         let (hex, d) = digest_hex(domains::REFUND_REQUEST, &v)?;
         let mut buyer_signed = false;
         let mut supplier_signed = false;
+        let mut risk_signed = false;
+        let mut basis = None;
+        ensure(sigs.risk.is_none() || reason == "PERMANENT_HOLD", "VALIDATION_FAILED", "only PERMANENT_HOLD carries a risk/policy signature")?;
         match reason.as_str() {
             "PARTIAL_FUNDING_RETURN" | "EXCESS_FUNDING_RETURN" => {
                 ensure(initiator == "FUNDER", "FORBIDDEN", "only the original funder initiates this return")?;
@@ -209,6 +274,26 @@ impl TradeRecord {
                 if reason == "TRADE_EXPIRY" {
                     ensure(buyer_signed != supplier_signed, "VALIDATION_FAILED", "trade expiry needs only the initiator signature")?;
                 }
+            }
+            "INSPECTION_FAIL" => {
+                ensure(initiator == "BUYER" || initiator == "SUPPLIER", "FORBIDDEN", "initiator must be the designated buyer or supplier")?;
+                ensure(sigs.buyer.is_some() != sigs.supplier.is_some(), "VALIDATION_FAILED", "inspection-fail refund needs only the initiator signature")?;
+                let (sig, key) = if initiator == "BUYER" { (sigs.buyer, "buyer") } else { (sigs.supplier, "supplier") };
+                self.verify_role(ctx, key, &d, sig.ok_or_else(sig_missing)?)?;
+                buyer_signed = initiator == "BUYER";
+                supplier_signed = initiator == "SUPPLIER";
+                basis = Some(self.inspection_fail_basis(ctx.now_ms)?.0);
+            }
+            "PERMANENT_HOLD" => {
+                ensure(initiator == "RISK_RESOLVER", "FORBIDDEN", "only the separate risk/policy principal initiates a permanent-hold refund")?;
+                ensure(sigs.buyer.is_none(), "VALIDATION_FAILED", "the buyer is not a signer of this row")?;
+                self.verify_role(ctx, "riskResolver", &d, sigs.risk.ok_or_else(sig_missing)?)?;
+                risk_signed = true;
+                if let Some(sv) = sigs.supplier {
+                    self.verify_role(ctx, "supplier", &d, sv)?;
+                    supplier_signed = true;
+                }
+                basis = Some(self.permanent_hold_basis()?);
             }
             _ => return err("INTERNAL", "unreachable reason"),
         }
@@ -232,6 +317,8 @@ impl TradeRecord {
             request_expires_at: expires,
             dispute: None,
             history: alloc::vec![("REQUESTED".into(), ctx.now_ms)],
+            basis,
+            risk_signed,
         };
         let origin = match reason.as_str() {
             "TRADE_EXPIRY" => Some((self.terms.expires_at, 24 * HOUR_MS)),
@@ -240,6 +327,10 @@ impl TradeRecord {
                 let at = self.ledger.funder(&intent.funder).excess_detected_at.unwrap_or(ctx.now_ms);
                 Some((at, HOUR_MS))
             }
+            "INSPECTION_FAIL" => Some((self.inspection_fail_basis(ctx.now_ms)?.1, CHALLENGE_48H_MS)),
+            // PERMANENT_HOLD: the cooling period starts at the second required signature.
+            "PERMANENT_HOLD" if supplier_signed => Some((ctx.now_ms, CHALLENGE_48H_MS)),
+            "PERMANENT_HOLD" => None,
             // MUTUAL_CANCEL: the clock starts at the second signature.
             _ if buyer_signed && supplier_signed => Some((ctx.now_ms, HOUR_MS)),
             _ => None,
@@ -256,14 +347,16 @@ impl TradeRecord {
     /// Second MUTUAL_CANCEL consent over the identical request digest.
     pub fn cosign_refund(&mut self, ctx: &Ctx<'_>, id: &str, role: &str, signature: &str) -> R<()> {
         let r = self.refunds.get(id).ok_or_else(nf)?.clone();
-        ensure(r.reason == "MUTUAL_CANCEL", "INVALID_STATE", "only mutual cancellation takes a second consent")?;
+        ensure(r.reason == "MUTUAL_CANCEL" || r.reason == "PERMANENT_HOLD", "INVALID_STATE", "this row takes no second consent")?;
         ensure(r.state == RefundState::Requested, "INVALID_STATE", "intent is not awaiting consent")?;
-        ensure(ctx.now_ms < r.request_expires_at, "EXPIRED", "cancellation request has expired")?;
+        ensure(ctx.now_ms < r.request_expires_at, "EXPIRED", "request has expired")?;
+        self.require_no_unresolved_release()?;
         let key = match role {
-            "BUYER" if !r.buyer_signed => "buyer",
+            "BUYER" if !r.buyer_signed && r.reason == "MUTUAL_CANCEL" => "buyer",
             "SUPPLIER" if !r.supplier_signed => "supplier",
             _ => return err("INVALID_STATE", "that party has already consented or role is invalid"),
         };
+        let cooling = if r.reason == "PERMANENT_HOLD" { CHALLENGE_48H_MS } else { HOUR_MS };
         self.verify_role(ctx, key, &r.request_digest_bytes, signature)?;
         let r = self.refunds.get_mut(id).expect("present");
         if key == "buyer" {
@@ -272,7 +365,7 @@ impl TradeRecord {
             r.supplier_signed = true;
         }
         r.clock_origin = Some(ctx.now_ms);
-        r.deadline = Some(ctx.now_ms + HOUR_MS);
+        r.deadline = Some(ctx.now_ms + cooling);
         r.to(RefundState::Timelocked, ctx.now_ms);
         Ok(())
     }
@@ -315,6 +408,20 @@ impl TradeRecord {
                 ensure(matches!(r.state, RefundState::Requested | RefundState::Timelocked), "INVALID_STATE", "revocation is allowed only before authorization")?;
                 self.verify_role(ctx, role_key(&revoker)?, &d, signature.ok_or_else(sig_missing)?)?;
             }
+            "INSPECTION_FAIL" => {
+                ensure(revoker == "RISK_RESOLVER", "FORBIDDEN", "only the risk/policy principal may revoke an inspection-fail refund")?;
+                ensure(
+                    matches!(r.state, RefundState::Requested | RefundState::Timelocked | RefundState::Authorized | RefundState::Review),
+                    "INVALID_STATE",
+                    "revocation is allowed only before execution",
+                )?;
+                self.verify_role(ctx, "riskResolver", &d, signature.ok_or_else(sig_missing)?)?;
+            }
+            "PERMANENT_HOLD" => {
+                ensure(revoker == "RISK_RESOLVER" || revoker == "SUPPLIER", "FORBIDDEN", "only a required signer may revoke")?;
+                ensure(matches!(r.state, RefundState::Requested | RefundState::Timelocked), "INVALID_STATE", "revocation is allowed only during cooling")?;
+                self.verify_role(ctx, role_key(&revoker)?, &d, signature.ok_or_else(sig_missing)?)?;
+            }
             _ => return err("INVALID_STATE", "intent cannot be revoked"),
         }
         self.consume_nonce(domains::REFUND_REVOKE, &o.str("nonce")?)?;
@@ -338,6 +445,10 @@ impl TradeRecord {
                 ensure(r.state == RefundState::Timelocked && r.deadline.is_some_and(|dl| ctx.now_ms < dl), "INVALID_STATE", "dispute window has closed")?;
                 &["BUYER", "SUPPLIER"]
             }
+            "INSPECTION_FAIL" => {
+                ensure(r.state == RefundState::Timelocked && r.deadline.is_some_and(|dl| ctx.now_ms < dl), "INVALID_STATE", "appeal window has closed")?;
+                &["SUPPLIER"]
+            }
             "PARTIAL_FUNDING_RETURN" => &["BUYER", "SUPPLIER"],
             "EXCESS_FUNDING_RETURN" => &["BUYER", "RISK_RESOLVER"],
             _ => return err("DISPUTE_NOT_ALLOWED", "this row has no challenge path; signers revoke instead"),
@@ -359,11 +470,17 @@ impl TradeRecord {
         ensure(r.state == RefundState::Timelocked, "INVALID_STATE", "intent is not timelocked")?;
         ensure(r.deadline.is_some_and(|dl| ctx.now_ms >= dl), "DELAY_NOT_ELAPSED", "challenge/cooling period has not elapsed")?;
         ensure(r.dispute.is_none(), "INVALID_STATE", "disputed refund stays in REVIEW")?;
+        self.require_no_unresolved_release()?;
         match r.reason.as_str() {
             "PARTIAL_FUNDING_RETURN" => ensure(!self.ledger.fully_funded(), "NOT_ELIGIBLE", "trade became fully funded")?,
             "TRADE_EXPIRY" | "MUTUAL_CANCEL" => {
                 ensure(self.blocking_holds() == 0, "HOLD_ACTIVE", "an active or expired-unresolved hold blocks this refund")?;
                 ensure(self.ledger.funders.values().all(|x| x.reserved == 0), "VALUE_LOCKED", "a release intent holds value")?;
+            }
+            "INSPECTION_FAIL" => return err("FORBIDDEN", "an inspection-fail refund needs the separate risk/policy authorization"),
+            "PERMANENT_HOLD" => {
+                let basis = self.permanent_hold_basis()?;
+                ensure(Some(basis) == r.basis, "NOT_ELIGIBLE", "a later hold resolution superseded the basis")?;
             }
             _ => {}
         }
@@ -371,8 +488,35 @@ impl TradeRecord {
         Ok(())
     }
 
+    /// INSPECTION_FAIL authorization by the separate risk/policy principal after the appeal window
+    /// (`dockside/refund-authorize`). The FAIL attestation must still be the current inspection.
+    pub fn authorize_refund_signed(&mut self, ctx: &Ctx<'_>, payload: &J, signature: &str) -> R<()> {
+        let v = decode(payload)?;
+        let (o, r) = self.intent_payload(
+            &v,
+            &["contractId", "tradeId", "tradeRevision", "tradeDigest", "refundIntentId", "requestDigest", "authorizerRole", "issuedAt", "expiresAt", "nonce"],
+            "refund authorize",
+            ctx,
+        )?;
+        o.expect_str("authorizerRole", "RISK_RESOLVER", "FORBIDDEN")?;
+        ensure(r.reason == "INSPECTION_FAIL", "INVALID_STATE", "only INSPECTION_FAIL takes a signed authorization")?;
+        ensure(r.state == RefundState::Timelocked, "INVALID_STATE", "intent is not timelocked")?;
+        ensure(r.deadline.is_some_and(|dl| ctx.now_ms >= dl), "DELAY_NOT_ELAPSED", "appeal window has not elapsed")?;
+        ensure(r.dispute.is_none(), "INVALID_STATE", "appealed refund stays in REVIEW")?;
+        self.require_no_unresolved_release()?;
+        ensure(self.blocking_holds() == 0, "HOLD_ACTIVE", "an active or expired-unresolved hold blocks this refund")?;
+        let (basis, _) = self.inspection_fail_basis(ctx.now_ms)?;
+        ensure(Some(basis) == r.basis, "NOT_ELIGIBLE", "a superseding inspection replaced the FAIL attestation")?;
+        let (_, d) = digest_hex(domains::REFUND_AUTHORIZE, &v)?;
+        self.verify_role(ctx, "riskResolver", &d, signature)?;
+        self.consume_nonce(domains::REFUND_AUTHORIZE, &o.str("nonce")?)?;
+        self.refunds.get_mut(&r.id).expect("present").to(RefundState::Authorized, ctx.now_ms);
+        Ok(())
+    }
+
     /// AUTHORIZED -> EXECUTING. Returns the transfer the host must perform: (original funder, amount).
     pub fn begin_refund(&mut self, ctx: &Ctx<'_>, id: &str) -> R<(String, u128)> {
+        self.require_no_unresolved_release()?;
         let r = self.refunds.get_mut(id).ok_or_else(nf)?;
         ensure(r.state == RefundState::Authorized, "INVALID_STATE", "intent is not authorized")?;
         r.to(RefundState::Executing, ctx.now_ms);

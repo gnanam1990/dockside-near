@@ -9,12 +9,14 @@ extern crate alloc;
 
 pub mod assets;
 pub mod crypto;
+pub mod destination;
 pub mod domains;
 pub mod error;
 pub mod evidence;
 pub mod holds;
 pub mod ledger;
 pub mod refund;
+pub mod release;
 pub mod terms;
 pub mod trade;
 pub mod typed;

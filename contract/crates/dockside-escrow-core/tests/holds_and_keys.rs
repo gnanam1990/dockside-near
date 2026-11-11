@@ -128,7 +128,7 @@ fn expiry_never_clears_a_hold() {
         ],
     );
     let id_ = rec
-        .request_refund(&w.ctx(), &req, RefundSignatures { buyer: Some(&sign("buyer", "dockside/refund-request", &req)), supplier: Some(&sign("supplier", "dockside/refund-request", &req)) })
+        .request_refund(&w.ctx(), &req, RefundSignatures { buyer: Some(&sign("buyer", "dockside/refund-request", &req)), supplier: Some(&sign("supplier", "dockside/refund-request", &req)), risk: None })
         .unwrap();
     w.now += HOUR;
     assert_eq!(code(rec.authorize_refund(&w.ctx(), &id_)), "HOLD_ACTIVE");
