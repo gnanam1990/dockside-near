@@ -390,13 +390,20 @@ export function reconcileProviderRefund(input: {
   readonly slices: readonly { readonly funder: string; readonly amountYocto: bigint }[];
   readonly receipts: readonly ProviderRefundReceipt[];
 }): ProviderRefundResult {
-  const seen = new Set<string>();
+  const seen = new Map<string, string>();
   let wrong = false;
   let total = 0n;
   const counted: string[] = [];
   for (const r of input.receipts) {
-    if (!r.final || seen.has(r.receiptId)) continue;
-    seen.add(r.receiptId);
+    if (!r.final) continue;
+    const key = `${r.receiverId}|${r.asset}|${r.amountYocto}`;
+    const prior = seen.get(r.receiptId);
+    if (prior !== undefined) {
+      // The same receipt delivered with different facts is a contradiction, not a duplicate.
+      if (prior !== key) wrong = true;
+      continue;
+    }
+    seen.set(r.receiptId, key);
     if (r.receiverId !== input.refundAuthority || r.asset !== input.asset) {
       wrong = true;
       continue;
@@ -431,6 +438,6 @@ export function reconcileProviderRefund(input: {
     allocation: base,
     unmatchedYocto: input.expectedYocto - counted_,
     quarantineYocto: total > input.expectedYocto ? total - input.expectedYocto : 0n,
-    countedReceipts: counted,
+    countedReceipts: [...counted].sort(),
   };
 }

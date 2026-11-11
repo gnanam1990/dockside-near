@@ -169,14 +169,8 @@ export async function excessRefund(
     expiresAt: now + HOUR,
     nonce: newNonce(),
   });
-  const sigs =
-    reason === "PARTIAL_FUNDING_RETURN"
-      ? {
-          buyer: c.sign(c.w.buyer, "REFUND_REQUEST", req),
-          supplier: c.sign(c.w.supplier, "REFUND_REQUEST", req),
-        }
-      : { buyer: c.sign(c.w.buyer, "REFUND_REQUEST", req) };
-  c.ok(c.escrow.requestRefundCall(c.t, toTypedJson(req), sigs), funder);
+  // Funder-initiated returns carry no party signatures: the predecessor is the original funder.
+  c.ok(c.escrow.requestRefundCall(c.t, toTypedJson(req)), funder);
   return id;
 }
 

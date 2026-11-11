@@ -4,17 +4,17 @@ import { approve, codeOfAsync, dualCancel, evidenceReady, lockIntent } from "../
 import { Journal, OPERATION_STATES, transitionTable } from "../src/index.js";
 import {
   approvedIntent,
+  BUYER_ACCT,
   type JWorld,
   jworld,
   ledgerOk,
-  replaceInvoice,
   NEAR,
   RELAYER,
+  replaceInvoice,
   run,
   SUPPLIER_ACCT,
   state,
   TREASURY,
-  BUYER_ACCT,
   VALIDITY,
 } from "./world.js";
 
