@@ -3,6 +3,7 @@
 use crate::assets::UnexpectedAsset;
 use crate::ledger::FunderLedger;
 use crate::trade::TradeRecord;
+use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use serde_json::{json, Map, Value as J};
@@ -112,5 +113,32 @@ pub fn unexpected(a: &UnexpectedAsset) -> J {
         "index": a.index, "standard": a.standard, "assetContract": a.asset_contract, "tokenId": a.token_id,
         "observedAmount": a.observed_amount, "claimedSender": a.claimed_sender, "msgDigest": a.msg_digest,
         "observedAt": a.observed_at, "state": a.state, "originalFunder": J::Null, "withdrawable": false,
+    })
+}
+
+pub fn evidence(t: &TradeRecord, now_ms: u64) -> J {
+    let e = &t.evidence;
+    let manifest = |m: &crate::evidence::ManifestRecord| {
+        json!({
+            "revision": m.revision, "digest": m.digest, "attestationDigest": m.attestation_digest,
+            "acceptedAt": m.accepted_at, "expiresAt": m.expires_at, "minFreshUntil": m.min_fresh_until,
+            "items": m.items, "status": format!("{:?}", m.status).to_uppercase(), "consumed": m.consumed,
+        })
+    };
+    json!({
+        "policy": e.policy.as_ref().map(|p| json!({
+            "policyId": p.policy_id, "revision": p.revision, "digest": p.digest,
+            "attestationLifetimeMs": p.attestation_lifetime_ms,
+            "slots": p.slots.iter().map(|s| json!({"slotId": s.slot_id, "digest": s.digest, "minItems": s.min_items, "maxItems": s.max_items})).collect::<Vec<J>>(),
+        })),
+        "current": e.current.as_ref().map(manifest),
+        "usable": e.usable(now_ms).is_some(),
+        "history": e.history.iter().map(manifest).collect::<Vec<J>>(),
+        "inspection": e.inspection.as_ref().map(|i| json!({
+            "decision": i.decision, "reasonCodes": i.reason_codes, "manifestDigest": i.manifest_digest,
+            "manifestRevision": i.manifest_revision, "digest": i.digest, "recordedAt": i.recorded_at,
+            "expiresAt": i.expires_at, "invalidated": i.invalidated,
+        })),
+        "currentInspectionDecision": e.current_inspection(now_ms).map(|i| i.decision.clone()),
     })
 }
