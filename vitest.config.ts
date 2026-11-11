@@ -9,6 +9,7 @@ export default defineConfig({
       "@dockside/core": src("./packages/core/src/index.ts"),
       "@dockside/store": src("./packages/store/src/index.ts"),
       "@dockside/authority": src("./packages/authority/src/index.ts"),
+      "@dockside/api": src("./services/api/src/app.ts"),
     },
   },
   test: {

@@ -1,0 +1,4 @@
+secret-scan: 84 files clean
+exit=0
+No known vulnerabilities found
+exit=0

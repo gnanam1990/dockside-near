@@ -1,0 +1,8 @@
+Mutation sanity check (M01), 2026-11-11
+
+Mutant: removed requireSignature(..., "REQUEST_PROOF", ...) in AuthorityService.authenticate.
+Command: pnpm exec vitest run packages/authority services
+Result: 2 failed | 39 passed (41) -- killed by
+  - T-004 "authenticates every request with a fresh proof signed by the session key"
+  - M01 HTTP "requires a fresh proof for every authenticated request"
+Source restored from backup; re-run: 34 passed (34) for packages/authority.
