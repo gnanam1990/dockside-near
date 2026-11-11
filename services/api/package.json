@@ -1,0 +1,19 @@
+{
+  "name": "@dockside/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside control API (M01 authority endpoints)",
+  "exports": {
+    ".": {
+      "types": "./dist/app.d.ts",
+      "default": "./dist/app.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/authority": "workspace:*",
+    "@dockside/core": "workspace:*",
+    "@dockside/store": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

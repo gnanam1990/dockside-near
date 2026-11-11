@@ -1,0 +1,27 @@
+   Compiling dockside-canonical v0.1.0 (<repo>\contract\crates\dockside-canonical)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.83s
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_canonical-1a01ec0de4a25155.exe)
+
+running 4 tests
+test tests::domains_are_validated ... ok
+test tests::depth_limit ... ok
+test tests::struct_order_is_bytewise_and_duplicates_fail ... ok
+test tests::type_tags_separate_numeric_forms ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\vectors.rs (contract\target\debug\deps\vectors-d85028e06c66ea8b.exe)
+
+running 2 tests
+test reproduces_typescript_vectors ... ok
+test verifies_typescript_signature_over_trade_revision ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests dockside_canonical
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0
