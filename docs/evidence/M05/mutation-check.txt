@@ -1,0 +1,5 @@
+M1 lost response inferred as FAILED: exit 1 Tests  3 failed | 16 passed (19)
+M2 PAID without destination receipt: exit 1 Tests  2 failed | 17 passed (19)
+M3 ReleaseService ignores the economic journal: exit 1 Tests  7 failed | 12 passed (19)
+M4 REVIEW leaves without new evidence or request: exit 1 Tests  2 failed | 17 passed (19)
+M5 lease fence disabled: exit 1 Tests  1 failed | 18 passed (19)
