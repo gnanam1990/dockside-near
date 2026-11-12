@@ -30,8 +30,10 @@ fn sha256(b: &[u8]) -> [u8; 32] {
     sha2::Sha256::digest(b).into()
 }
 
-/// NEAR secret key text for a key derived from `label` (never leaves the test process).
-fn derived_secret(label: &str) -> (String, String) {
+/// NEAR secret and public key text for a sandbox account key derived from `label`. These keys
+/// exist only on the local sandbox node (and, for the run-all validation, in its temporary
+/// near-cli-rs keychain).
+pub fn derived_secret(label: &str) -> (String, String) {
     let sk = SigningKey::from_bytes(&sha256(format!("dockside-sandbox-account/{label}").as_bytes()));
     let mut kp = sk.to_bytes().to_vec();
     kp.extend_from_slice(&sk.verifying_key().to_bytes());
