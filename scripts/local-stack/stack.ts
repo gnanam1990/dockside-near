@@ -129,12 +129,28 @@ function slot(slotId: string, issuer: string, uploaders: string[], freshnessMs: 
   };
 }
 
+/**
+ * Attestation lifetime of the stack's policy: one day by default. A stack that must keep an
+ * inspection current past the 48-hour INSPECTION_FAIL appeal window (the refund-reasons browser
+ * suite, M15) sets DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS; it is part of the signed policy digest.
+ */
+function attestationLifetimeMs(): number {
+  const raw = env["DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS"];
+  if (raw === undefined) return DAY;
+  const ms = Number(raw);
+  if (!Number.isInteger(ms) || ms < 3600_000 || ms > 30 * DAY)
+    throw new Error(
+      "DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS must be whole milliseconds from 1 hour to 30 days",
+    );
+  return ms;
+}
+
 /** The organisation's registered EvidencePolicy (same shape as the M03 commercial policy). */
 const POLICY = {
   schema: "dockside/evidence-policy@1" as const,
   policyId: "commercial-docs",
   revision: 1,
-  attestationLifetimeMs: DAY,
+  attestationLifetimeMs: attestationLifetimeMs(),
   slots: [
     slot("commercial-invoice", "SUPPLIER_SIGNER", ["SUPPLIER_SIGNER", "EVIDENCE_UPLOADER"], 30 * DAY),
     slot("inspection-report", "INSPECTOR", ["INSPECTOR"], 7 * DAY),
@@ -506,6 +522,7 @@ async function main(): Promise<void> {
               token: TOKEN,
             },
             destinationChangeDelayMs: config.DOCKSIDE_DESTINATION_CHANGE_DELAY_MS,
+            attestationLifetimeMs: POLICY.attestationLifetimeMs,
             chainOffsetMs,
             organizations: Object.fromEntries(
               Object.entries(admins).map(([k, a]) => [
@@ -645,6 +662,12 @@ async function main(): Promise<void> {
               code: "VALIDATION_FAILED",
             });
           return json(res, 200, await submit(from, call));
+        }
+        if (req.method === "GET" && url.pathname === "/control/balances") {
+          // Simulated chain only: native balances of the stack's accounts, so a browser test can
+          // count value movements on the chain itself rather than trusting any Dockside view.
+          const accounts = [BUYER_ACCT, TREASURY, SUPPLIER_ACCT, SUPPLIER_ALT_ACCT, CONTRACT];
+          return json(res, 200, Object.fromEntries(accounts.map((a) => [a, sim.balance(a).toString(10)])));
         }
         if (req.method === "GET" && url.pathname === "/control/token") {
           return json(res, 200, {
