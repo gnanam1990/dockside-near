@@ -9,7 +9,7 @@
  *     trade and stops at the per-asset attempt cap;
  * (c) repeated minimum `fund` calls stop at the per-trade deposit cap.
  */
-import { newNonce, randomIds } from "@dockside/core";
+import { newNonce, randomIds, tradeRevisionDigest } from "@dockside/core";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   assetRecoveryRequestPayload,
@@ -149,7 +149,10 @@ describe("m33 storage bounds (compiled wasm, simulated NEAR host)", () => {
     // world() funded the trade with one buyer deposit; the stranger's deposits are all excess.
     let accepted = 0;
     for (let i = 0; i < MAX_DEPOSITS_PER_TRADE + 20; i++) {
-      const r = w.exec(w.escrow.fundCall(w.terms.tradeId, MIN_DEPOSIT), STRANGER);
+      const r = w.exec(
+        w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), MIN_DEPOSIT),
+        STRANGER,
+      );
       if (!r.ok) {
         expect(panicCode(r)).toBe("CAPACITY_EXCEEDED");
         break;

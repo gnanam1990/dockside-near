@@ -28,7 +28,7 @@ async fn m33_receivers_recovery_attempts_and_deposits_are_bounded_on_chain() -> 
     let relayer = d.relayer.clone();
     d.ok(&relayer, "register_trade", register_args(&d.fx), 0).await?;
     let (buyer, t) = (d.buyer.clone(), d.trade_id());
-    d.ok(&buyer, "fund", fund_args(&t), 5 * NEAR).await?;
+    d.ok(&buyer, "fund", fund_args(&t, &d.rec().terms_digest), 5 * NEAR).await?;
     let stranger = d.net.account("stranger", 20).await?;
 
     // (b) The stranger records an NEP-141 asset naming itself as sender, then loops
@@ -103,9 +103,9 @@ async fn m33_receivers_recovery_attempts_and_deposits_are_bounded_on_chain() -> 
     // (c) Repeated minimum deposits from the stranger stop at the per-trade cap.
     let usage_c = storage_usage(&d).await?;
     for _ in 1..MAX_DEPOSITS_PER_TRADE {
-        d.ok(&stranger, "fund", fund_args(&t), MILLINEAR).await?;
+        d.ok(&stranger, "fund", fund_args(&t, &d.rec().terms_digest), MILLINEAR).await?;
     }
-    assert_eq!(d.refused(&stranger, "fund", fund_args(&t), MILLINEAR).await?, "CAPACITY_EXCEEDED");
+    assert_eq!(d.refused(&stranger, "fund", fund_args(&t, &d.rec().terms_digest), MILLINEAR).await?, "CAPACITY_EXCEEDED");
     let ledger = d.view("get_ledger", json!({ "trade_id": t })).await?;
     assert_eq!(ledger["deposits"].as_array().map(Vec::len), Some(MAX_DEPOSITS_PER_TRADE));
     println!(
