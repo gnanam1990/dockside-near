@@ -1,3 +1,4 @@
-  36 passed (7.2m)
-  3 passed (30.6s)
+  41 passed (8.3m)
+  3 passed (20.2s)
   8 passed (1.5m)
+  3 passed (19.5s)

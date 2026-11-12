@@ -1,6 +1,6 @@
 {
   "schema": "dockside/build-manifest@1",
-  "commit": "b657885814e8f4c12a5123b837d6753babaf23f9",
+  "commit": "2cfca20aae2ab200cc21ddce582c6292cd694553",
   "trackedTreeClean": true,
   "toolchain": {
     "node": "v22.23.5",
@@ -45,18 +45,22 @@
     {
       "file": "0008_relayer_nonces.sql",
       "sha256": "04d8c7aca0360fac64eb9b1a59f21c84262c3b88db40831d2467e8554d09eb36"
+    },
+    {
+      "file": "0009_key_rebinding.sql",
+      "sha256": "835a01cfa4f2e981fa6257437db4f9810dc6cec5680a4b06565efca797a816a0"
     }
   ],
   "dist": {
     "files": 232,
-    "digest": "dcf3f9348d29f2fb70b208361e00f93a74beb8c3e439224704abb074972d8a6c"
+    "digest": "c5f15b09fcf18a9aeb3c0ee6a2531be85d1af8834be621e4953d99b454a220d6"
   },
   "contract": {
     "path": "contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm",
-    "bytes": 769515,
-    "sha256": "65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7",
-    "nearCodeHash": "7r13FvcfXPUvKMcoZeZNiuvFafYRaAZ3b7upu47w3zwx",
-    "builtAt": "2026-11-12T06:29:02.004Z"
+    "bytes": 809036,
+    "sha256": "497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774",
+    "nearCodeHash": "5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM",
+    "builtAt": "2026-11-12T06:47:10.232Z"
   },
   "deployment": {
     "network": "near-testnet",

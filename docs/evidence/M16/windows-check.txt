@@ -1,6 +1,6 @@
-Checked 192 files in 327ms. No fixes applied.
-Checked 193 files in 294ms. No fixes applied.
- Test Files  46 passed (46)
-      Tests  497 passed (497)
+Checked 198 files in 168ms. No fixes applied.
+Checked 199 files in 176ms. No fixes applied.
+ Test Files  48 passed (48)
+      Tests  519 passed (519)
 > node scripts/secret-scan.mjs
-secret-scan: 412 files clean
+secret-scan: 439 files clean
