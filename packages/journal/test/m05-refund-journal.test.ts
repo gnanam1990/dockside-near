@@ -1,3 +1,4 @@
+import { tradeRevisionDigest } from "@dockside/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { codeOfAsync } from "../../release/test/chain.js";
 import { reconcileProviderRefund } from "../src/index.js";
@@ -22,7 +23,7 @@ afterEach(async () => {
 
 async function excessWorld(): Promise<JWorld> {
   w = await jworld();
-  w.c.ok(w.c.escrow.fundCall(w.c.t, 2n * NEAR), TREASURY);
+  w.c.ok(w.c.escrow.fundCall(w.c.t, tradeRevisionDigest(w.c.w.evidence.terms(w.c.t)), 2n * NEAR), TREASURY);
   const l = await w.c.escrow.getLedger(w.c.t);
   expect(l.funders[TREASURY]?.quarantined).toBe(2n * NEAR);
   return w;
@@ -61,7 +62,10 @@ describe("T-057 refund uncertainty and revocation restore the exact bucket", () 
 
   it("revocation of a partial-funding return restores PARTIAL, not a generic bucket", async () => {
     w = await jworld({ funded: false });
-    w.c.ok(w.c.escrow.fundCall(w.c.t, 6n * NEAR), BUYER_ACCT);
+    w.c.ok(
+      w.c.escrow.fundCall(w.c.t, tradeRevisionDigest(w.c.w.evidence.terms(w.c.t)), 6n * NEAR),
+      BUYER_ACCT,
+    );
     expect((await bucket(BUYER_ACCT))?.partial).toBe(6n * NEAR);
     const rid = await excessRefund(w, {
       reason: "PARTIAL_FUNDING_RETURN",

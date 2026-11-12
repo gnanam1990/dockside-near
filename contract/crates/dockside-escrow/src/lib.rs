@@ -162,11 +162,14 @@ impl Escrow {
     }
 
     /// Native testnet NEAR from the caller, recorded per deposit against its original funder.
+    /// `terms_digest` is the trade revision digest the funder agreed to; a record whose digest
+    /// differs (another registration under the same trade id, or a superseded revision) refuses
+    /// the deposit, and the failed call returns it.
     #[payable]
-    pub fn fund(&mut self, trade_id: String) -> J {
+    pub fn fund(&mut self, trade_id: String, terms_digest: String) -> J {
         let amount = env::attached_deposit().as_yoctonear();
         let min = self.min_deposit;
-        let o = self.mutate(&trade_id, |t, ctx| t.fund(ctx, amount, min));
+        let o = self.mutate(&trade_id, |t, ctx| t.fund_exact(ctx, &terms_digest, amount, min));
         serde_json::json!({
             "index": o.index, "accepted": o.accepted.to_string(),
             "quarantined": o.quarantined.to_string(), "fullyFunded": o.fully_funded,

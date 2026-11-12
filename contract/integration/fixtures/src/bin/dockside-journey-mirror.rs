@@ -67,7 +67,7 @@ fn build(st: &State, req: &J) -> Result<J, String> {
     let (method, args, deposit) = match what.as_str() {
         "register" => ("register_trade", register_args(&st.fx), 0),
         "policy" => ("register_evidence_policy", policy_args(rec()?), 0),
-        "fund" => ("fund", fund_args(&t), st.fx.amount_yocto),
+        "fund" => ("fund", fund_args(&t, &rec()?.terms_digest), st.fx.amount_yocto),
         "attestation" => ("submit_manifest_attestation", attestation_args(&st.fx, rec()?, next_manifest_revision(rec()?), now, &label), 0),
         "inspection" => ("submit_inspection", inspection_args(&st.fx, rec()?, "PASS", now, &label), 0),
         "intent" => ("create_release_intent", intent_args(&st.fx, rec()?, now, &label), 0),
