@@ -24,7 +24,10 @@ export interface ChainPorts {
 }
 
 export interface GatheredFacts {
+  /** The subject's contract status; "PENDING" (keep waiting) when the read was UNAVAILABLE. */
   readonly contract: ContractStatus;
+  /** False when the contract read failed: `contract` is then not evidence of anything. */
+  readonly contractAvailable: boolean;
   readonly contractState: string | null;
   readonly attemptId: string | null;
   readonly successors: string[];
@@ -208,6 +211,7 @@ export async function gatherFacts(
   }
   return {
     contract: contractRead ? contract : "PENDING",
+    contractAvailable: contractRead,
     contractState,
     attemptId,
     successors,
