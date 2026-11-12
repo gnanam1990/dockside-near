@@ -29,6 +29,8 @@ devices have run the flow. 1Click is not integrated (optional, `NOT_RUN`), and t
 - pnpm 10 (developed on 10.34.9)
 - Rust stable with cargo (developed on 1.97.1) and the wasm target: `rustup target add wasm32-unknown-unknown`
 - For browser tests: a Playwright Chromium build (see apps/web/README.md)
+- For the Linux reproduction and the deployable wasm: a Docker Engine (for example inside WSL 2); nothing else is
+  installed on the host
 
 ## Setup, build and test
 
@@ -37,10 +39,26 @@ pnpm install --frozen-lockfile
 pnpm test                 # builds TypeScript and the contract wasm, then runs every vitest suite
 pnpm run check            # format + lint + typecheck (incl. web) + test + secret scan
 pnpm run contract:test    # cargo host tests of the contract core (incl. the T-041 generated sequences)
-pnpm run web:e2e          # production web build + Playwright browser suite on the local stack
+pnpm run web:e2e          # production web build + both Playwright suites, each on its own local stack
 node scripts/clean-checkout.mjs [--e2e]     # fresh clone into a temp dir, install, build, full test (T-043)
 node scripts/build-manifest.mjs --out m.json  # exact-build identities incl. the NEAR code hash (T-045)
 node scripts/build-manifest.mjs --verify m.json
+```
+
+`pnpm run web:e2e` runs `apps/web/playwright.config.ts` (ports 8791, 8792, 4391; overridable with
+`DOCKSIDE_E2E_API_PORT`, `DOCKSIDE_E2E_CONTROL_PORT`, `DOCKSIDE_E2E_WEB_PORT`) and then
+`apps/web/playwright.assets.config.ts`, which moves the simulated chain clock 73 hours and therefore runs on its own
+stack (ports 8795, 8796, 4393; `DOCKSIDE_E2E_ASSETS_*_PORT`).
+
+Linux reproduction in an official container (ADR-0015). The wasm built there is the deployable artifact: a wasm built
+on a developer machine embeds that machine's cargo-home path, so its digest differs per machine.
+
+```sh
+docker run --rm -v "$PWD":/repo:ro -v "$PWD/.data/repro":/out \
+  -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
+  -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
+  node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh "$(git rev-parse HEAD)" --e2e
+# On Windows: wsl.exe -d <distro> -u root -- docker run ... with the repository under /mnt/c/...
 ```
 
 `pnpm run contract:build` builds `contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm` and prints its
@@ -81,6 +99,7 @@ is provisioned.
 | `DOCKSIDE_OBJECT_STORE_DIR` | `.data/objects` | Content-addressed evidence objects (private directory). |
 | `DOCKSIDE_CHALLENGE_TTL_MS` / `DOCKSIDE_SESSION_TTL_MS` / `DOCKSIDE_INVITATION_TTL_MS` | 5 min / 8 h / 3 d | Proof-of-possession lifetimes. |
 | `DOCKSIDE_RECOVERY_DELAY_MS` | 48 h | Delay before a recovered key activates. |
+| `DOCKSIDE_DESTINATION_CHANGE_DELAY_MS` | 1 day | Delay new destination-change proposals bind (minimum 1 minute); the contract enforces the signed value. |
 | `DOCKSIDE_REQUEST_PROOF_SKEW_MS` | 60 s | Allowed clock skew of per-request proofs. |
 | `DOCKSIDE_RATE_LIMIT_UNAUTH_PER_MIN` | 300 | Unauthenticated requests per client address per minute (M09). |
 | `DOCKSIDE_RATE_LIMIT_SESSION_PER_MIN` | 3000 | Authenticated requests per session per minute (M09). |
@@ -106,8 +125,12 @@ response carries CSP, nosniff, frame-deny and no-store headers.
 | Economic-operation journal, transactional outbox, fenced workers, reconciler | `packages/journal`, `services/worker` | M05, ADR-0007 |
 | 1Click dry-compatibility interfaces (blocked adapter only) | `packages/payout` | M06 (optional, NOT_RUN) |
 | Integrated HTTP API, authority layers, idempotency, checksummed audit export, destination-change routes, rate limits | `services/api` | M07, M09, ADR-0009/0011 |
+| Refund request routes over `dockside-refund-v1`, append-only refund journal (migration 0006) | `services/api/src/refunds.ts`, `packages/store` | M10, ADR-0013 |
+| Unexpected-asset recovery: contract protocol, journaled execution (migration 0007), nine API routes | `contract/crates/dockside-escrow-core/src/assets.rs`, `packages/journal/src/assets.ts`, `services/api/src/assets.ts` | M11, ADR-0014 |
 | Web UI (React + Vite), WebCrypto device keys, browser digest recomputation | `apps/web` | M08, ADR-0008/0010 |
-| Local stack, testnet runbook, clean-checkout and build-manifest scripts | `scripts/` | M08, M09 |
+| Destination-change screen (Agreement tab), Refund tab, asset-recovery review panel | `apps/web/src/screens/trade/` | M10, M11 |
+| Key screens: own key rotation, directory, revocation, delayed recovery with veto, service enrollment through custody, trade impact | `apps/web/src/screens/org/`, `apps/web/src/screens/Recovery.tsx` | M12, ADR-0012 |
+| Local stack, testnet runbook, clean-checkout, container reproduction and build-manifest scripts | `scripts/` | M08, M09, M13 |
 
 Contract entry points: `new` (testnet only), `register_trade`, payable `fund`, `register_evidence_policy`,
 `submit_manifest_attestation`, `submit_inspection`, `set_hold`, `resolve_hold`, `revoke_bound_key`,
@@ -115,8 +138,26 @@ Contract entry points: `new` (testnet only), `register_trade`, payable `fund`, `
 `revoke_cancel_consent`, `abandon_release_intent`, `propose_/consent_/revoke_/activate_destination_change`,
 `request_refund`, `cosign_refund`, `revoke_refund`, `dispute_refund`, `authorize_refund`,
 `authorize_refund_signed`, `execute_refund` (+ `on_refund_transfer`), `ft_/nft_/mt_on_transfer` (recorded, never
-credited). Views: `get_config`, `get_trade`, `get_ledger`, `get_refunds`, `get_holds`, `get_evidence`,
-`get_release`, `get_unexpected_assets`.
+credited), `request_/approve_/challenge_/revoke_/execute_asset_recovery` (+ `on_asset_recovery_transfer`; NEP-141
+only, back to the proven sender after a 72-hour challenge window). There is no withdraw or sweep entry point. Views:
+`get_config`, `get_trade`, `get_ledger`, `get_refunds`, `get_holds`, `get_evidence`, `get_release`,
+`get_unexpected_assets`, `get_unexpected_asset`.
+
+### Destination change, refunds, asset recovery and keys (M10–M12)
+
+- The Agreement tab carries the dual-consent destination change: proposal by either bound party, consent by the
+  other over the same TRADE_REVISION digest, the signed delay, activation and binding of the new revision, after
+  which evidence, inspection and approval must be renewed.
+- The Refund tab shows per-funder buckets and the signed reason matrix, and offers request, cosign, revoke, dispute,
+  authorize and execute by bound role and contract state. Funder returns are submitted by the funder's own wallet;
+  this build has no wallet connector, so the page shows the exact call instead of a submit button.
+- The "Asset recovery review" panel in the Refund tab lists unexpected token deposits. Only the sender's own
+  transaction can request a recovery; the trade's risk/policy key approves a read-only validation; buyer, supplier,
+  risk/policy or another claimant can challenge; execution is journaled like a payout.
+- `/organization/keys`, `/organization/services` and `/recovery` cover key rotation in the browser, revocation,
+  delayed recovery with veto and service enrollment through a custody operator. A trade revision that binds a
+  rotated, revoked or recovered key shows "new trade revision required"; creating that revision is not built.
+- Browser tests: `apps/web/e2e/destination.spec.ts`, `refund.spec.ts`, `keys.spec.ts` and `asset-recovery.spec.ts`.
 
 ## Layout
 
@@ -124,7 +165,8 @@ credited). Views: `get_config`, `get_trade`, `get_ledger`, `get_refunds`, `get_h
 packages/core  store  authority  near  evidence  release  journal  payout
 services/api   services/worker   apps/web
 contract/      Rust workspace (canonical encoder, escrow core, near-sdk wasm contract)
-scripts/       build-contract, build-manifest, clean-checkout, secret-scan, local-stack/, testnet-deploy/
+scripts/       build-contract, build-manifest, clean-checkout, container-reproduce, secret-scan, local-stack/,
+               testnet-deploy/
 fixtures/      cross-language canonical vectors
 docs/          adr/, status/, evidence/, USER-NEXT-STEPS.md, spec/ (sealed)
 ```
