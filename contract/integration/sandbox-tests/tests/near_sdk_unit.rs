@@ -70,7 +70,7 @@ fn funded() -> (Escrow, Mirror, Fixture) {
     let mut c = Escrow::new("near-testnet".into(), None);
     let reg = register_args(&fx);
     let digest = c.register_trade(reg["terms"].clone(), s(&reg, "buyer_signature"), s(&reg, "supplier_signature"));
-    assert_eq!(J::String(digest), m.apply("register_trade", &reg, Call::by(RELAYER, T0)).unwrap());
+    assert_eq!(J::String(digest.clone()), m.apply("register_trade", &reg, Call::by(RELAYER, T0)).unwrap());
     let t = fx.trade_id();
     let p = policy_args(m.trade(&t));
     c.register_evidence_policy(t.clone(), p["policy"].clone());
