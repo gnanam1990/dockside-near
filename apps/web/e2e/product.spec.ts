@@ -385,15 +385,21 @@ test("T-036 buyer locks and approves; T-038 a lost outcome stays locked and neve
   }
   await r.setViewportSize({ width: 1280, height: 900 });
 
-  // Receipts become readable again; the risk resolver asks for reconciliation; the reconciler
-  // proves the receipt and records PAID.
-  await control("/control/faults", { hideAllReceipts: false });
+  // The risk resolver asks for reconciliation while the receipts are still withheld: the request
+  // is accepted from REVIEW but cannot decide anything, so the operation stays locked. Requesting
+  // only after the receipts return would race the reconciler, which also leaves REVIEW on its own
+  // when new evidence arrives (seen on Linux, where its 2 s re-check won before the click).
   await inReview.getByRole("button", { name: "Request reconciliation" }).click();
-  await expect(inReview.getByTestId("op-locked")).toContainText("Reconciliation requested");
+  await expect(inReview.getByTestId("op-locked")).toContainText(
+    "Reconciliation requested; operation is REVIEW.",
+  );
   test.info().annotations.push({
     type: "reconciliation-request",
     description: (await inReview.getByTestId("op-locked").locator("[role=status]").innerText()).trim(),
   });
+  await expect(inReview).not.toContainText("Paid (terminal evidence recorded)");
+  // Receipts become readable again; the reconciler proves the receipt and records PAID.
+  await control("/control/faults", { hideAllReceipts: false });
   await openTab(b, tradeId, "payout");
   await eventually(
     b,
