@@ -965,7 +965,10 @@ export function tradeRoutes(d: AppDeps): Route[] {
         delayMs: t.delayPolicy.destinationChangeDelayMs,
         pending: view.pendingDestinationChange,
         history: view.destinationHistory,
-        bindingRequired: view.revision > t.revision,
+        // Only a newer revision the destination protocol activated (a key rebinding binds itself).
+        bindingRequired:
+          view.revision > t.revision &&
+          view.destinationHistory.some((h) => h.status === "ACTIVATED" && h.successorDigest === view.termsDigest),
       };
     }),
     r(
