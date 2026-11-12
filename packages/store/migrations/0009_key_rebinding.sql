@@ -1,4 +1,4 @@
--- 0008 key-rebinding revisions (M14).
+-- 0009 key-rebinding revisions (M14).
 --
 -- A key-rebinding revision is a successor trade revision that changes only bound key versions
 -- and public keys. Its party consents and revocations are journaled in release_signatures like

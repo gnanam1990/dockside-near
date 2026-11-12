@@ -15,6 +15,7 @@ import {
   type SourceBucket,
   tradeBinding,
 } from "@dockside/near";
+import type { EvidencePolicyInput } from "@dockside/evidence";
 import { expect } from "vitest";
 import { closeHarnesses } from "../../authority/test/helpers.js";
 import { pdf } from "../../evidence/test/world.js";
@@ -70,8 +71,10 @@ export function rpcFor(url: string): JsonRpcNearClient {
   });
 }
 
-export async function jworld(opts: { funded?: boolean; evidence?: boolean } = {}): Promise<JWorld> {
-  const c = await chain();
+export async function jworld(
+  opts: { funded?: boolean; evidence?: boolean; policy?: EvidencePolicyInput } = {},
+): Promise<JWorld> {
+  const c = await chain(opts.policy ? { policy: opts.policy } : {});
   if (opts.funded !== false) fund(c);
   if (opts.evidence !== false && opts.funded !== false) await evidenceReady(c);
   const server = new SimChainServer(c.sim, () => c.w.h.clock.now(), { validityBlocks: VALIDITY });

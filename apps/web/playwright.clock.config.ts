@@ -12,9 +12,9 @@ import base from "./playwright.config";
  * sessions and request proofs keep the wall clock. A dedicated stack keeps every other suite's
  * clocks untouched. Everything else is the same as playwright.config.
  */
-const API_PORT = Number(process.env["DOCKSIDE_E2E_CLOCK_API_PORT"] ?? 8797);
-const CONTROL_PORT = Number(process.env["DOCKSIDE_E2E_CLOCK_CONTROL_PORT"] ?? 8798);
-const WEB_PORT = Number(process.env["DOCKSIDE_E2E_CLOCK_WEB_PORT"] ?? 4394);
+const API_PORT = Number(process.env["DOCKSIDE_E2E_CLOCK_API_PORT"] ?? 8799);
+const CONTROL_PORT = Number(process.env["DOCKSIDE_E2E_CLOCK_CONTROL_PORT"] ?? 8800);
+const WEB_PORT = Number(process.env["DOCKSIDE_E2E_CLOCK_WEB_PORT"] ?? 4396);
 const WEB = `http://127.0.0.1:${WEB_PORT}`;
 const API = `http://127.0.0.1:${API_PORT}`;
 // e2e/stack.ts reads the control port from this variable in the runner and in workers.

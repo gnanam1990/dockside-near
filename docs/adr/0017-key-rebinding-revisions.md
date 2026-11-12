@@ -1,4 +1,4 @@
-# ADR-0016 — Key-rebinding revisions, recovery challenge re-issue and simulated trade time
+# ADR-0017 — Key-rebinding revisions, recovery challenge re-issue and simulated trade time
 
 - Decision status: accepted (M14 follow-up)
 - Date: 2026-11-12, Dockside platform team (M14)
@@ -63,7 +63,7 @@ could not be re-issued, and T-037's STALE slot was never driven in the browser.
    does not exist) and the trade's bound buyer approver or supplier signer principal (a capability holder that is
    not the bound party is refused and audited as `KEY_REBINDING_DENIED`), then the session key that this successor
    binds for that party (refusals audited as `RELEASE_ACTION_DENIED`). Consents and revocations are verified, journaled in `release_signatures`
-   (migration 0008 rebuilds that append-only table to admit the two new kinds) and audited
+   (migration 0009 rebuilds that append-only table to admit the two new kinds) and audited
    (`KEY_REBINDING_CONSENT_RECORDED`, `KEY_REBINDING_REVOCATION_RECORDED`, `KEY_REBINDING_ACTIVATION_PREPARED`,
    `KEY_REBINDING_REVISION_BOUND`). Activation and binding are relays the contract re-checks; binding reuses the
    journaled-successor path of the destination protocol and requires the contract digest to match.

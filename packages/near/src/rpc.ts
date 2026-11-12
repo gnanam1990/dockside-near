@@ -130,6 +130,9 @@ export class JsonRpcNearClient implements NearRpc {
         maxStringLength: this.cfg.maxResponseBytes,
         maxArrayLength: 1_000_000,
         maxObjectKeys: 1024,
+        // Real nodes send u64 fields as JSON numbers (block header `timestamp` is in nanoseconds,
+        // far past 2^53). They are kept as exact decimal strings, never as lossy numbers.
+        unsafeIntegers: "decimal-string",
       });
     } catch {
       fail("UPSTREAM_INVALID", "NEAR RPC response is not valid JSON");
