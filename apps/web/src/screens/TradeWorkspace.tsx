@@ -485,7 +485,7 @@ function ExportPanel() {
   );
 }
 
-/** Signed export (M17, ADR-0016): fetched, then checked in this browser before it is offered. */
+/** Signed export (M17, ADR-0017): fetched, then checked in this browser before it is offered. */
 function SignedExportPanel() {
   const t = useTrade();
   const [state, setState] = useState<"idle" | "loading" | "ready" | "failed">("idle");

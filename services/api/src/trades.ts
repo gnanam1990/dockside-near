@@ -1146,7 +1146,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
       log(must(ctx), "AUDIT_EXPORTED", "trade", terms.tradeId);
       return out;
     }),
-    /** The same export, signed by the deployment's dedicated audit-export key (ADR-0016). */
+    /** The same export, signed by the deployment's dedicated audit-export key (ADR-0017). */
     r("GET", "/v1/trades/:id/signed-audit-export", true, undefined, async ({ ctx, params, query }) => {
       const c = must(ctx);
       act(c, "EXPORT_AUDIT");

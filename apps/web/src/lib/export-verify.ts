@@ -2,7 +2,7 @@ import { base58Decode } from "./base58";
 import { type CanonicalValue, canonicalDigest, sha256, toHex } from "./canonical";
 
 /**
- * In-browser check of a signed audit export (ADR-0016), mirroring services/api/src/verify-export.ts:
+ * In-browser check of a signed audit export (ADR-0017), mirroring services/api/src/verify-export.ts:
  * the export's own checksum, the statement's binding to it, its DCE-1 digest and the Ed25519
  * signature under `dockside/audit-export`, and whether the key is in the list this server publishes.
  * Independent verification uses the offline `verify-export` command with the operator's key list.
