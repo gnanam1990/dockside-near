@@ -1,0 +1,91 @@
+{
+  "schema": "dockside/testnet-run@1",
+  "network": "testnet",
+  "scriptCommit": "49fbaf7658988edeb380fee011a4c853f20b6bd2",
+  "artifact": {
+    "bytes": 809036,
+    "sha256": "497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774",
+    "nearCodeHash": "5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM",
+    "commit": "49fbaf7658988edeb380fee011a4c853f20b6bd2",
+    "platform": "linux-x64"
+  },
+  "deployTx": null,
+  "deployment": {
+    "contractId": "gnanam1990-dock-escrow.testnet",
+    "onChainCodeHash": "5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM",
+    "match": true,
+    "blockHeight": 277382908,
+    "config": {
+      "network": "near-testnet",
+      "minDepositYocto": "1000000000000000000000",
+      "trades": 1,
+      "unexpectedAssets": 0,
+      "refundPolicy": {
+        "id": "dockside-refund-v1",
+        "revision": 1
+      }
+    }
+  },
+  "relayer": {
+    "relayer": "gnanam1990-dock-relayer.testnet",
+    "publicKey": "ed25519:J9RvmdzWNiXQZeyJPmhobxH56MwzzyekCdngQg43aidN",
+    "receiverId": "gnanam1990-dock-escrow.testnet",
+    "methodNames": [],
+    "allowance": "997219854198093500000000"
+  },
+  "journey": {
+    "ok": true,
+    "tradeId": "trd_563c174f39144ac1543b9e3e61eb4d21",
+    "releaseIntentId": "rli_2f2c7d7e9e96af8ed7a5b4b9fe86a7dd",
+    "checks": {
+      "settledTrue": true,
+      "releasePaid": true,
+      "supplierDeltaYocto": "50000000000000000000000",
+      "supplierReceivedExactAmount": true,
+      "ledgerConservation": true,
+      "releasedTotal": "50000000000000000000000"
+    },
+    "transactions": [
+      {
+        "method": "register_trade",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "EXJUH59wfz7fxYMDT2XUCyMkS7cgXu6Wt91RyFAzc71N"
+      },
+      {
+        "method": "register_evidence_policy",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "DDYArQXFSfVDtaceXZeufEHSj3y9t15mfsa83bMzxhC4"
+      },
+      {
+        "method": "fund",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "516vpRsRCHdPsCtSbVJNHjeVeK1eXzNkojZowWkDuByV"
+      },
+      {
+        "method": "submit_manifest_attestation",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "mLPLZ471DZN1hUM9Z8nNH7j8rdqi3JCLuxzGKwfiMfY"
+      },
+      {
+        "method": "submit_inspection",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "4pUNbTGTL7NJidhKSdB1CYWETy8FpersvV55MUhXF7Yt"
+      },
+      {
+        "method": "create_release_intent",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "FDvXSTHtH4d6gPFNXPkWc6TuEF8VhVSfpScYKFkqyFm8"
+      },
+      {
+        "method": "approve_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "9VF8tnBgmcStrkVjsVi4WC37Gu9NcCCJMTk9CESm3BV5"
+      },
+      {
+        "method": "execute_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "Hixw372qTfqEUmXAuxmxuttN7W2pBBVxpYw2ognLEmeD"
+      }
+    ]
+  }
+}

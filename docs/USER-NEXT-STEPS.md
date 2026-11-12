@@ -1,7 +1,8 @@
 # What you need to do to reach WORKING_TESTNET
 
 Dockside is **IMPLEMENTED_UNVERIFIED**. Every code path below exists and passes its tests against a simulated NEAR
-chain, and the escrow contract also runs with real transactions on a local nearcore node (near-sandbox). The steps
+chain, the escrow contract also runs with real transactions on a local nearcore node (near-sandbox), and §2–§3 are
+**done**: you deployed the escrow on NEAR testnet and ran one trade to PAID there (docs/status/M24.md). The steps
 that remain need things this build was not allowed to create or hold. Every step here is for **you** to run;
 nothing in the repository runs them for you.
 
@@ -10,7 +11,7 @@ What remains yours, in short:
 | Yours | Why it cannot be done here | Section |
 |---|---|---|
 | Push the repository and check the first CI run | nothing was pushed; the workflow has only been replayed locally | §1 |
-| Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet` | no accounts, faucet, signing with your keys or testnet NEAR in this build | §2–§3 |
+| ~~Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet`~~ | **done** (M24) | §2–§3 |
 | Custody of the relayer key and the worker's `TxSigner` | a signing key with real custody (keychain, HSM, KMS or an isolated signer) is yours | §4 |
 | Custody of the audit-export key (HSM or KMS if you need it) | the build uses an isolated signer process | §5 |
 | Separate people on separate devices for the buyer, supplier, inspector and risk/policy roles | INV-13: one operator holding every key does not count | §6–§7 |
@@ -65,7 +66,10 @@ read-only permissions and no secrets. It has never run, because nothing was push
 3. To replay CI on your machine: `pnpm run ci:local --list`, then `pnpm run ci:local --job test` (or
    `--job chain` with Docker).
 
-## 2. Create the testnet accounts
+## 2. Create the testnet accounts — done
+
+Done (M24): `gnanam1990-dock-escrow`, `-buyer`, `-supplier` and `-relayer` `.testnet`, 10 NEAR each. Kept below for
+reference; the extra accounts for §7 are still yours to create if you have not.
 
 Create these with near-cli-rs (faucet-sponsored creation works on testnet), with names you own, and keep their
 full-access keys in the near-cli-rs keychain:
@@ -85,7 +89,25 @@ For the full product run (§7) also create `<supplier-alt>.testnet` (destination
 `<treasury>.testnet` (a second funder) and `<sender>.testnet` holding a testnet NEP-141 token (unexpected-asset
 recovery).
 
-## 3. Deploy, verify and run one trade: one command
+## 3. Deploy, verify and run one trade: one command — done
+
+**Done (M24)**, three runs on 2026-11-12 from Windows: run 1 deployed and initialised the escrow in one transaction
+(`7KExSVdWHAVXXDjjAme1m1zQBW4hBSgXgsMEQt2K9dyY`, code hash `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM`, equal to
+commit `49fbaf7`'s manifest) and added the relayer key `ed25519:J9RvmdzWNiXQZeyJPmhobxH56MwzzyekCdngQg43aidN`; run 3
+(`--skip-deploy --relayer-key-file`) took trade `trd_563c174f39144ac1543b9e3e61eb4d21` to PAID with the supplier
+receiving exactly 0.05 NEAR. Evidence: docs/evidence/M24/. The Windows problems those runs hit (an invisible key-scheme
+question, npm's `near` shim, a transient "Transaction has expired") are fixed in M24; on Windows use
+`powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet`
+(scripts/testnet-deploy/README.md, "Windows"). Still to do from this section: write the escrow account and on-chain code
+hash into the manifest's `deployment` section.
+
+**Stranded trade.** Run 2 stopped at `approve_release` (expired transaction, never included) and left trade
+`trd_9aced7e741a0462ac88ef4de0e67ba81` funded with 0.05 testnet NEAR from `gnanam1990-dock-buyer.testnet`, all of it
+reserved by release intent `rli_7781d4f0bb0b6aa6461935a154614c02` (`VALUE_LOCKED`, no approval). **It cannot be
+refunded in §7.8**: every way out (approval, dual-signed CANCEL, ABANDON after expiry, and every refund row, which also
+needs the intent's reservation released first) needs a Dockside principal signature, and that trade's principal keys
+came from a random seed run-all does not keep. Its 0.05 testnet NEAR stays locked in the escrow; it has no value and the
+contract's conservation holds. Run the §7.8 refunds on new trades whose principals are enrolled with kept keys.
 
 ```sh
 export DOCKSIDE_ESCROW_ACCOUNT=<escrow>.testnet DOCKSIDE_BUYER_ACCOUNT=<buyer>.testnet \
@@ -100,7 +122,7 @@ checks the on-chain code hash and config, adds a relayer function-call key restr
 chain, runs one trade to PAID with the supplier's balance delta and a ledger replay after every transaction, and
 writes `run-record.json`. `--network` has no default and mainnet is refused. It prints `run-all: PASS` and exits 0;
 any refusal exits 2 with a code (for example `WASM_MISMATCH`, `ESCROW_NOT_EMPTY`, `CODE_HASH_MISMATCH`) before the
-step that would be wrong. It was validated end to end on a local near-sandbox node, never on testnet.
+step that would be wrong. It was validated end to end on a local near-sandbox node and has run on testnet (above).
 
 Keep the commit, `build-manifest.json`, `run-record.json`, `journey.json` and `deployment.json`. Write the escrow
 account and on-chain code hash into the manifest's `deployment` section. A second journey against the same
