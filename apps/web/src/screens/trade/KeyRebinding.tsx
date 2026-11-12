@@ -19,7 +19,7 @@ import { Invalidations } from "./Destination";
 import { Section, useTrade } from "./common";
 
 /**
- * Key-rebinding revision (M14, ADR-0016). When a key this revision binds was rotated, revoked or
+ * Key-rebinding revision (M14, ADR-0017). When a key this revision binds was rotated, revoked or
  * recovered, the authority's rebinding plan names each affected role's current key. Both bound
  * parties sign one successor revision that changes only those key versions (a party whose own key
  * changed signs with its new key; the other party's bound key anchors it), a signed delay applies

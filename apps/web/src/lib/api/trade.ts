@@ -373,6 +373,8 @@ export interface RefundView {
   readonly operations: OperationSummary[];
   readonly source: string;
   readonly observedAt: number;
+  /** The contract's clock (latest final block time) when the view was read; deadlines run on it. */
+  readonly chainTimeMs: number;
 }
 
 /** A contract call only the named NEAR account can submit (the contract checks the caller). */

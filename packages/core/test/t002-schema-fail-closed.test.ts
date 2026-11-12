@@ -8,6 +8,7 @@ import {
   base58Encode,
   canonicalEncode,
   checkValidityWindow,
+  DEFAULT_JSON_LIMITS,
   decideIdempotency,
   type ErrorCode,
   idempotencyRequestDigest,
@@ -173,6 +174,14 @@ describe("T-002 schema and unknown fields fail closed", () => {
     expect(code(() => parseStrictJson("1.5"))).toBe("VALIDATION_FAILED");
     expect(code(() => parseStrictJson("1e3"))).toBe("VALIDATION_FAILED");
     expect(code(() => parseStrictJson("9007199254740993"))).toBe("VALIDATION_FAILED");
+    // M15: a boundary that reads a peer's u64 numbers may keep them as exact decimal strings.
+    const u64 = { ...DEFAULT_JSON_LIMITS, unsafeIntegers: "decimal-string" as const };
+    expect(parseStrictJson('{"timestamp":1800000000123456789,"height":7}', u64)).toEqual({
+      timestamp: "1800000000123456789",
+      height: 7,
+    });
+    expect(code(() => parseStrictJson("-9007199254740993", u64))).toBe("VALIDATION_FAILED");
+    expect(code(() => parseStrictJson("1.5", u64))).toBe("VALIDATION_FAILED");
     expect(code(() => parseStrictJson("-0"))).toBe("VALIDATION_FAILED");
     expect(code(() => parseStrictJson('"\\ud800"'))).toBe("MALFORMED_JSON");
     expect(code(() => parseStrictJson('"a\u0001"'))).toBe("MALFORMED_JSON");
