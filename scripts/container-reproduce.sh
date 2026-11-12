@@ -8,7 +8,6 @@
 # Run from the host (Docker Engine, for example inside WSL 2), with the repository mounted read-only
 # at /repo and a writable directory for the reports at /out:
 #   docker run --rm -v <repo>:/repo:ro -v <out dir>:/out \
-#     -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
 #     node:22-bookworm-slim@sha256:<IMAGES.bookworm digest> sh /repo/scripts/container-reproduce.sh <commit> [--e2e]
 # (`pnpm run contract:reproduce [--e2e]` builds this command, and also mounts the shared git
