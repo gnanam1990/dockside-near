@@ -1,0 +1,16 @@
+[package]
+name = "dockside-fixtures"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Signed Dockside escrow payloads for real-chain runs and a host mirror of the contract dispatcher"
+
+[dependencies]
+dockside-escrow-core = { path = "../../crates/dockside-escrow-core" }
+dockside-canonical = { path = "../../crates/dockside-canonical" }
+ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
+serde_json = { version = "=1.0.154" }
+hex = "=0.4.3"
+sha2 = "=0.10.9"
+bs58 = { version = "=0.5.1", default-features = false, features = ["alloc"] }

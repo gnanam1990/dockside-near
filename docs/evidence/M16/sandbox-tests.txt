@@ -1,0 +1,75 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 30s
+     Running unittests src/lib.rs (target/debug/deps/dockside_fixtures-b6256ae74d93fd61)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/dockside-journey-mirror.rs (target/debug/deps/dockside_journey_mirror-0c98e195935099e0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/dockside_sandbox_tests-7ec976245fdbe0e8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/near_sdk_unit.rs (target/debug/deps/near_sdk_unit-de71761e5c55f77d)
+
+running 7 tests
+test new_refuses_mainnet - should panic ... ok
+test new_sets_the_testnet_corridor_and_minimum_deposit ... ok
+test funding_records_each_funder_and_quarantines_the_excess ... ok
+test nep141_tokens_are_recorded_for_review_and_never_credited ... ok
+test a_deposit_below_the_minimum_is_refused - should panic ... ok
+test a_failed_release_transfer_settles_failed_and_restores_the_value ... ok
+test execute_release_schedules_the_exact_transfer_and_a_private_settlement ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/run_all_on_sandbox.rs (target/debug/deps/run_all_on_sandbox-d203181e7de74628)
+
+running 1 test
+test run_all_deploys_verifies_configures_the_relayer_and_completes_the_journey_on_sandbox ... ignored, needs near-cli-rs, the container-built wasm and its manifest (scripts/sandbox/container-sandbox.sh)
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/sandbox_escrow.rs (target/debug/deps/sandbox_escrow-e0ea0c466bbf4d5c)
+
+running 6 tests
+test t045_deployed_code_hash_is_the_built_wasm_and_init_is_testnet_only ... ok
+test t031_a_native_transfer_the_runtime_refunds_settles_failed_and_restores_the_exact_reservation ... ok
+test t051_unexpected_nep141_returns_to_the_proven_sender_after_the_72_hour_window ... ok
+test t008_t009_refunds_return_exact_value_to_the_original_funder_only ... ok
+test t007_t019_t022_funding_and_direct_release_of_the_exact_value_to_the_bound_supplier ... ok
+test t020_t021_t042_dual_consent_delayed_destination_change_redirects_the_release ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.29s
+
+     Running unittests src/lib.rs (target/debug/deps/dockside_test_token-36a841033426b33e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests dockside_fixtures
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests dockside_sandbox_tests
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests dockside_test_token
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

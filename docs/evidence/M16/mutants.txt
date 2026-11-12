@@ -1,0 +1,15 @@
+M16 wrapper mutants (contract/crates/dockside-escrow/src/lib.rs), each built to its own wasm and run
+against the near-sdk unit-testing suite (tests/near_sdk_unit.rs) and the near-sandbox suite
+(tests/sandbox_escrow.rs) with `cargo test --locked --no-fail-fast`, in the trixie dev container,
+near-sandbox 2.14.0. The mutants change only the NEAR wrapper, which the core host tests never run.
+
+| Mutant | Change | Unit (7 tests) | Sandbox (6 tests) | Killed by |
+|---|---|---|---|---|
+| m1 | execute_release transfers amount - 1 | 1 failed | 2 failed | execute_release_schedules_the_exact_transfer_and_a_private_settlement; t007_t019_t022_..., t020_t021_t042_... |
+| m2 | on_release_transfer ignores the promise result (always transferred) | 1 failed | 1 failed | a_failed_release_transfer_settles_failed_and_restores_the_value; t031_a_native_transfer_the_runtime_refunds_... |
+| m3 | ft_on_transfer returns the full amount (token refunds the sender) | 1 failed | 1 failed | nep141_tokens_are_recorded_for_review_and_never_credited; t051_unexpected_nep141_... |
+| m4 | execute_refund transfers to the caller instead of the original funder | 0 failed | 1 failed | t008_t009_refunds_return_exact_value_to_the_original_funder_only |
+| m5 | #[private] removed from on_release_transfer | 0 failed | 1 failed | t007_t019_t022_... (a forged callback is no longer refused) |
+
+5/5 killed. m4 and m5 are only visible on a real runtime: the receiver of a scheduled transfer and
+the private-callback guard live in the wasm export and the receipt, not in the Rust method body.

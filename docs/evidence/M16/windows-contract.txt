@@ -1,0 +1,36 @@
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_canonical-7d4b2e9ffa4db05a.exe)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\vectors.rs (contract\target\debug\deps\vectors-734d4367732d11c0.exe)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_escrow_core-224f0e0a28db8e29.exe)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\holds_and_keys.rs (contract\target\debug\deps\holds_and_keys-772bb686bf9d359f.exe)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\refund_rows.rs (contract\target\debug\deps\refund_rows-1d59669942e9b8bf.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\t006_key_rebinding.rs (contract\target\debug\deps\t006_key_rebinding-cebdffcd504afbe4.exe)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+     Running tests\t007_t008_funding.rs (contract\target\debug\deps\t007_t008_funding-125c47e4d00c0fd9.exe)
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running tests\t009_t010_t050_refund_matrix.rs (contract\target\debug\deps\t009_t010_t050_refund_matrix-0be913c045bf5cd8.exe)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+     Running tests\t015_t019_release_conjunction.rs (contract\target\debug\deps\t015_t019_release_conjunction-d53b55dc3ceaf2e1.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+     Running tests\t016_hold_resolution.rs (contract\target\debug\deps\t016_hold_resolution-f2908076480e5ca8.exe)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests\t020_t021_t047_destination.rs (contract\target\debug\deps\t020_t021_t047_destination-8e9feeefa121cd19.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+     Running tests\t022_t023_value_lock.rs (contract\target\debug\deps\t022_t023_value_lock-73a451036a94226d.exe)
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+     Running tests\t041_generated_conservation.rs (contract\target\debug\deps\t041_generated_conservation-5f409c6e1b2b8841.exe)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.70s
+     Running tests\t046_pre_submit_exits.rs (contract\target\debug\deps\t046_pre_submit_exits-9c281ba9ee3b0b70.exe)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+     Running tests\t049_t017_t018_contract_evidence.rs (contract\target\debug\deps\t049_t017_t018_contract_evidence-517e7af6886d18a0.exe)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+     Running tests\t051_asset_recovery.rs (contract\target\debug\deps\t051_asset_recovery-c2879be3465c866a.exe)
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests\t051_unexpected_assets.rs (contract\target\debug\deps\t051_unexpected_assets-67bc9b9d472923ea.exe)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
