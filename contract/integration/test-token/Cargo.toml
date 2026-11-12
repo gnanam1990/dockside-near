@@ -1,0 +1,14 @@
+[package]
+name = "dockside-test-token"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "NEP-141 test token (near-contract-standards FungibleToken) for local near-sandbox runs only"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "=5.30.1"
+near-contract-standards = "=5.30.1"
