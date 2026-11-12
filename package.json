@@ -25,6 +25,7 @@
     "api": "node services/api/dist/main.js",
     "stack": "node --experimental-transform-types --no-warnings --import ./scripts/local-stack/register.mjs scripts/local-stack/stack.ts",
     "contract:build": "node scripts/build-contract.mjs",
+    "contract:sandbox": "node scripts/sandbox/run.mjs",
     "web:build": "pnpm --filter @dockside/web run build",
     "web:e2e": "pnpm --filter @dockside/web run e2e"
   },
