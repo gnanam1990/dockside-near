@@ -25,6 +25,9 @@ const ROUTES = [
   "/payouts",
   "/audit",
   "/organization",
+  "/organization/keys",
+  "/organization/services",
+  "/recovery",
   "/no-such-page",
 ];
 
@@ -42,7 +45,15 @@ test.describe("signed out", () => {
   }
 
   test("data routes ask for sign-in instead of showing data", async ({ page }) => {
-    for (const r of ["/trades", "/audit", "/organization", "/payouts", "/inspections"]) {
+    for (const r of [
+      "/trades",
+      "/audit",
+      "/organization",
+      "/organization/keys",
+      "/organization/services",
+      "/payouts",
+      "/inspections",
+    ]) {
       await page.goto(r);
       await waitForScreen(page);
       await expect(page.getByTestId("state-signin")).toBeVisible();
