@@ -1,0 +1,20 @@
+Run 2: run-all --network testnet --skip-deploy --relayer-key-file <the run-1 key file>, with NEAR_CLI pointing at a binary
+Node can spawn (the real near.exe). Steps 1, 2 and 4 passed and the relayer key was re-checked on chain (artifact.json, preflight.json, deployment.json, relayer.json); deploy and key creation were skipped (reused from run 1).
+
+The journey registered trade trd_9aced7e741a0462ac88ef4de0e67ba81 and submitted register_trade,
+register_evidence_policy, fund (0.05 NEAR from gnanam1990-dock-buyer.testnet), submit_manifest_attestation,
+submit_inspection and create_release_intent. approve_release then failed: near-cli-rs printed
+"Error: Transaction has expired." (InvalidTxError::Expired: the RPC rejected the transaction before
+inclusion), and run-all reported only
+  run-all: SUBMIT_FAILED: approve_release: near-cli-rs printed no transaction id
+The journey's per-step transaction hashes went to the terminal only (no journey.json is written on
+failure), so they are not recorded here; the trade's state is recorded from the chain instead
+(onchain-reverify.json, key trd_9aced7e741a0462ac88ef4de0e67ba81):
+  ledger                 funded 0.05 NEAR by gnanam1990-dock-buyer.testnet, reserved 0.05 NEAR,
+                         released 0, refunded 0, conservation true
+  release intent         rli_7781d4f0bb0b6aa6461935a154614c02, state VALUE_LOCKED, no approval, no attempt
+  blockers               APPROVAL_MISSING
+This confirms the expired approve_release was never included.
+
+Fixed in M24: an expired transaction is signed again (at most 3 attempts) and every failure carries
+near-cli-rs's own error line.

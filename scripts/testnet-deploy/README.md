@@ -1,14 +1,18 @@
 # NEAR testnet deployment: `run-all`
 
-Status: **validated end to end on a local near-sandbox node; never run against NEAR testnet in
-this build.** `run-all --network sandbox` passed against nearcore 2.14.0 (sandbox build) with real
-transactions (docs/status/M16.md). Running it with `--network testnet` is yours to do, with your own
-accounts: this build was not allowed to create accounts, use a faucet, sign with user keys or move
-testnet NEAR. Mainnet is refused by the script and by the contract (`new` accepts only
-`near-testnet`).
+Status: **run on NEAR testnet by the repository owner from their own keys (M24), and validated end
+to end on a local near-sandbox node (M16).** The owner's third run deployed nothing new
+(`--skip-deploy`) and took one trade to PAID with the supplier receiving exactly the trade amount;
+the first run had deployed and initialised the contract in one transaction and added the relayer's
+function-call key. Transaction hashes and the read-only re-check: [docs/status/M24.md](../../docs/status/M24.md),
+[docs/evidence/M24/](../../docs/evidence/M24/). T-007, the T-019 positive path and REAL-PRODUCT-GATE
+item 2 are PASS on testnet for that build. Mainnet is refused by the script and by the contract
+(`new` accepts only `near-testnet`).
 
-T-007 and REAL-PRODUCT-GATE item 2 stay `NOT_RUN` on testnet until a testnet run produces real
-transaction hashes.
+The first runs on Windows found three problems, fixed in M24: near-cli-rs 0.31 asked an invisible
+question while adding the relayer key, the Node helpers could not start npm's `near` shim, and a
+transient "Transaction has expired" stopped the journey with a misleading message (see "Windows"
+and "Retries and failures" below).
 
 ## What you run
 
@@ -42,7 +46,8 @@ the API or the web app.
 - Node 22, Rust 1.97 (cargo builds the payload builder; no C toolchain needed), git, a POSIX shell
   (on Windows: Git for Windows, or use `run-all.ps1`).
 - [near-cli-rs](https://github.com/near/near-cli-rs) 0.31 (`near --version`); set `NEAR_CLI` if it is
-  not `near` on your `PATH`.
+  not `near` on your `PATH`. On Windows run-all finds the real `near.exe` behind npm's shims by
+  itself (see "Windows").
 - The deployable wasm and its manifest from the Linux container (ADR-0015), for the commit you deploy:
 
   ```sh
@@ -88,6 +93,8 @@ $env:DOCKSIDE_ESCROW_ACCOUNT = "<escrow>.testnet"   # and the other three
 ```
 
 Options: `--rpc-url` (default `https://rpc.testnet.near.org`; must be https and not a mainnet host),
+`--fallback-rpc-urls <a,b>` (or `DOCKSIDE_FALLBACK_RPC_URLS`: further RPC URLs, checked by the same
+rules, that the read-only checks use when the primary fails at transport level),
 `--wasm`, `--manifest`, `--amount-yocto` (default 50000000000000000000000, 0.05 NEAR), `--out`
 (default `.data/testnet-run/<network>-<UTC time>`), `--skip-deploy` (reuse an escrow that already runs
 the manifest's code), `--relayer-key-file` (reuse the key file from an earlier run),
@@ -97,6 +104,48 @@ On success it prints `run-all: PASS` and exits 0. Any refusal exits 2 with `run-
 before the step that would be wrong (for example `NETWORK_REFUSED`, `WASM_MISMATCH`,
 `ESCROW_NOT_EMPTY`, `CODE_HASH_MISMATCH`, `INSUFFICIENT_BALANCE`); a failed near-cli-rs command
 exits 1 and leaves its output in the record directory.
+
+### Retries and failures
+
+Every near-cli-rs command runs with stdin closed and a complete command line. near-cli-rs is stopped
+as soon as it draws an interactive question (on Windows a closed stdin alone does not stop it), and
+the run fails with `stopped at "<question>"`; a total timeout (`DOCKSIDE_NEAR_CLI_TIMEOUT_MS`,
+default 300000) ends any other wait. near-cli-rs's "Error: Transaction has expired." means the RPC
+rejected the transaction before inclusion, so run-all signs it again (a new near-cli-rs process with a
+fresh nonce and block hash), at most 3 attempts. Nothing else is retried: not a printed transaction
+id, a timeout or an unavailable RPC (the transaction may still be included; check it on chain before
+running again), and not a contract refusal. Failure messages carry near-cli-rs's own error lines, and
+the record files (`deploy.txt`, `relayer-key.txt`) hold every attempt. near-cli-rs submits through
+its own `testnet` connection (`near config edit-connection testnet` changes its RPC);
+`--fallback-rpc-urls` covers only run-all's read-only checks.
+
+A journey that stops part way leaves its trade on chain, possibly funded. Its Dockside principal keys
+come from a random seed that run-all never stores, so nobody can sign an approval, cancellation or
+refund for that trade afterwards: its testnet NEAR stays locked in the escrow (testnet trade
+`trd_9aced7e741a0462ac88ef4de0e67ba81`, docs/status/M24.md).
+
+### Windows
+
+- One line, from the repository root in PowerShell:
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet
+  ```
+
+  with the four `$env:DOCKSIDE_*_ACCOUNT` variables set first. PowerShell's default execution policy
+  on Windows client editions refuses unsigned scripts; `-ExecutionPolicy Bypass` (or
+  `Set-ExecutionPolicy -Scope Process Bypass` for the current window only) lifts that for this run
+  without changing the machine's policy.
+- Interactively, call near-cli-rs as `near.cmd` (for example `near.cmd account view-account-summary
+  <name>.testnet network-config testnet now`): npm also installs `near.ps1`, which the same execution
+  policy blocks.
+- run-all needs no `NEAR_CLI` on Windows. It resolves the real binary
+  `<npm prefix>\node_modules\near-cli-rs\node_modules\.bin_real\near.exe` from `npm_config_prefix`,
+  Node's own directory or `where near` (npm's per-user prefix is on PATH), and maps a `NEAR_CLI` that names a shim
+  (`near`, `near.cmd`, `near.ps1`) to that binary. `node scripts/testnet-deploy/tool.mjs near-cli`
+  prints what it will run.
+- near-cli-rs 0.31 asks which signature scheme a new key pair uses; run-all passes
+  `--signature-scheme ed25519` when it creates the relayer key.
 
 To run another journey against the same deployment:
 
