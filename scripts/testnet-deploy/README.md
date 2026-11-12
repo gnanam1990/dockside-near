@@ -48,7 +48,6 @@ the API or the web app.
   ```sh
   mkdir -p .data/repro
   docker run --rm -v "$PWD":/repo:ro -v "$PWD/.data/repro":/out \
-    -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
     node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh "$(git rev-parse HEAD)"
   ```

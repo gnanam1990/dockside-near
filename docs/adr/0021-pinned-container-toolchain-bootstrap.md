@@ -38,10 +38,13 @@ toolchain path, so it cannot detect a compromised compiler on its own.
    `https://static.rust-lang.org/rustup/archive/1.29.3/<triple>/rustup-init` (x86_64 and aarch64
    Linux pinned). It checks the file with `sha256sum -c` and exits 1 on a mismatch before running
    anything. Only then does it run the installer with the minimal profile and 1.97.1. The pins equal
-   the `.sha256` files that rust-lang publishes beside the binaries. rustup-init installs itself as
-   `$CARGO_HOME/bin/rustup`, so a rustup found in the cached `dockside-cargo` volume is reused only
-   when its digest equals the pin. Anything else (an older unverified install, a self-update, a
-   changed file) is replaced through the verified installer. `rustup set auto-self-update disable`
+   the `.sha256` files that rust-lang publishes beside the binaries. Amended by finding m29 (external
+   security audit): no cargo or rustup home is reused. The runners mount no `dockside-cargo` or
+   `dockside-rustup` volume, so each `--rm` container installs the toolchain into homes it discards,
+   and the bootstrap refuses a non-empty `$CARGO_HOME` or `$RUSTUP_HOME` rather than trusting it. A
+   digest match of a cached `bin/rustup`, the earlier rule, proved nothing about the env script,
+   proxies, toolchain or registry cache beside it, all writable by the code a previous run tested.
+   The bootstrap sets `PATH` itself and sources nothing from the homes. `rustup set auto-self-update disable`
    keeps the verified binary.
 3. **Toolchain components are verified by rustup.** rustup checks each 1.97.1 component it
    downloads against the SHA-256 in the channel manifest from `static.rust-lang.org` over TLS. This
