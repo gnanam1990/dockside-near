@@ -69,3 +69,11 @@ pnpm run contract:test    exit 0 — 103 passed, 0 failed
 ```
 
 Web e2e and sandbox suites were not run because no web, API route or contract code changed.
+
+## After merging main (`9d0a680`, includes m28)
+
+```
+pnpm run check            exit 0 — Test Files 57 passed | 1 skipped (58), Tests 591 passed | 3 skipped (594),
+                                   secret-scan clean
+pnpm run contract:test    exit 0 — 103 passed, 0 failed
+```
