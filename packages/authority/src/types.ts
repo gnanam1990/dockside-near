@@ -205,6 +205,28 @@ export interface BindingStatus {
   readonly issues: { readonly role: string; readonly code: BindingIssueCode }[];
 }
 
+/** One role of a key-rebinding plan (M14): the bound key, the key it would be rebound to. */
+export interface RebindingPlanRole {
+  readonly role: string;
+  readonly issues: BindingIssueCode[];
+  readonly from: { keyVersionId: string | null; keyVersion: number | null; publicKey: string };
+  readonly to: { keyVersionId: string; keyVersion: number; publicKey: string } | null;
+  /** Why no rebinding is possible for this role, or null. */
+  readonly blockedBy: "NO_ACTIVE_KEY" | "CAPABILITY_MISSING" | "SCOPE_MISMATCH" | "ENROLLMENT_REVOKED" | null;
+}
+
+export interface RebindingPlan {
+  readonly requiresNewRevision: boolean;
+  readonly roles: RebindingPlanRole[];
+  /** Roles the next rebinding revision changes. */
+  readonly rebind: string[];
+  /** Roles that need a later rebinding (the second party key when both changed). */
+  readonly deferred: string[];
+  /** Roles a rebinding cannot repair. */
+  readonly blocked: string[];
+  readonly rebindsParty: boolean;
+}
+
 /** A key version with its full lifecycle timestamps (read models only; never key material). */
 export interface KeyVersionDetail extends KeyVersionView {
   readonly createdAt: number;

@@ -7,7 +7,9 @@ import {
   fail,
   fromTypedJson,
   type IdGenerator,
+  keyRebindingRoles,
   newNonce,
+  type RebindableRole,
   type SigningPurpose,
   type TradeTerms,
   type TypedJson,
@@ -29,6 +31,8 @@ import {
   type EscrowContract,
   type ExitBinding,
   type FunctionCall,
+  type KeyRebindingView,
+  keyRebindingRevokePayload,
   type PartySignerRole,
   type ReleaseIntentState,
   type ReleaseView,
@@ -115,6 +119,17 @@ export interface PreparedPayload {
 }
 
 type PartyRole = "BUYER_APPROVER" | "SUPPLIER_SIGNER";
+
+/** A key-rebinding successor revision (M14) and the roles it rebinds. */
+export interface KeyRebindingSuccessor {
+  readonly terms: TradeTerms;
+  readonly canonical: CanonicalValue;
+  readonly digest: string;
+  readonly roles: RebindableRole[];
+  readonly rebindsParty: boolean;
+  /** The contract's pending rebinding for this successor, or null for a fresh one. */
+  readonly pending: KeyRebindingView | null;
+}
 
 function prepared(purpose: SigningPurpose, payload: CanonicalValue): PreparedPayload {
   return { payload, typed: toTypedJson(payload), digest: digestHexFor(purpose, payload) };
@@ -943,6 +958,12 @@ export class ReleaseService {
     const active = pending && (pending.status === "PROPOSED" || pending.status === "CONSENTED");
     if (active && pending.successorDigest !== digest)
       fail("DESTINATION_CHANGE_PENDING", "another destination change is pending; it must be revoked first");
+    const rb = view.pendingKeyRebinding;
+    if (
+      rb &&
+      (rb.status === "CONSENTED" || (rb.status === "PROPOSED" && this.clock.now() < rb.consentDeadline))
+    )
+      fail("KEY_REBINDING_PENDING", "a key rebinding is pending; it must be revoked or activated first");
     const v = this.verifyParty(cur, role, "TRADE_REVISION", canonical, input.signature);
     this.recordSignature(
       input.tradeId,
@@ -1041,7 +1062,7 @@ export class ReleaseService {
     const cur = this.evidence.terms(tradeId);
     if (view.revision !== cur.revision + 1) fail("INVALID_STATE", "no newer activated revision to bind");
     const sigs = this.db.all(
-      "SELECT signer_role, payload_json, signature FROM release_signatures WHERE trade_id = ? AND kind = 'DESTINATION_CONSENT' AND digest = ?",
+      "SELECT signer_role, payload_json, signature FROM release_signatures WHERE trade_id = ? AND kind IN ('DESTINATION_CONSENT', 'KEY_REBINDING_CONSENT') AND digest = ?",
       tradeId,
       view.termsDigest,
     );
@@ -1059,6 +1080,272 @@ export class ReleaseService {
       supplierSignature: String(s["signature"]),
     });
     return { tradeDigest: r.tradeDigest, revision: terms.revision };
+  }
+
+  /* ============================ key rebinding (M14) ============================ */
+
+  /**
+   * The key-rebinding successor a party would sign now: the pending one on chain (whose terms
+   * the first consent journaled), or a fresh successor from the authority's rebinding plan.
+   */
+  async keyRebindingSuccessor(tradeId: string): Promise<KeyRebindingSuccessor> {
+    const view = await this.sync(tradeId);
+    const cur = this.evidence.terms(tradeId);
+    if (view.revision !== cur.revision)
+      fail("INVALID_STATE", "an activated successor revision must be bound first");
+    const p = view.pendingKeyRebinding;
+    if (p && (p.status === "PROPOSED" || p.status === "CONSENTED")) {
+      const terms = this.journaledSuccessor(tradeId, p.successorDigest, "KEY_REBINDING_CONSENT");
+      return this.successorOf(cur, terms, p);
+    }
+    const plan = this.authority.rebindingPlan(cur);
+    if (!plan.requiresNewRevision)
+      fail("INVALID_STATE", "every key this revision binds is still the current usable key");
+    if (!plan.rebind.length)
+      fail(
+        "NOT_ELIGIBLE",
+        "no affected role has a current key to rebind to; it needs another kind of revision",
+        { blocked: plan.blocked.join(",") },
+      );
+    const json = tradeTermsToJson(cur) as Record<string, Record<string, unknown>>;
+    const next: Record<string, unknown> = {
+      ...json,
+      revision: cur.revision + 1,
+      predecessorDigest: tradeRevisionDigest(cur),
+    };
+    for (const r of plan.roles) {
+      if (!r.to || !plan.rebind.includes(r.role)) continue;
+      const service = r.role === "manifestAttestor" || r.role === "policySetter";
+      next[r.role] = {
+        ...json[r.role],
+        ...(service ? { keyVersion: r.to.keyVersion } : { keyVersionId: r.to.keyVersionId }),
+        publicKey: r.to.publicKey,
+      };
+    }
+    return this.successorOf(cur, tradeTermsFromJson(next), null);
+  }
+
+  private successorOf(
+    cur: TradeTerms,
+    terms: TradeTerms,
+    pending: KeyRebindingView | null,
+  ): KeyRebindingSuccessor {
+    const roles = keyRebindingRoles(cur, terms);
+    return {
+      terms,
+      canonical: tradeTermsCanonical(terms),
+      digest: tradeRevisionDigest(terms),
+      roles,
+      rebindsParty: roles.includes("buyer") || roles.includes("supplier"),
+      pending,
+    };
+  }
+
+  private journaledSuccessor(tradeId: string, digest: string, kind: string): TradeTerms {
+    const r = this.db.get(
+      "SELECT payload_json FROM release_signatures WHERE trade_id = ? AND kind = ? AND digest = ? ORDER BY recorded_at LIMIT 1",
+      tradeId,
+      kind,
+      digest,
+    );
+    if (!r) fail("INVALID_STATE", "the pending successor revision is not journaled here");
+    const terms = tradeTermsFromJsonCanonical(
+      fromTypedJson(JSON.parse(String(r["payload_json"])) as TypedJson),
+    );
+    if (tradeRevisionDigest(terms) !== digest)
+      fail("DIGEST_MISMATCH", "journaled successor differs from the contract");
+    return terms;
+  }
+
+  /**
+   * Server-side authority for a key-rebinding step: the session is the bound buyer approver or
+   * supplier signer, and its key is the one the successor binds for that party (the new key when
+   * the rebinding changes it, otherwise the key the active revision binds). Denials are audited.
+   */
+  rebindingParty(ctx: AuthContext, cur: TradeTerms, s: KeyRebindingSuccessor): PartyRole {
+    let role: PartyRole;
+    if (ctx.principal.id === cur.buyer.principalId) role = "BUYER_APPROVER";
+    else if (ctx.principal.id === cur.supplier.principalId) role = "SUPPLIER_SIGNER";
+    else
+      return this.deny(
+        ctx,
+        cur.tradeId,
+        "FORBIDDEN",
+        "only the designated buyer approver or supplier signer",
+      );
+    if (!ctx.capabilities.includes(role as Capability))
+      this.deny(ctx, cur.tradeId, "FORBIDDEN", `${role} required`);
+    const party = role === "BUYER_APPROVER" ? "buyer" : "supplier";
+    const binding = s.roles.includes(party) ? s.terms[party] : cur[party];
+    if (ctx.keyVersion.id !== binding.keyVersionId)
+      this.deny(
+        ctx,
+        cur.tradeId,
+        "KEY_NOT_BOUND",
+        s.roles.includes(party)
+          ? "sign this rebinding from the session of the new key it binds for you"
+          : "sign this rebinding from the session of the key the active revision binds",
+      );
+    return role;
+  }
+
+  private verifyRebindingParty(
+    cur: TradeTerms,
+    s: KeyRebindingSuccessor,
+    role: PartyRole,
+    purpose: SigningPurpose,
+    payload: CanonicalValue,
+    sig: string,
+  ) {
+    const party = role === "BUYER_APPROVER" ? "buyer" : "supplier";
+    return this.verifyParty(s.roles.includes(party) ? s.terms : cur, role, purpose, payload, sig);
+  }
+
+  /**
+   * Verify a party's signature over the key-rebinding successor and return the propose call
+   * (first consent) or the consent call (second consent over the identical pending digest).
+   */
+  async recordKeyRebindingConsent(
+    ctx: AuthContext,
+    input: { tradeId: string; successorDigest: string; signature: string },
+  ): Promise<{ relay: FunctionCall; successor: KeyRebindingSuccessor }> {
+    const cur = this.evidence.terms(input.tradeId);
+    this.assertEconomicJournal(input.tradeId, null, { frozen: true });
+    const s = await this.keyRebindingSuccessor(input.tradeId);
+    const role = this.rebindingParty(ctx, cur, s);
+    if (s.digest !== input.successorDigest)
+      fail("DIGEST_MISMATCH", "the signed successor is not the key rebinding this trade needs now", {
+        expected: s.digest,
+      });
+    const view = await this.sync(input.tradeId);
+    if (view.intents.some((i) => i.state === "PAID"))
+      fail("INVALID_STATE", "the trade value has already been released");
+    const dp = view.pendingDestinationChange;
+    if (
+      dp &&
+      (dp.status === "CONSENTED" || (dp.status === "PROPOSED" && this.clock.now() < dp.consentDeadline))
+    )
+      fail("DESTINATION_CHANGE_PENDING", "a destination change is pending; it must be revoked first");
+    if (s.pending && s.pending.status !== "PROPOSED")
+      fail("INVALID_STATE", "both parties already consented to this rebinding");
+    const v = this.verifyRebindingParty(cur, s, role, "TRADE_REVISION", s.canonical, input.signature);
+    this.recordSignature(
+      input.tradeId,
+      null,
+      "KEY_REBINDING_CONSENT",
+      role,
+      v,
+      "TRADE_REVISION",
+      s.canonical,
+      input.signature,
+      cur.expiresAt,
+    );
+    const partyRole = role === "BUYER_APPROVER" ? "BUYER" : "SUPPLIER";
+    if (s.pending)
+      return {
+        relay: this.escrow.consentKeyRebindingCall(input.tradeId, s.digest, partyRole, input.signature),
+        successor: s,
+      };
+    return {
+      relay: this.escrow.proposeKeyRebindingCall(
+        input.tradeId,
+        toTypedJson(s.canonical),
+        partyRole,
+        input.signature,
+      ),
+      successor: s,
+    };
+  }
+
+  async prepareKeyRebindingRevocation(ctx: AuthContext, tradeId: string): Promise<PreparedPayload> {
+    const cur = this.evidence.terms(tradeId);
+    const s = await this.keyRebindingSuccessor(tradeId);
+    if (!s.pending) fail("NOT_FOUND", "no pending key rebinding");
+    const role = this.rebindingParty(ctx, cur, s);
+    const now = this.clock.now();
+    return prepared(
+      "KEY_REBINDING_REVOKE",
+      keyRebindingRevokePayload(tradeBinding(cur), {
+        successorDigest: s.digest,
+        signerRole: role === "BUYER_APPROVER" ? "BUYER" : "SUPPLIER",
+        issuedAt: now,
+        expiresAt: now + HOUR,
+        nonce: newNonce(),
+      }),
+    );
+  }
+
+  async recordKeyRebindingRevocation(
+    ctx: AuthContext,
+    input: { payload: CanonicalValue; signature: string },
+  ): Promise<FunctionCall> {
+    const cur = this.evidence.terms(str(input.payload, "tradeId"));
+    const s = await this.keyRebindingSuccessor(cur.tradeId);
+    if (!s.pending) fail("NOT_FOUND", "no pending key rebinding");
+    const role = this.rebindingParty(ctx, cur, s);
+    if (str(input.payload, "signerRole") !== (role === "BUYER_APPROVER" ? "BUYER" : "SUPPLIER"))
+      fail("FORBIDDEN", "a party revokes only in its own role");
+    if (str(input.payload, "successorDigest") !== s.digest)
+      fail("DIGEST_MISMATCH", "revocation names another successor");
+    const v = this.verifyRebindingParty(cur, s, role, "KEY_REBINDING_REVOKE", input.payload, input.signature);
+    const exp = Number((input.payload as Record<string, CanonicalValue>)["expiresAt"]);
+    this.recordSignature(
+      cur.tradeId,
+      null,
+      "KEY_REBINDING_REVOKE",
+      role,
+      v,
+      "KEY_REBINDING_REVOKE",
+      input.payload,
+      input.signature,
+      exp,
+    );
+    return this.escrow.revokeKeyRebindingCall(cur.tradeId, toTypedJson(input.payload), input.signature);
+  }
+
+  /**
+   * The key rebinding a party acts on now: the pending one, or the activated one whose revision
+   * is not bound here yet (null when there is neither, or the newer revision was a destination
+   * change).
+   */
+  async currentKeyRebinding(tradeId: string): Promise<KeyRebindingSuccessor | null> {
+    const view = await this.sync(tradeId);
+    const cur = this.evidence.terms(tradeId);
+    if (view.revision === cur.revision + 1) {
+      const last = view.keyRebindingHistory.at(-1);
+      if (last?.status !== "ACTIVATED" || last.successorDigest !== view.termsDigest) return null;
+      return this.successorOf(
+        cur,
+        this.journaledSuccessor(tradeId, last.successorDigest, "KEY_REBINDING_CONSENT"),
+        last,
+      );
+    }
+    const p = view.pendingKeyRebinding;
+    if (view.revision !== cur.revision || !p || (p.status !== "PROPOSED" && p.status !== "CONSENTED"))
+      return null;
+    return this.successorOf(
+      cur,
+      this.journaledSuccessor(tradeId, p.successorDigest, "KEY_REBINDING_CONSENT"),
+      p,
+    );
+  }
+
+  /** Permissionless activation relay, refused unless the contract predicate would hold. */
+  async prepareKeyRebindingActivation(tradeId: string): Promise<FunctionCall> {
+    const view = await this.sync(tradeId);
+    this.assertNoUnresolvedRelease(tradeId);
+    this.assertEconomicJournal(tradeId, null, { frozen: true });
+    const p = view.pendingKeyRebinding;
+    if (!p) fail("NOT_FOUND", "no pending key rebinding");
+    if (p.status !== "CONSENTED") fail("INVALID_STATE", "both buyer and supplier consents are required");
+    if (p.delayUntil === null || this.clock.now() < p.delayUntil)
+      fail("DELAY_NOT_ELAPSED", "the key-rebinding delay has not elapsed", { delayUntil: p.delayUntil });
+    if (view.intents.some((i) => i.state === "PAID"))
+      fail("INVALID_STATE", "the trade value has already been released");
+    const refunds = await this.escrow.getRefunds(tradeId);
+    if (refunds.some((r) => !["REFUNDED", "FAILED", "REVOKED"].includes(r.state)))
+      fail("VALUE_LOCKED", "a live refund intent blocks key-rebinding activation");
+    return this.escrow.activateKeyRebindingCall(tradeId, p.successorDigest);
   }
 
   /* ================================= audit ================================= */

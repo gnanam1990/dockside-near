@@ -48,6 +48,8 @@ import type {
   PopProof,
   PrincipalBinding,
   PrincipalView,
+  RebindingPlan,
+  RebindingPlanRole,
   RecoveryView,
   RequestProof,
   RoleGrantView,
@@ -1369,6 +1371,121 @@ export class AuthorityService {
       else statusIssue(role, k["status"]);
     }
     return { current: issues.length === 0, requiresNewRevision: issues.length > 0, issues };
+  }
+
+  /**
+   * What a key-rebinding revision of `terms` would bind (M14): for every role whose bound key is
+   * no longer its current usable key, the principal's or enrollment's ACTIVE key version, or the
+   * reason none can be bound (no active key yet, capability missing, enrollment revoked or out
+   * of scope: those need another kind of revision, not a rebinding). The escrow contract lets
+   * one rebinding change at most one party key, so when both the buyer's and the supplier's keys
+   * changed, the buyer is rebound first and the supplier is deferred to the next rebinding.
+   * Read-only; never key material beyond public keys.
+   */
+  rebindingPlan(terms: TradeTerms): RebindingPlan {
+    const status = this.bindingStatus(terms);
+    const roles: RebindingPlanRole[] = [];
+    const issuesOf = (role: string) => status.issues.filter((i) => i.role === role).map((i) => i.code);
+    const humans = [
+      ["buyer", terms.buyer, "BUYER_APPROVER"],
+      ["supplier", terms.supplier, "SUPPLIER_SIGNER"],
+      ["inspector", terms.inspector, "INSPECTOR"],
+      ["riskResolver", terms.riskResolver, "RISK_RESOLVER"],
+    ] as const;
+    for (const [role, b, cap] of humans) {
+      const issues = issuesOf(role);
+      const from = {
+        keyVersionId: b.keyVersionId,
+        publicKey: b.publicKey,
+        keyVersion: null as number | null,
+      };
+      const bound = this.db.get("SELECT version FROM key_versions WHERE id = ?", b.keyVersionId);
+      if (bound) from.keyVersion = Number(bound["version"]);
+      if (!issues.length) {
+        roles.push({ role, issues, from, to: null, blockedBy: null });
+        continue;
+      }
+      if (issues.includes("CAPABILITY_MISSING")) {
+        roles.push({ role, issues, from, to: null, blockedBy: "CAPABILITY_MISSING" });
+        continue;
+      }
+      const k = this.db.get(
+        "SELECT * FROM key_versions WHERE principal_id = ? AND status = 'ACTIVE' ORDER BY version DESC",
+        b.principalId,
+      );
+      if (!k || k["public_key"] === b.publicKey) {
+        roles.push({ role, issues, from, to: null, blockedBy: "NO_ACTIVE_KEY" });
+        continue;
+      }
+      roles.push({
+        role,
+        issues,
+        from,
+        to: {
+          keyVersionId: String(k["id"]),
+          keyVersion: Number(k["version"]),
+          publicKey: String(k["public_key"]),
+        },
+        blockedBy: null,
+      });
+    }
+    for (const role of ["manifestAttestor", "policySetter"] as const) {
+      const b = terms[role];
+      const issues = issuesOf(role);
+      const from = { keyVersionId: null as string | null, publicKey: b.publicKey, keyVersion: b.keyVersion };
+      if (!issues.length) {
+        roles.push({ role, issues, from, to: null, blockedBy: null });
+        continue;
+      }
+      if (issues.includes("SCOPE_MISMATCH")) {
+        roles.push({ role, issues, from, to: null, blockedBy: "SCOPE_MISMATCH" });
+        continue;
+      }
+      const e = this.db.get("SELECT * FROM service_enrollments WHERE id = ?", b.enrollmentId);
+      const k =
+        e &&
+        e["status"] === "ACTIVE" &&
+        this.db.get(
+          "SELECT * FROM key_versions WHERE principal_id = ? AND status = 'ACTIVE' ORDER BY version DESC",
+          String(e["principal_id"]),
+        );
+      if (!k || Number(k["version"]) <= b.keyVersion) {
+        roles.push({
+          role,
+          issues,
+          from,
+          to: null,
+          blockedBy: e && e["status"] !== "ACTIVE" ? "ENROLLMENT_REVOKED" : "NO_ACTIVE_KEY",
+        });
+        continue;
+      }
+      from.keyVersionId = null;
+      roles.push({
+        role,
+        issues,
+        from,
+        to: {
+          keyVersionId: String(k["id"]),
+          keyVersion: Number(k["version"]),
+          publicKey: String(k["public_key"]),
+        },
+        blockedBy: null,
+      });
+    }
+    const rebindable = roles.filter((r) => r.to !== null);
+    const deferred: string[] = [];
+    if (rebindable.some((r) => r.role === "buyer") && rebindable.some((r) => r.role === "supplier"))
+      deferred.push("supplier");
+    const rebind = rebindable.map((r) => r.role).filter((r) => !deferred.includes(r));
+    const blocked = roles.filter((r) => r.blockedBy !== null).map((r) => r.role);
+    return {
+      requiresNewRevision: status.requiresNewRevision,
+      roles,
+      rebind,
+      deferred,
+      blocked,
+      rebindsParty: rebind.includes("buyer") || rebind.includes("supplier"),
+    };
   }
 
   /* ================================================================ */
