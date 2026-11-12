@@ -6,7 +6,8 @@
  * inventing data. Since M07 every TDD §15 trade route is served; a backend without escrow/RPC
  * configuration answers those routes with "no such endpoint" (TRADE_MODULES_NOT_CONFIGURED).
  * M09 added the destination-change routes, M10 the refund request routes and M11 the
- * unexpected-asset recovery routes; no entry is planned.
+ * unexpected-asset recovery routes, M14 the key-rebinding revision routes and the recovery
+ * challenge re-issue; no entry is planned.
  */
 export type Availability = "implemented" | "planned";
 
@@ -77,6 +78,14 @@ export const ENDPOINTS = {
   startRecovery: e("startRecovery", "POST", "/v1/recoveries", true, "implemented", "M01"),
   proveRecovery: e("proveRecovery", "POST", "/v1/recoveries/prove", false, "implemented", "M01"),
   completeRecovery: e("completeRecovery", "POST", "/v1/recoveries/:id/complete", true, "implemented", "M01"),
+  reissueRecoveryChallenge: e(
+    "reissueRecoveryChallenge",
+    "POST",
+    "/v1/recoveries/:id/challenges",
+    true,
+    "implemented",
+    "M14",
+  ),
   recoveryCancelChallenge: e(
     "recoveryCancelChallenge",
     "POST",
@@ -331,6 +340,55 @@ export const ENDPOINTS = {
     true,
     "implemented",
     "M09",
+  ),
+  keyRebinding: e("keyRebinding", "GET", "/v1/trades/:id/key-rebinding", true, "implemented", "M14"),
+  keyRebindingChallenge: e(
+    "keyRebindingChallenge",
+    "POST",
+    "/v1/trades/:id/key-rebinding-challenges",
+    true,
+    "implemented",
+    "M14",
+  ),
+  keyRebindingConsent: e(
+    "keyRebindingConsent",
+    "POST",
+    "/v1/trades/:id/key-rebinding-consents",
+    true,
+    "implemented",
+    "M14",
+  ),
+  keyRebindingRevocationChallenge: e(
+    "keyRebindingRevocationChallenge",
+    "POST",
+    "/v1/trades/:id/key-rebinding-revocation-challenges",
+    true,
+    "implemented",
+    "M14",
+  ),
+  keyRebindingRevocation: e(
+    "keyRebindingRevocation",
+    "POST",
+    "/v1/trades/:id/key-rebinding-revocations",
+    true,
+    "implemented",
+    "M14",
+  ),
+  keyRebindingActivation: e(
+    "keyRebindingActivation",
+    "POST",
+    "/v1/trades/:id/key-rebinding-activation",
+    true,
+    "implemented",
+    "M14",
+  ),
+  keyRebindingBinding: e(
+    "keyRebindingBinding",
+    "POST",
+    "/v1/trades/:id/key-rebinding-binding",
+    true,
+    "implemented",
+    "M14",
   ),
   tradePayout: e("tradePayout", "GET", "/v1/trades/:id/payout", true, "implemented", "M07"),
   tradeRefund: e("tradeRefund", "GET", "/v1/trades/:id/refund", true, "implemented", "M10"),

@@ -397,6 +397,10 @@ export class DocksideClient {
       body: { challengeId, proof: { scheme: "dockside-ed25519", signature } },
     });
   }
+  /** M14: a security administrator re-issues the challenge of a recovery whose challenge expired. */
+  reissueRecoveryChallenge(recoveryId: string): Promise<ApiOutcome<RecoveryStarted>> {
+    return this.call(ENDPOINTS.reissueRecoveryChallenge, { params: { id: recoveryId }, body: {} });
+  }
   completeRecovery(recoveryId: string): Promise<ApiOutcome<KeyVersionView>> {
     return this.call(ENDPOINTS.completeRecovery, { params: { id: recoveryId }, body: {} });
   }

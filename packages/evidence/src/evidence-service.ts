@@ -10,6 +10,7 @@ import {
   fromTypedJson,
   type IdGenerator,
   isDocksideError,
+  keyRebindingRoles,
   newNonce,
   type SigningPurpose,
   type TradeTerms,
@@ -326,10 +327,10 @@ export class EvidenceService {
     const changed = changedMaterialFields(current, terms).filter(
       (f) => f !== "revision" && f !== "predecessorDigest",
     );
-    if (changed.length !== 1 || changed[0] !== "payout" || current.payout.network !== terms.payout.network)
-      fail("IMMUTABLE_FIELD", "a successor bound here may change only payout.destination", {
-        fields: changed.join(","),
-      });
+    const destinationOnly =
+      changed.length === 1 && changed[0] === "payout" && current.payout.network === terms.payout.network;
+    // M14: otherwise only a key-rebinding successor (bound key versions and public keys) binds here.
+    if (!destinationOnly) keyRebindingRoles(current, terms);
     const accepted = this.authority.verifyTradeRevisionAcceptance(terms, sigs);
     return this.db.transaction(() => {
       this.db.run(

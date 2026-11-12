@@ -550,11 +550,74 @@ function CompleteRecoveryControl({
   );
 }
 
+/**
+ * M14: a recovery whose RECOVERY_KEY challenge expired before the principal proved the new key is
+ * re-issued by a security administrator: same new key and version, same not-before (the delay keeps
+ * running from the request), the old challenge stays unusable. The server refuses while the current
+ * challenge is open, so the client does not pre-judge expiry with its own clock.
+ */
+function ReissueRecoveryControl({
+  recovery,
+  onReissued,
+}: {
+  recovery: RecoveryView;
+  onReissued: (p: RecoveryPackage) => void;
+}) {
+  const app = useApp();
+  const gate = useMutationGate();
+  const [open, setOpen] = useState(false);
+  const [failure, setFailure] = useState<ApiFailure | null>(null);
+  const confirm = async () => {
+    setOpen(false);
+    setFailure(null);
+    const out = await app.client.reissueRecoveryChallenge(recovery.id);
+    if (!out.ok) return setFailure(out.error);
+    onReissued({
+      schema: "dockside/recovery-package@1",
+      recoveryId: out.data.recoveryId,
+      principalId: recovery.principalId,
+      notBefore: out.data.notBefore,
+      challenge: out.data.challenge,
+    });
+  };
+  return (
+    <>
+      <button type="button" className="btn btn--small" onClick={() => setOpen(true)} disabled={!gate.allowed}>
+        Re-issue recovery challenge
+      </button>
+      <ConfirmDialog
+        open={open}
+        title="Re-issue recovery challenge"
+        confirmLabel="Re-issue challenge"
+        onCancel={() => setOpen(false)}
+        onConfirm={() => void confirm()}
+      >
+        <IdentityList
+          items={[
+            ["Recovery", <code key="r">{recovery.id}</code>],
+            ["Principal", <code key="p">{recovery.principalId}</code>],
+            ["New key version", `v${recovery.newKeyVersion} (unchanged)`],
+            ["Not before", `${formatUtc(recovery.notBefore)} (unchanged)`],
+          ]}
+        />
+        <p>
+          The server issues a new challenge for the same new key. The expired challenge stays unusable, and
+          the principal can still veto with its existing key. The server refuses while the current challenge
+          is open.
+        </p>
+      </ConfirmDialog>
+      {failure ? (
+        <FailureState failure={failure} what="Recovery challenge re-issue" headingLevel={3} />
+      ) : null}
+    </>
+  );
+}
+
 function RecoveryPackagePanel({ pkg, onHide }: { pkg: RecoveryPackage; onHide: () => void }) {
   const { now } = useApp();
   return (
     <div className="secret-once" data-testid="recovery-package" role="status">
-      <h3>Recovery started: hand this package to the principal</h3>
+      <h3>Recovery challenge issued: hand this package to the principal</h3>
       <p>
         It contains no secret: only the server's challenge for the new key, which the principal signs in their
         own browser under <Link href="/recovery">Recover access</Link>. The challenge expires{" "}
@@ -685,7 +748,21 @@ function PeoplePanel({
                   r.status === "WAITING" ? (
                     <CompleteRecoveryControl recovery={r} trades={trades} onDone={onChanged} />
                   ) : r.status === "PENDING_PROOF" ? (
-                    <span className="small">Waiting for the principal's key proof</span>
+                    <>
+                      <span className="small" data-testid={`recovery-challenge-${r.id}`}>
+                        Waiting for the principal's key proof.{" "}
+                        {r.challengeExpiresAt
+                          ? `Challenge ${r.challengeExpiresAt <= dir.observedAt ? "expired" : "open until"} ${formatUtc(r.challengeExpiresAt)} (server time).`
+                          : ""}
+                      </span>
+                      <ReissueRecoveryControl
+                        recovery={r}
+                        onReissued={(x) => {
+                          setPkg(x);
+                          onChanged();
+                        }}
+                      />
+                    </>
                   ) : (
                     <span className="small">Closed</span>
                   )

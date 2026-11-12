@@ -48,6 +48,17 @@ const schema = z
       .min(10_000)
       .max(15 * 60_000)
       .default(5 * 60_000),
+    /**
+     * Lifetime of a key-recovery (RECOVERY_KEY) challenge (M14). The package is handed to the
+     * principal out of band, so it has its own setting; an expired one is re-issued by a
+     * security administrator. Defaults to the general challenge lifetime when unset.
+     */
+    DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS: z.coerce
+      .number()
+      .int()
+      .min(10_000)
+      .max(24 * 3600_000)
+      .optional(),
     DOCKSIDE_SESSION_TTL_MS: z.coerce
       .number()
       .int()
