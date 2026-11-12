@@ -1,0 +1,18 @@
+# M18 red run: packages/core/test/m18-ci-workflow.test.ts before .github/workflows/ci.yml, scripts/ci/workflow-policy.mjs and scripts/ci/local-run.mjs existed
+# command: npx vitest run packages/core/test/m18-ci-workflow.test.ts   exit 1
+      Tests  10 failed (10)
+     × refuses a missing concurrency cancel, a missing or long timeout and a floating runner image 0ms
+     × refuses a workflow that drops a required command or calls a script the repository does not have 0ms
+     × refuses an action not pinned to a full commit SHA with its version comment 0ms
+     × refuses privileged or extra triggers 1ms
+     × refuses secrets, persisted checkout credentials and expressions inside run scripts 0ms
+     × refuses write permissions at workflow or job level 0ms
+     × the committed workflow satisfies every rule 44ms
+     × the local runner lists every job and step without executing anything 41ms
+     × the local runner refuses an unknown job 42ms
+     × the local runner refuses to run a workflow that breaks the policy 1ms
+ Test Files  1 failed (1)
++ Error: Cannot find module '<worktree>\scripts\ci\workflow-policy.mjs'
+Error: Cannot find module '<worktree>\scripts\ci\local-run.mjs'
+Error: ENOENT: no such file or directory, open '<worktree>\.github\workflows\ci.yml'
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯

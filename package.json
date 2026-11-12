@@ -28,15 +28,19 @@
     "verify-export": "node services/api/dist/cli/verify-export.js",
     "stack": "node --experimental-transform-types --no-warnings --import ./scripts/local-stack/register.mjs scripts/local-stack/stack.ts",
     "contract:build": "node scripts/build-contract.mjs",
+    "contract:reproduce": "node scripts/container-reproduce.mjs",
     "contract:sandbox": "node scripts/sandbox/run.mjs",
     "web:build": "pnpm --filter @dockside/web run build",
-    "web:e2e": "pnpm --filter @dockside/web run e2e"
+    "web:e2e": "pnpm --filter @dockside/web run e2e",
+    "ci:policy": "node scripts/ci/workflow-policy.mjs",
+    "ci:local": "node scripts/ci/local-run.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/node": "22.20.5",
     "fast-check": "4.10.2",
     "typescript": "5.9.3",
-    "vitest": "4.1.12"
+    "vitest": "4.1.12",
+    "yaml": "2.9.0"
   }
 }
