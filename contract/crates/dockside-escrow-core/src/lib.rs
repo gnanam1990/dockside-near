@@ -33,6 +33,14 @@ use refund::RefundState;
 /// Minimum native deposit; covers the storage the deposit record consumes.
 pub const DEFAULT_MIN_DEPOSIT_YOCTO: u128 = 1_000_000_000_000_000_000_000; // 0.001 NEAR
 
+/// Ceiling on the per-trade deposit history. `fund` is permissionless and every deposit stays in
+/// the trade record that each later mutation loads and rewrites, so the history must be bounded
+/// (external security audit, m33).
+pub const MAX_DEPOSITS_PER_TRADE: usize = 64;
+/// Past [`MAX_DEPOSITS_PER_TRADE`], a deposit that completes an under-funded trade is still
+/// accepted (up to this many extra), so a full history cannot block the buyer's funding.
+pub const MAX_COMPLETING_DEPOSITS_OVER_LIMIT: usize = 8;
+
 impl TradeRecord {
     /// Accept native NEAR from `ctx.predecessor` (the original funder of this deposit).
     pub fn fund(&mut self, ctx: &Ctx<'_>, amount: u128, min_deposit: u128) -> Res<DepositOutcome> {
@@ -43,6 +51,16 @@ impl TradeRecord {
             "FUNDING_FROZEN",
             "funding is frozen while a refund of accepted value is unresolved",
         )?;
+        let n = self.ledger.deposits.len();
+        if n >= MAX_DEPOSITS_PER_TRADE {
+            let room = self.ledger.required.saturating_sub(self.ledger.committed());
+            let completes = room > 0 && amount >= room;
+            ensure(
+                completes && n < MAX_DEPOSITS_PER_TRADE + MAX_COMPLETING_DEPOSITS_OVER_LIMIT,
+                "CAPACITY_EXCEEDED",
+                "this trade holds the maximum number of deposits; only a deposit that completes the amount is accepted",
+            )?;
+        }
         self.ledger.deposit(ctx.predecessor, amount, ctx.now_ms)
     }
 }

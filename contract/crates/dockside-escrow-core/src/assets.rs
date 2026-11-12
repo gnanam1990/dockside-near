@@ -22,7 +22,17 @@
 //!    transfer is FAILED and returns the asset to review without any retry of that recovery.
 //!
 //! The governing trade supplies only authority (its bound keys and its nonce set); recovery never
-//! reads or writes that trade's native ledger or refund intents.
+//! reads or writes that trade's native ledger or refund intents. Steps authenticated only by the
+//! caller's own account (the claimed sender's request and CLAIMED_SENDER revoke, a CLAIMANT
+//! challenge) need no trade role, so they never write the trade: their nonce is checked against
+//! the trade's consumed set but not added to it, and each such step is single-shot by recovery
+//! state. Only steps signed with the trade's bound keys consume trade nonces.
+//!
+//! Storage bounds (external security audit, m33): the receivers are callable by any account and
+//! every record is paid from the escrow balance that also holds escrowed value, so the contract
+//! keeps at most [`MAX_UNEXPECTED_ASSETS`] records and each keeps at most
+//! [`MAX_RECOVERIES_PER_ASSET`] recovery attempts. A receiver call past the cap fails, and the
+//! token contract then returns the asset to its sender under its own standard.
 
 use crate::domains;
 use crate::error::{ensure, err, R};
@@ -42,6 +52,28 @@ pub const MAX_REQUEST_LIFETIME_MS: u64 = 7 * 24 * HOUR_MS;
 /// The NEP-141 adapter: `ft_transfer` of the exact observed amount with exactly one yoctoNEAR.
 pub const NEP141_CAPABILITY: &str = "NEP141_FT_TRANSFER";
 pub const ADAPTER_DEPOSIT_YOCTO: u128 = 1;
+/// Contract-wide ceiling on persisted unexpected-asset records (all standards together).
+pub const MAX_UNEXPECTED_ASSETS: u64 = 16;
+/// Ceiling on recovery attempts kept for one unexpected asset.
+pub const MAX_RECOVERIES_PER_ASSET: usize = 4;
+
+/// Refuse a receiver call whose `adding` records would take the contract past
+/// [`MAX_UNEXPECTED_ASSETS`]. A multi-token batch fits whole or not at all.
+pub fn ensure_capacity(recorded: u64, adding: usize) -> R<()> {
+    let total = u64::try_from(adding).ok().and_then(|n| recorded.checked_add(n));
+    ensure(
+        total.is_some_and(|t| t <= MAX_UNEXPECTED_ASSETS),
+        "CAPACITY_EXCEEDED",
+        "the escrow holds the maximum number of unexpected-asset records; the transfer is refused",
+    )
+}
+
+/// Replay check for a step authenticated by the caller's own account: the nonce must be well
+/// formed and not consumed by the trade, but it is not added to the trade's nonce set.
+fn check_unsigned_nonce(rec: &TradeRecord, domain: &str, nonce: &str) -> R<()> {
+    ensure(crate::typed::is_nonce(nonce), "VALIDATION_FAILED", "nonce must be 16..32 bytes of lowercase hex")?;
+    ensure(!rec.nonce_used(domain, nonce), "NONCE_REPLAYED", "nonce already consumed")
+}
 
 /// The asset-specific recovery capability compiled into this contract, if any.
 pub fn capability_for(standard: &str) -> Option<&'static str> {
@@ -219,6 +251,11 @@ pub fn request_recovery(a: &mut UnexpectedAsset, rec: &mut TradeRecord, ctx: &Ct
     )?;
     rec.check_header(&o, ctx)?;
     ensure(a.live().is_none() && a.state != "RECOVERED", "INVALID_STATE", "the asset already has a live or completed recovery")?;
+    ensure(
+        a.recoveries.len() < MAX_RECOVERIES_PER_ASSET,
+        "CAPACITY_EXCEEDED",
+        "this asset has used every recovery attempt; it stays in review",
+    )?;
     o.expect_str("policyId", crate::terms::REFUND_POLICY_ID, "POLICY_MISMATCH")?;
     ensure(o.u64("policyRevision")? == crate::terms::REFUND_POLICY_REVISION, "POLICY_MISMATCH", "recovery policy revision mismatch")?;
     o.expect_str("reason", RECOVERY_REASON, "POLICY_MISMATCH")?;
@@ -239,7 +276,7 @@ pub fn request_recovery(a: &mut UnexpectedAsset, rec: &mut TradeRecord, ctx: &Ct
     let evidence = o.str("evidenceDigest")?;
     ensure(is_hex64(&evidence), "VALIDATION_FAILED", "evidenceDigest malformed")?;
     let (hex, _) = digest_hex(domains::ASSET_RECOVERY_REQUEST, &v)?;
-    rec.consume_nonce(domains::ASSET_RECOVERY_REQUEST, &o.str("nonce")?)?;
+    check_unsigned_nonce(rec, domains::ASSET_RECOVERY_REQUEST, &o.str("nonce")?)?;
     a.recoveries.push(AssetRecovery {
         id: id.clone(),
         trade_id: rec.terms.trade_id.clone(),
@@ -336,20 +373,22 @@ pub fn challenge_recovery(a: &mut UnexpectedAsset, rec: &mut TradeRecord, ctx: &
     ensure(is_hex64(&evidence), "VALIDATION_FAILED", "evidenceDigest malformed")?;
     let account = o.opt_str("challengerAccount")?;
     let (hex, d) = digest_hex(domains::ASSET_RECOVERY_CHALLENGE, &v)?;
+    let n = o.str("nonce")?;
     match key {
         Some(k) => {
             ensure(account.is_none(), "VALIDATION_FAILED", "a bound party challenges by key, not by account")?;
             let s = signature.ok_or_else(|| crate::error::Error { code: "SIGNATURE_INVALID", message: "signature required".into() })?;
             rec.verify_role(ctx, k, &d, s)?;
+            rec.consume_nonce(domains::ASSET_RECOVERY_CHALLENGE, &n)?;
         }
         None => {
             ensure(signature.is_none(), "VALIDATION_FAILED", "a claimant challenges from its own account, unsigned")?;
             let acct = account.clone().unwrap_or_default();
             ensure(!acct.is_empty() && ctx.predecessor == acct, "FORBIDDEN", "a claimant challenge must come from the claimant's own account")?;
             ensure(acct != r.recipient, "FORBIDDEN", "the recipient cannot challenge its own recovery")?;
+            check_unsigned_nonce(rec, domains::ASSET_RECOVERY_CHALLENGE, &n)?;
         }
     }
-    rec.consume_nonce(domains::ASSET_RECOVERY_CHALLENGE, &o.str("nonce")?)?;
     let rest = a.rest_state();
     let r = &mut a.recoveries[i];
     r.challenge = Some(RecoveryChallenge { role, account, reason_code: reason, evidence_digest: evidence, digest: hex, at: ctx.now_ms });
@@ -377,17 +416,19 @@ pub fn revoke_recovery(a: &mut UnexpectedAsset, rec: &mut TradeRecord, ctx: &Ctx
     rec.check_window(&o, ctx, 24 * HOUR_MS)?;
     let role = o.str("revokerRole")?;
     let (_, d) = digest_hex(domains::ASSET_RECOVERY_REVOKE, &v)?;
+    let n = o.str("nonce")?;
     match role.as_str() {
         "CLAIMED_SENDER" => {
             ensure(ctx.predecessor == r.recipient && signature.is_none(), "FORBIDDEN", "only the claimed sender's own account revokes in that role")?;
+            check_unsigned_nonce(rec, domains::ASSET_RECOVERY_REVOKE, &n)?;
         }
         "RISK_RESOLVER" => {
             let s = signature.ok_or_else(|| crate::error::Error { code: "SIGNATURE_INVALID", message: "signature required".into() })?;
             rec.verify_role(ctx, "riskResolver", &d, s)?;
+            rec.consume_nonce(domains::ASSET_RECOVERY_REVOKE, &n)?;
         }
         _ => return err("FORBIDDEN", "only the claimed sender or the risk/policy principal may revoke"),
     }
-    rec.consume_nonce(domains::ASSET_RECOVERY_REVOKE, &o.str("nonce")?)?;
     let rest = a.rest_state();
     let r = &mut a.recoveries[i];
     r.revoked_by = Some(role);
