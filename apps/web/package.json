@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
-    "e2e": "vite build && playwright test && playwright test -c playwright.assets.config.ts"
+    "e2e": "vite build && playwright test && playwright test -c playwright.assets.config.ts && playwright test -c playwright.clock.config.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.2.7",

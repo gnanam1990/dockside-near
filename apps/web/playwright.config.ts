@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
-import { RECOVERY_DELAY_MS } from "./e2e/stack";
+import { RECOVERY_CHALLENGE_TTL_MS, RECOVERY_DELAY_MS } from "./e2e/stack";
 
 /**
  * Browser tests run the real API process with every trade module (scripts/local-stack: the
@@ -42,9 +42,10 @@ const executablePath = chromiumPath();
 
 export default defineConfig({
   testDir: "./e2e",
-  // The unexpected-asset recovery spec moves the simulated chain clock 72 hours; it runs on its own
-  // stack (playwright.assets.config.ts) so this suite's chain clock is untouched.
-  testIgnore: ["asset-recovery.spec.ts"],
+  // The unexpected-asset recovery spec moves the simulated chain clock 72 hours and the stale
+  // evidence spec moves the simulated trade and chain clocks a week; each runs on its own stack
+  // (playwright.assets.config.ts, playwright.clock.config.ts) so this suite's clocks are untouched.
+  testIgnore: ["asset-recovery.spec.ts", "evidence-stale.spec.ts"],
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -71,6 +72,9 @@ export default defineConfig({
         DOCKSIDE_STACK_CONTROL_PORT: String(CONTROL_PORT),
         // Short recovery delay so the browser tests can watch it hold and then elapse (default two days).
         DOCKSIDE_RECOVERY_DELAY_MS: String(RECOVERY_DELAY_MS),
+        // Short key-recovery challenge lifetime (M14) so the browser test watches one expire and
+        // re-issues it; every other challenge keeps the default lifetime.
+        DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS: String(RECOVERY_CHALLENGE_TTL_MS),
         // New proposals bind a one-minute destination-change delay (the configurable minimum), so
         // the browser test waits out a real delay that the API and the contract both enforce.
         DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: "60000",
