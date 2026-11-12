@@ -23,6 +23,8 @@
     "clean": "node scripts/clean.mjs",
     "pretest": "pnpm run build && pnpm run contract:build",
     "api": "node services/api/dist/main.js",
+    "export-key": "node services/api/dist/cli/export-key.js",
+    "verify-export": "node services/api/dist/cli/verify-export.js",
     "stack": "node --experimental-transform-types --no-warnings --import ./scripts/local-stack/register.mjs scripts/local-stack/stack.ts",
     "contract:build": "node scripts/build-contract.mjs",
     "web:build": "pnpm --filter @dockside/web run build",
