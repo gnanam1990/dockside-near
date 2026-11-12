@@ -142,7 +142,7 @@ refund for that trade afterwards: its testnet NEAR stays locked in the escrow (t
   policy blocks.
 - run-all needs no `NEAR_CLI` on Windows. It resolves the real binary
   `<npm prefix>\node_modules\near-cli-rs\node_modules\.bin_real\near.exe` from `npm_config_prefix`,
-  Node's own directory, `%APPDATA%\npm` or `where near`, and maps a `NEAR_CLI` that names a shim
+  Node's own directory or `where near` (npm's per-user prefix is on PATH), and maps a `NEAR_CLI` that names a shim
   (`near`, `near.cmd`, `near.ps1`) to that binary. `node scripts/testnet-deploy/tool.mjs near-cli`
   prints what it will run.
 - near-cli-rs 0.31 asks which signature scheme a new key pair uses; run-all passes

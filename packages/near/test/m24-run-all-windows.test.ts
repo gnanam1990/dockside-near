@@ -122,11 +122,16 @@ describe("NEAR_CLI resolution (shared by run-all and the Node helpers)", () => {
 
   it("finds the real near.exe under the npm global prefix on Windows", () => {
     expect(tools.resolveNearCli(base)).toBe(real);
-    const appdata = "C:\\Users\\u\\AppData\\Roaming";
-    const fromAppdata = `${appdata}\\npm\\node_modules\\near-cli-rs\\node_modules\\.bin_real\\near.exe`;
+    // npm's per-user prefix is reached through `where near` (it is on PATH).
+    const perUser = "D:\\profile\\npm";
+    const fromPerUser = `${perUser}\\node_modules\\near-cli-rs\\node_modules\\.bin_real\\near.exe`;
     expect(
-      tools.resolveNearCli({ ...base, env: { APPDATA: appdata }, exists: (p) => p === fromAppdata }),
-    ).toBe(fromAppdata);
+      tools.resolveNearCli({
+        ...base,
+        exists: (p) => p === fromPerUser,
+        where: () => [`${perUser}\\near`, `${perUser}\\near.cmd`],
+      }),
+    ).toBe(fromPerUser);
     const custom = "E:\\npm-global";
     const fromConfig = `${custom}\\node_modules\\near-cli-rs\\node_modules\\.bin_real\\near.exe`;
     expect(
