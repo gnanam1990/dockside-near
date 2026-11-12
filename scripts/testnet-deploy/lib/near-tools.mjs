@@ -301,7 +301,8 @@ function whereOnPath(name) {
  * The near-cli-rs binary run-all and the Node helpers spawn (without a shell). NEAR_CLI wins when it
  * names a binary; off Windows the default is `near` on PATH. On Windows an npm shim (NEAR_CLI or
  * `where near`) is mapped to the real near.exe beside it, and with no NEAR_CLI the npm global
- * prefixes (npm_config_prefix, Node's own directory, %APPDATA%\npm) are searched first.
+ * prefixes (npm_config_prefix, Node's own directory) are searched first; npm's per-user prefix is
+ * found through `where near`, since npm puts it on PATH.
  */
 export function resolveNearCli({
   env = process.env,
@@ -329,7 +330,6 @@ export function resolveNearCli({
   const name = explicit || "near";
   if (!explicit) {
     const prefixes = [env.npm_config_prefix, env.NPM_CONFIG_PREFIX, win32.dirname(execPath)];
-    if (env.APPDATA) prefixes.push(win32.join(env.APPDATA, "npm"));
     for (const prefix of prefixes.filter(Boolean)) {
       const real = win32.join(prefix, ...REAL_EXE);
       if (exists(real)) return real;

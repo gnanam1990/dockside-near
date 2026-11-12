@@ -8,7 +8,7 @@ deploy.txt (step 3, `near contract deploy ... with-init-call new ... sign-with-k
   actions                deploy code 5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM, function call
                          new {"min_deposit_yocto": null, "network": "near-testnet"}, 30.0 Tgas, 0 NEAR
   signing key            the escrow account's own full-access key (ml-dsa-65), found in the legacy keychain
-                         (<home>/.near-credentials) after "no access keys found in keychain"
+                         after "no access keys found in keychain"
   gas used / fee         60.8 Tgas / 0.0060478577036984 NEAR
   transaction id         7KExSVdWHAVXXDjjAme1m1zQBW4hBSgXgsMEQt2K9dyY (deploy-tx.txt)
   result                 "Contract code has been successfully deployed." and the `new` call succeeded,
@@ -28,8 +28,8 @@ save-to-legacy-keychain ...`)
   signing key            the relayer account's own full-access key (ml-dsa-65), legacy keychain
   gas used / fee         0.744 Tgas / 0.000052055425 NEAR
   transaction id         CBamyhdUBTp7DxjB53gPdoHMKQzfmpJVWyXtyRhuDjfu
-  key file               <home>/.near-credentials/testnet/gnanam1990-dock-relayer.testnet/ed25519_J9RvmdzWNiXQZeyJPmhobxH56MwzzyekCdngQg43aidN.json
-                         (written by near-cli-rs; not copied, not read beyond its public_key)
+  key file               written by near-cli-rs into the owner's legacy keychain directory; not copied,
+                         and run-all reads only its public_key
 
 Step 6 (journey) then stopped with `run-all: NEAR_CLI_MISSING: cannot run near: spawnSync near ENOENT`:
 the Node helper spawned `near` without a shell, and on Windows npm installs only near/near.cmd/near.ps1
