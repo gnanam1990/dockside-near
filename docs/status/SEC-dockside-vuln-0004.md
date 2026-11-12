@@ -58,6 +58,7 @@ per address per minute, and never a limiter key of their own.
 |---|---|---|
 | `npx vitest run services/api/test/sec-vuln-0004-limiter-exhaustion.test.ts services/api/test/m09-hardening.test.ts` | 0 | 7 passed (the 3 new tests and the 4 existing M09 limiter tests, unchanged in behavior) |
 | `pnpm run check` (format, lint, typecheck, build, contract build, all vitest suites, secret scan) | 0 | 53 files passed, 1 skipped; 574 tests passed, 3 skipped; secret-scan clean |
+| `pnpm run check` again after `git merge main` (vuln-0002 fix merged meanwhile) | 0 | 55 files passed, 1 skipped; 586 tests passed, 3 skipped; secret-scan clean |
 | `pnpm exec vite build` (apps/web) | 0 | production build |
 | `pnpm exec playwright test -c playwright.config.ts` (ports 9030–9032 via `DOCKSIDE_E2E_*_PORT`) | 0 | 51 passed |
 | `pnpm exec playwright test -c playwright.assets.config.ts` (ports 9033–9035) | 0 | 3 passed |
