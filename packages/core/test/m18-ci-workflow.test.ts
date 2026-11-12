@@ -149,6 +149,18 @@ describe("M18 CI workflow policy (T-043, T-044, T-045)", () => {
     );
   });
 
+  it("refuses a toolchain chosen by RUSTUP_TOOLCHAIN instead of rustup default (found by the local replay)", () => {
+    const viaEnv = rules(
+      variant((t) =>
+        t
+          .replace(/^env:\n/m, 'env:\n  RUSTUP_TOOLCHAIN: "1.97.1"\n')
+          .replace(/^ {10}rustup default 1\.97\.1\n/m, ""),
+      ),
+    );
+    expect(viaEnv).toContain("TOOLCHAIN");
+    expect(viaEnv).toContain("REQUIRED_COMMANDS");
+  });
+
   it("the local runner lists every job and step without executing anything", () => {
     const r = spawnSync(process.execPath, [RUNNER, "--list"], { encoding: "utf8", cwd: ROOT });
     expect(r.status, r.stderr).toBe(0);

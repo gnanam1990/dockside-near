@@ -24,8 +24,10 @@ defaults:
   run:
     shell: bash
 
+# The Rust toolchain is chosen by `rustup default` in the setup step, not by RUSTUP_TOOLCHAIN: on a
+# developer machine the variable would select the host's default triple (for example msvc on a
+# windows-gnu setup) without the wasm32 target, so the local replay could not use it.
 env:
-  RUSTUP_TOOLCHAIN: "1.97.1"
   COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
   CARGO_TERM_COLOR: never
 
@@ -58,7 +60,8 @@ jobs:
       - name: Rust 1.97.1 with the wasm32 target
         id: setup-rust
         run: |
-          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --target wasm32-unknown-unknown
+          rustup toolchain install 1.97.1 --profile minimal --target wasm32-unknown-unknown
+          rustup default 1.97.1
           rustc --version
           cargo --version
 
