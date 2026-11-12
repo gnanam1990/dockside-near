@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useApp, useMutationGate } from "../app/app-context";
-import { useRouter } from "../app/router";
+import { Link, useRouter } from "../app/router";
 import { PageHeader } from "../components/AppShell";
 import { AddressDisplay, IdentityList } from "../components/Data";
 import { ErrorSummary, Field, type FieldError } from "../components/Forms";
@@ -363,6 +363,17 @@ export function SignInScreen() {
               </button>
             </form>
           )}
+        </section>
+
+        <section className="panel" aria-labelledby="recover-title">
+          <h2 id="recover-title">Lost or suspended key</h2>
+          <p className="muted">
+            A lost key is replaced only through a delayed recovery started by a security administrator of your
+            organization. You prove the new key from your own device, or veto a recovery you did not ask for.
+          </p>
+          <p>
+            <Link href="/recovery">Recover access</Link>
+          </p>
         </section>
 
         <section className="panel" aria-labelledby="invite-title">

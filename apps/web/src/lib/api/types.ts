@@ -186,3 +186,182 @@ export interface MoneyAmount {
   readonly decimals: number;
   readonly network: Network;
 }
+
+/* ------------------------------------------------------------------ */
+/* M12 key management (services/api GET /v1/me/keys,                  */
+/* /v1/organization/directory, /v1/organization/trade-bindings).      */
+/* ------------------------------------------------------------------ */
+
+export interface KeyVersionDetail extends KeyVersionView {
+  readonly createdAt: number;
+  readonly provenAt: number | null;
+  readonly supersededAt: number | null;
+  readonly suspendedAt: number | null;
+  readonly revokeReason: string | null;
+}
+
+export type RecoveryStatus = "PENDING_PROOF" | "WAITING" | "COMPLETED" | "CANCELLED";
+
+export interface RecoveryView {
+  readonly id: string;
+  readonly organizationId: string;
+  readonly principalId: string;
+  readonly newKeyVersionId: string;
+  readonly newKeyVersion: number;
+  readonly newPublicKey: string;
+  readonly suspendedKeyVersionIds: string[];
+  readonly status: RecoveryStatus;
+  readonly requestedBy: string;
+  readonly requestedAt: number;
+  readonly notBefore: number;
+  readonly completedBy: string | null;
+  readonly completedAt: number | null;
+  readonly cancelledAt: number | null;
+}
+
+export interface ServiceScope {
+  readonly organizationId: string;
+  readonly tradeId: string | null;
+  readonly evidencePolicyId: string;
+  readonly evidencePolicyRevision: number;
+}
+
+export interface DirectoryPrincipal extends PrincipalView {
+  readonly enrolledVia: "BOOTSTRAP" | "INVITATION" | "SERVICE_ENROLLMENT";
+  readonly createdAt: number;
+  readonly capabilities: Capability[];
+  readonly keys: KeyVersionDetail[];
+}
+
+export type ServiceCapability = (typeof SERVICE_CAPABILITIES)[number];
+
+export interface DirectoryService {
+  readonly id: string;
+  readonly organizationId: string;
+  readonly principalId: string;
+  readonly serviceId: string;
+  readonly capability: ServiceCapability;
+  readonly scope: ServiceScope;
+  readonly status: "PENDING_PROOF" | "ACTIVE" | "REVOKED";
+  readonly createdAt: number;
+  readonly createdBy: string;
+  readonly versions: KeyVersionDetail[];
+}
+
+export interface OrganizationDirectory {
+  readonly organization: { readonly id: string; readonly name: string; readonly status: string };
+  readonly recoveryDelayMs: number;
+  readonly principals: DirectoryPrincipal[];
+  readonly services: DirectoryService[];
+  readonly recoveries: RecoveryView[];
+  readonly observedAt: number;
+}
+
+export interface OwnKeys {
+  readonly principalId: string;
+  readonly currentKeyVersionId: string;
+  readonly keys: KeyVersionDetail[];
+  readonly recoveries: RecoveryView[];
+  readonly observedAt: number;
+}
+
+export type BindingIssueCode =
+  | "KEY_SUPERSEDED"
+  | "KEY_REVOKED"
+  | "KEY_NOT_BOUND"
+  | "CAPABILITY_MISSING"
+  | "SCOPE_MISMATCH";
+
+export interface BindingStatus {
+  readonly current: boolean;
+  readonly requiresNewRevision: boolean;
+  readonly issues: { readonly role: string; readonly code: BindingIssueCode }[];
+}
+
+export interface BoundRole {
+  readonly role: string;
+  readonly capability: string;
+  readonly principalId: string | null;
+  readonly enrollmentId: string | null;
+  readonly serviceId: string | null;
+  readonly keyVersion: number | null;
+  readonly keyVersionId: string | null;
+  readonly publicKey: string;
+  readonly issues: BindingIssueCode[];
+}
+
+export interface TradeBindingImpact {
+  readonly tradeId: string;
+  readonly revision: number;
+  readonly termsDigest: string;
+  readonly liveIntentState: string | null;
+  readonly holdsBlocking: number;
+  readonly requiresNewRevision: boolean;
+  readonly roles: BoundRole[];
+}
+
+export interface TradeBindingsResponse {
+  readonly organizationId: string;
+  readonly trades: TradeBindingImpact[];
+  readonly observedAt: number;
+}
+
+export type ServiceChallengePurpose = "SERVICE_ENROLL" | "SERVICE_ROTATE" | "SERVICE_RECOVER";
+
+/** A service PoP challenge (domain dockside/service-pop-challenge), answered by the service's custody. */
+export interface ServiceChallengePayload {
+  readonly challengeId: string;
+  readonly purpose: ServiceChallengePurpose;
+  readonly origin: string;
+  readonly network: Network;
+  readonly organizationId: string;
+  readonly enrollmentId: string;
+  readonly serviceId: string;
+  readonly capability: string;
+  readonly scope: ServiceScope;
+  readonly publicKey: string;
+  readonly keyVersion: number;
+  readonly custodyKind: string | null;
+  readonly nonce: string;
+  readonly issuedAt: number;
+  readonly expiresAt: number;
+}
+
+export interface ServiceChallengeResponse {
+  readonly challengeId: string;
+  readonly purpose: ServiceChallengePurpose;
+  readonly payload: TypedJson;
+  readonly digestHex: string;
+  readonly expiresAt: number;
+}
+
+export interface ServiceEnrollmentCreated {
+  readonly enrollmentId: string;
+  readonly principalId: string;
+  readonly keyVersion: number;
+  readonly keyVersionId: string;
+  readonly challenge: ServiceChallengeResponse;
+}
+
+export interface ServiceVersionCreated {
+  readonly keyVersion: number;
+  readonly keyVersionId: string;
+  readonly notBefore?: number;
+  readonly challenge: ServiceChallengeResponse;
+}
+
+export interface RecoveryStarted {
+  readonly recoveryId: string;
+  readonly notBefore: number;
+  readonly keyVersion: number;
+  readonly challenge: ChallengeResponse;
+}
+
+/** What an administrator hands to the principal being recovered (no secret inside). */
+export interface RecoveryPackage {
+  readonly schema: "dockside/recovery-package@1";
+  readonly recoveryId: string;
+  readonly principalId: string;
+  readonly notBefore: number;
+  readonly challenge: ChallengeResponse;
+}

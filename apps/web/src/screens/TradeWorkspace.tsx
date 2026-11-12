@@ -10,6 +10,7 @@ import { type OperationView, type Relation, TradeApi, type TradeProjection } fro
 import { formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
 import { BlockerList, Near, Section, TradeContext, type TradeCtx, useTrade } from "./trade/common";
+import { AuthorityRevisionCallout } from "./trade/Authority";
 import { EvidenceTab } from "./trade/Evidence";
 import { ReleaseTab } from "./trade/Release";
 
@@ -919,6 +920,7 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
                 <p>Value is held; every economic action is refused until risk review closes the incident.</p>
               </Callout>
             ) : null}
+            <AuthorityRevisionCallout />
             <TabBody tab={tb} />
           </TradeContext.Provider>
         ) : null}

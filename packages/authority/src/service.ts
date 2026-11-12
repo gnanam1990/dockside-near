@@ -38,11 +38,17 @@ import type {
   ChallengeView,
   HumanChallengePayload,
   HumanChallengePurpose,
+  DirectoryPrincipal,
+  DirectoryService,
   KeyStatus,
+  KeyVersionDetail,
   KeyVersionView,
+  OrganizationDirectory,
+  OwnKeys,
   PopProof,
   PrincipalBinding,
   PrincipalView,
+  RecoveryView,
   RequestProof,
   RoleGrantView,
   ServiceBinding,
@@ -1098,6 +1104,94 @@ export class AuthorityService {
   }
 
   /* ================================================================ */
+  /* Read models for the key-management screens                      */
+  /* ================================================================ */
+
+  /**
+   * Everything a security administrator needs to manage one organization's authority: human
+   * principals with capabilities and every key version, service enrollments with custody kind
+   * (never the custody locator), and recoveries. Read-only; denials are audited.
+   */
+  organizationDirectory(ctx: AuthContext): OrganizationDirectory {
+    if (!ctx.capabilities.includes("ORG_SECURITY_ADMIN") && !ctx.capabilities.includes("AUDITOR")) {
+      this.deny(
+        "FORBIDDEN",
+        "organization directory requires security admin or auditor",
+        ctx.principal.id,
+        "organization",
+        ctx.organizationId,
+      );
+    }
+    const org = this.db.get("SELECT * FROM organizations WHERE id = ?", ctx.organizationId);
+    if (!org) fail("NOT_FOUND", "organization not found");
+    const keysOf = (principalId: string) =>
+      this.db
+        .all("SELECT * FROM key_versions WHERE principal_id = ? ORDER BY version", principalId)
+        .map((k) => this.keyDetail(k));
+    const principals: DirectoryPrincipal[] = this.db
+      .all(
+        "SELECT * FROM principals WHERE organization_id = ? AND kind = 'HUMAN' ORDER BY created_at, id",
+        ctx.organizationId,
+      )
+      .map((p) => ({
+        ...this.principalView(p),
+        enrolledVia: String(p["enrolled_via"]) as DirectoryPrincipal["enrolledVia"],
+        createdAt: Number(p["created_at"]),
+        capabilities: this.capabilitiesOf(String(p["id"])),
+        keys: keysOf(String(p["id"])),
+      }));
+    const services: DirectoryService[] = this.db
+      .all(
+        "SELECT * FROM service_enrollments WHERE organization_id = ? ORDER BY created_at, id",
+        ctx.organizationId,
+      )
+      .map((e) => ({
+        id: String(e["id"]),
+        organizationId: String(e["organization_id"]),
+        principalId: String(e["principal_id"]),
+        serviceId: String(e["service_id"]),
+        capability: parseCapability(e["capability"]),
+        scope: JSON.parse(String(e["scope_json"])) as ServiceScope,
+        status: String(e["status"]) as ServiceEnrollmentView["status"],
+        createdAt: Number(e["created_at"]),
+        createdBy: String(e["created_by"]),
+        versions: keysOf(String(e["principal_id"])),
+      }));
+    const recoveries = this.db
+      .all(
+        "SELECT * FROM recoveries WHERE organization_id = ? ORDER BY requested_at DESC, id",
+        ctx.organizationId,
+      )
+      .map((r) => this.recoveryView(r));
+    return {
+      organization: { id: String(org["id"]), name: String(org["name"]), status: String(org["status"]) },
+      recoveryDelayMs: this.cfg.recoveryDelayMs,
+      principals,
+      services,
+      recoveries,
+      observedAt: this.clock.now(),
+    };
+  }
+
+  /** The calling principal's own key versions and any recovery that targets it. */
+  ownKeys(ctx: AuthContext): OwnKeys {
+    return {
+      principalId: ctx.principal.id,
+      currentKeyVersionId: ctx.keyVersion.id,
+      keys: this.db
+        .all("SELECT * FROM key_versions WHERE principal_id = ? ORDER BY version", ctx.principal.id)
+        .map((k) => this.keyDetail(k)),
+      recoveries: this.db
+        .all(
+          "SELECT * FROM recoveries WHERE principal_id = ? ORDER BY requested_at DESC, id",
+          ctx.principal.id,
+        )
+        .map((r) => this.recoveryView(r)),
+      observedAt: this.clock.now(),
+    };
+  }
+
+  /* ================================================================ */
   /* Verification contracts for later modules                         */
   /* ================================================================ */
 
@@ -1790,6 +1884,39 @@ export class AuthorityService {
       notBefore: num(k["not_before"]),
       activatedAt: num(k["activated_at"]),
       revokedAt: num(k["revoked_at"]),
+    };
+  }
+
+  private keyDetail(k: Row): KeyVersionDetail {
+    return {
+      ...this.keyView(k),
+      createdAt: Number(k["created_at"]),
+      provenAt: num(k["proven_at"]),
+      supersededAt: num(k["superseded_at"]),
+      suspendedAt: num(k["suspended_at"]),
+      revokeReason: str(k["revoke_reason"]),
+    };
+  }
+
+  private recoveryView(r: Row): RecoveryView {
+    const k = this.keyRow(String(r["new_key_version_id"]));
+    return {
+      id: String(r["id"]),
+      organizationId: String(r["organization_id"]),
+      principalId: String(r["principal_id"]),
+      newKeyVersionId: String(k["id"]),
+      newKeyVersion: Number(k["version"]),
+      newPublicKey: String(k["public_key"]),
+      suspendedKeyVersionIds: (JSON.parse(String(r["suspended_key_ids_json"])) as { id: string }[]).map(
+        (x) => x.id,
+      ),
+      status: String(r["status"]) as RecoveryView["status"],
+      requestedBy: String(r["requested_by"]),
+      requestedAt: Number(r["requested_at"]),
+      notBefore: Number(r["not_before"]),
+      completedBy: str(r["completed_by"]),
+      completedAt: num(r["completed_at"]),
+      cancelledAt: num(r["cancelled_at"]),
     };
   }
 

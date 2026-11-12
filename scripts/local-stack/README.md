@@ -14,7 +14,8 @@ DOCKSIDE_API_URL=http://127.0.0.1:8791 DOCKSIDE_RELAYER_URL=http://127.0.0.1:879
 ```
 
 Environment: `DOCKSIDE_STACK_API_PORT`, `DOCKSIDE_STACK_CONTROL_PORT`, `DOCKSIDE_ORIGIN` (must equal the web
-origin), `DOCKSIDE_STACK_DATA_DIR` (default: a fresh temporary directory).
+origin), `DOCKSIDE_STACK_DATA_DIR` (default: a fresh temporary directory), `DOCKSIDE_RECOVERY_DELAY_MS` (default
+the API default of two days; the browser tests use a short delay).
 
 Control port (loopback only; never expose it):
 
@@ -25,6 +26,8 @@ Control port (loopback only; never expose it):
 | `POST /control/grants {org, invitationId}` | the administrator grants after the person accepted in their own browser session |
 | `POST /control/fund {tradeId, from, amountYocto}` | the funder's simulated wallet sends the `fund` deposit |
 | `POST /control/faults {statusDown?, down?, dropSendResponses?, hideAllReceipts?}` | chain fault switches |
+| `POST /control/custody/keys {serviceId, capability}` | the custody operator creates a new isolated service key that may sign only that capability's purpose (public key and opaque locator returned) |
+| `POST /control/custody/sign {challenge}` | the custody operator answers a service PoP challenge with the key it names (digest recomputed first) |
 | `GET /relay/v1/status`, `POST /relay/v1/calls {call}` | relayer for party calls (the web server proxies `/relay`) |
 
 Services inside the process: ManifestAttestor and deterministic-policy signers (isolated child processes), the

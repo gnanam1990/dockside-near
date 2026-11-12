@@ -291,6 +291,8 @@ async function tradeProjection(d: AppDeps, m: TradeModules, ctx: AuthContext, t:
         }
       : null,
     holds: { blocking: holds.filter((h) => h.status !== "RESOLVED").length, items: holds.map(holdSummary) },
+    // Whether every authority this revision binds is still its current usable key (M01 bindingStatus).
+    authority: d.authority.bindingStatus(t),
     release: {
       liveIntent: live
         ? { releaseIntentId: live.releaseIntentId, state: live.state, version: live.version }
@@ -355,6 +357,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
           holdsBlocking: m.holds.blocking(t.tradeId),
           liveIntentState: m.release.liveIntent(t.tradeId)?.state ?? null,
           frozen: m.journal.journal.frozen(t.tradeId).length > 0,
+          requiresNewRevision: authority().bindingStatus(t).requiresNewRevision,
         })),
       };
     }),
@@ -450,7 +453,39 @@ export function tradeRoutes(d: AppDeps): Route[] {
             ? enrollment
             : { enrollmentId: t.manifestAttestor.enrollmentId, visibility: "OTHER_ORGANIZATION" },
         currentAttestation: m.evidence.currentAttestation(t.tradeId)?.digest ?? null,
+        organizationAttestors: organizationAttestors(d, c, t),
       };
+    }),
+
+    /* ------------------------- key management (M12) ------------------------- */
+    // Every trade revision that binds a principal or service of the caller's organization, with
+    // the binding status of each such role: rotated, revoked or recovered keys require a new
+    // trade revision before evidence, inspection or release authority can be renewed.
+    r("GET", "/v1/organization/trade-bindings", true, undefined, ({ ctx }) => {
+      const c = must(ctx);
+      if (!c.capabilities.includes("ORG_SECURITY_ADMIN") && !c.capabilities.includes("AUDITOR"))
+        fail("FORBIDDEN", "trade binding impact requires security admin or auditor");
+      const m = mods(d);
+      const out = [];
+      for (const id of tradeIds(d)) {
+        const t = m.evidence.terms(id);
+        const roles = orgRoles(d, c.organizationId, t);
+        if (!roles.length) continue;
+        const status = authority().bindingStatus(t);
+        out.push({
+          tradeId: t.tradeId,
+          revision: t.revision,
+          termsDigest: tradeRevisionDigest(t),
+          liveIntentState: m.release.liveIntent(t.tradeId)?.state ?? null,
+          holdsBlocking: m.holds.blocking(t.tradeId),
+          requiresNewRevision: status.requiresNewRevision,
+          roles: roles.map((r) => ({
+            ...r,
+            issues: status.issues.filter((i) => i.role === r.role).map((i) => i.code),
+          })),
+        });
+      }
+      return { organizationId: c.organizationId, trades: out, observedAt: d.clock.now() };
     }),
 
     /* ----------------------------- evidence ----------------------------- */
@@ -1192,6 +1227,98 @@ export function tradeRoutes(d: AppDeps): Route[] {
 /* ------------------------- proposals and challenges (M08) ------------------------- */
 
 const DAY_MS = 24 * 3600_000;
+
+const HUMAN_ROLES = [
+  ["buyer", "BUYER_APPROVER"],
+  ["supplier", "SUPPLIER_SIGNER"],
+  ["inspector", "INSPECTOR"],
+  ["riskResolver", "RISK_RESOLVER"],
+] as const;
+
+/** The roles of a revision bound to one organization's principals or services, with the exact bound key. */
+function orgRoles(d: AppDeps, organizationId: string, t: TradeTerms) {
+  const out: {
+    role: string;
+    capability: string;
+    principalId: string | null;
+    enrollmentId: string | null;
+    serviceId: string | null;
+    keyVersion: number | null;
+    keyVersionId: string | null;
+    publicKey: string;
+  }[] = [];
+  for (const [role, capability] of HUMAN_ROLES) {
+    const b = t[role];
+    const p = d.db.get("SELECT organization_id FROM principals WHERE id = ?", b.principalId);
+    if (p?.["organization_id"] !== organizationId) continue;
+    const k = d.db.get("SELECT version FROM key_versions WHERE id = ?", b.keyVersionId);
+    out.push({
+      role,
+      capability,
+      principalId: b.principalId,
+      enrollmentId: null,
+      serviceId: null,
+      keyVersion: k ? Number(k["version"]) : null,
+      keyVersionId: b.keyVersionId,
+      publicKey: b.publicKey,
+    });
+  }
+  for (const role of ["manifestAttestor", "policySetter"] as const) {
+    const b = t[role];
+    if (b.scope.organizationId !== organizationId) continue;
+    out.push({
+      role,
+      capability: b.capability,
+      principalId: null,
+      enrollmentId: b.enrollmentId,
+      serviceId: b.serviceId,
+      keyVersion: b.keyVersion,
+      keyVersionId: null,
+      publicKey: b.publicKey,
+    });
+  }
+  return out;
+}
+
+/**
+ * The viewer organization's ManifestAttestor enrollments, each with whether this revision binds
+ * it and whether its enrolled scope covers this trade's organization, trade and EvidencePolicy.
+ * Another organization's enrollments are never listed.
+ */
+function organizationAttestors(d: AppDeps, ctx: AuthContext, t: TradeTerms) {
+  const b = t.manifestAttestor;
+  return d.db
+    .all(
+      "SELECT id, principal_id, service_id, status, scope_json FROM service_enrollments WHERE organization_id = ? AND capability = 'MANIFEST_ATTEST' ORDER BY created_at, id",
+      ctx.organizationId,
+    )
+    .map((e) => {
+      const s = JSON.parse(String(e["scope_json"])) as {
+        organizationId: string;
+        tradeId: string | null;
+        evidencePolicyId: string;
+        evidencePolicyRevision: number;
+      };
+      const k = d.db.get(
+        "SELECT version FROM key_versions WHERE principal_id = ? AND status = 'ACTIVE' ORDER BY version DESC LIMIT 1",
+        String(e["principal_id"]),
+      );
+      const covers =
+        s.organizationId === b.scope.organizationId &&
+        (s.tradeId === null || s.tradeId === t.tradeId) &&
+        s.evidencePolicyId === t.evidencePolicy.id &&
+        s.evidencePolicyRevision === t.evidencePolicy.revision;
+      return {
+        enrollmentId: String(e["id"]),
+        serviceId: String(e["service_id"]),
+        status: String(e["status"]),
+        activeKeyVersion: k ? Number(k["version"]) : null,
+        scope: s,
+        boundByRevision: String(e["id"]) === b.enrollmentId,
+        coverage: covers ? ("COVERS" as const) : ("SCOPE_MISMATCH" as const),
+      };
+    });
+}
 
 /** The EvidencePolicy a revision binds, as registered (digest checked against the terms). */
 function boundPolicy(d: AppDeps, t: TradeTerms) {
