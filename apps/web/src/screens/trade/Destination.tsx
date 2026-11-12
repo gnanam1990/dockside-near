@@ -90,13 +90,23 @@ function PendingChange({ p, view }: { p: DestinationChangeRecord; view: Destinat
   );
 }
 
-function Invalidations({ release }: { release: ReleaseView | null }) {
+/** What activating a successor revision (destination change or key rebinding) invalidates. */
+export function Invalidations({
+  release,
+  prefix = "dest",
+}: {
+  release: ReleaseView | null;
+  prefix?: string;
+}) {
   const t = useTrade();
   const live = t.p.release.liveIntent;
   const contractLive = release?.contract.intents.find((i) => i.releaseIntentId === live?.releaseIntentId);
   return (
-    <section aria-labelledby="dest-inval-title" data-testid="destination-invalidations">
-      <h4 id="dest-inval-title">What activation invalidates</h4>
+    <section
+      aria-labelledby={`${prefix}-inval-title`}
+      data-testid={prefix === "dest" ? "destination-invalidations" : `${prefix}-invalidations`}
+    >
+      <h4 id={`${prefix}-inval-title`}>What activation invalidates</h4>
       <ul className="checklist">
         <li>
           Manifest attestation:{" "}
