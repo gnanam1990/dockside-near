@@ -1,108 +1,134 @@
 # What you need to do to reach WORKING_TESTNET
 
-Dockside is **IMPLEMENTED_UNVERIFIED**. All of the code paths below exist and pass their tests against a
-simulated NEAR chain. The steps that remain need things this build was not allowed to create or hold: NEAR
-testnet accounts, testnet NEAR, a deployed contract, signing keys with real custody, separate people on
-separate devices, and (optionally) 1Click partner credentials. Every step here is for **you** to run. Nothing in
-the repository runs them for you.
+Dockside is **IMPLEMENTED_UNVERIFIED**. Every code path below exists and passes its tests against a simulated NEAR
+chain, and the escrow contract also runs with real transactions on a local nearcore node (near-sandbox). The steps
+that remain need things this build was not allowed to create or hold. Every step here is for **you** to run;
+nothing in the repository runs them for you.
 
-`WORKING_TESTNET` can be claimed only when every REAL-PRODUCT-GATE item (see the matrix in
+What remains yours, in short:
+
+| Yours | Why it cannot be done here | Section |
+|---|---|---|
+| Push the repository and check the first CI run | nothing was pushed; the workflow has only been replayed locally | §1 |
+| Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet` | no accounts, faucet, signing with your keys or testnet NEAR in this build | §2–§3 |
+| Custody of the relayer key and the worker's `TxSigner` | a signing key with real custody (keychain, HSM, KMS or an isolated signer) is yours | §4 |
+| Custody of the audit-export key (HSM or KMS if you need it) | the build uses an isolated signer process | §5 |
+| Separate people on separate devices for the buyer, supplier, inspector and risk/policy roles | INV-13: one operator holding every key does not count | §6–§7 |
+| A manual accessibility review | automated axe checks cannot replace it | §8 |
+| 1Click (optional) | needs a partner registration and a credential | §9 |
+
+`WORKING_TESTNET` can be claimed only when every REAL-PRODUCT-GATE item (the matrix in
 [BUILD-STATUS.md](../BUILD-STATUS.md)) has been produced by **one exact build**, and you have recorded that
 evidence. A recording or screenshot does not replace any step.
 
-Never commit or paste keys, seed phrases, JWTs or API credentials into the repository, an issue or a
+Never commit or paste keys, seed phrases, JWTs or API credentials into the repository, an issue, a CI setting or a
 `DOCKSIDE_*` variable.
 
 ## 0. Prerequisites
 
 - Windows, macOS or Linux with Node 22 (`>=22.13 <23`), pnpm 10, Rust stable with `wasm32-unknown-unknown`, git.
-- A Docker Engine (on Windows, inside WSL 2) to build the deployable wasm in the pinned Linux container.
-- [near-cli-rs](https://github.com/near/near-cli-rs) for account creation, deployment and submitting relayed calls.
+- A Docker Engine (on Windows, inside WSL 2) for the deployable wasm and the local nearcore suites.
+- [near-cli-rs](https://github.com/near/near-cli-rs) 0.31 for account creation; `run-all` drives it for the rest.
 - A NEAR testnet wallet you control for each funding account.
 - Four people with their own devices and browsers for the buyer approver, supplier signer, inspector and risk/policy
-  resolver (INV-13). Two more people (or the same people in a separate admin role) act as each organisation's
-  security administrator. One person holding every key can run the flow, but that does **not** satisfy the gate.
+  resolver (INV-13), plus each organisation's security administrator.
 
-## 1. Freeze and reproduce the build you will deploy
+## 1. Freeze, reproduce and check CI for the build you will deploy
 
 ```sh
 git clone <your copy of this repository> dockside && cd dockside
 git checkout <the commit you intend to deploy>
-node scripts/clean-checkout.mjs --e2e --report clean-checkout.json      # your own machine
-mkdir -p .data/repro
-docker run --rm -v "$PWD":/repo:ro -v "$PWD/.data/repro":/out \
-  -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
-  -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
-  node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh "$(git rev-parse HEAD)" --e2e
+pnpm install --frozen-lockfile
+node scripts/clean-checkout.mjs --e2e --report clean-checkout.json   # your own machine
+pnpm run contract:reproduce --e2e        # Linux container; on Windows set
+                                         # DOCKSIDE_DOCKER="wsl.exe -d <distro> -u root -- docker"
+pnpm run contract:sandbox                # optional: the contract on a local nearcore node
 ```
 
-Both `clean-checkout.json` and `.data/repro/clean-checkout-report.json` must say `"result": "PASS"`. Keep
-`.data/repro/build-manifest.json` and deploy `.data/repro/dockside_escrow.wasm`, the wasm the container built (the
-script copies it only when its SHA-256 equals the manifest's). The manifest's `contract.nearCodeHash` is the code hash
-your deployed account must report. Do not deploy a wasm built on your own machine: it embeds that machine's cargo-home path
-(including your user name), and its digest differs from every other machine's (ADR-0015). Every later step uses this
-one commit and this one wasm.
+`clean-checkout.json` and `.data/repro/clean-checkout-report.json` must both say `"result": "PASS"`. Keep
+`.data/repro/build-manifest.json` and deploy `.data/repro/dockside_escrow.wasm`, the wasm the container built (it is
+copied only when its SHA-256 equals the manifest's). Do not deploy a wasm built on your own machine: it embeds that
+machine's cargo-home path and its digest differs from every other machine's (ADR-0015). Every later step uses this
+one commit and this one wasm. The digest and NEAR code hash of the build recorded in this repository are in
+[docs/status/M18.md](status/M18.md).
 
-For the build recorded in [docs/status/M13.md](status/M13.md), the container wasm is 769 515 bytes; check its SHA-256
-and NEAR code hash there.
+CI (`.github/workflows/ci.yml`, ADR-0020) runs the same on GitHub's `ubuntu-24.04` and `windows-2022` runners with
+read-only permissions and no secrets. It has never run, because nothing was pushed. When you push:
 
-## 2. Create testnet accounts
+1. Confirm the three pinned action SHAs once, for example
+   `git ls-remote https://github.com/actions/checkout refs/tags/v4.2.2` must print
+   `11bd71901bbe5b1630ceea73d27597364c9af683` (likewise `actions/setup-node` v4.1.0 and
+   `actions/upload-artifact` v4.4.3, ADR-0020 §3).
+2. Check that both `test` legs and the `chain` job pass. The `chain` job's artifact `dockside-linux-reproduction`
+   holds the reports, the build manifest and the deployable wasm; you can deploy that wasm instead of a local
+   container build, as long as its SHA-256 equals the manifest's.
+3. To replay CI on your machine: `pnpm run ci:local --list`, then `pnpm run ci:local --job test` (or
+   `--job chain` with Docker).
 
-Create these with near-cli-rs (faucet-sponsored creation works on testnet). Use names you own:
+## 2. Create the testnet accounts
 
-| Account | Purpose |
-|---|---|
-| `<escrow>.testnet` | holds the contract; needs about 7.7 testnet NEAR of storage staking for the code (the container-built wasm is 769 515 bytes; 1 NEAR per 100 kB) plus state, so fund it with 10 |
-| `<buyer>.testnet` | buyer party account and the recorded funder of the trade |
-| `<treasury>.testnet` (optional) | a second funder, to see per-funder ledgers and refunds |
-| `<supplier>.testnet` | supplier party account and the bound payout destination |
-| `<supplier-alt>.testnet` | a second supplier-owned account, for the destination-change check |
-| `<relayer>.testnet` | submits relayed calls and the worker's release transaction; give it a FunctionCall access key restricted to `<escrow>.testnet` |
-| `<sender>.testnet` (optional) | holds an existing testnet NEP-141 token and sends a small amount to the escrow by mistake, for the unexpected-asset recovery check |
+Create these with near-cli-rs (faucet-sponsored creation works on testnet), with names you own, and keep their
+full-access keys in the near-cli-rs keychain:
 
 ```sh
 near account create-account sponsor-by-faucet-service <name>.testnet autogenerate-new-keypair save-to-keychain network-config testnet create
 ```
 
-## 3. Deploy, initialise and verify the contract
+| Account | Variable | Needs |
+|---|---|---|
+| `<escrow>.testnet` | `DOCKSIDE_ESCROW_ACCOUNT` | holds the contract: 1 NEAR per 100 kB of wasm plus 1 NEAR (about 9 NEAR for the 0.8 MB build; the preflight computes it); fund it with 12 |
+| `<buyer>.testnet` | `DOCKSIDE_BUYER_ACCOUNT` | buyer party and the recorded funder: the trade amount plus 0.1 NEAR |
+| `<supplier>.testnet` | `DOCKSIDE_SUPPLIER_ACCOUNT` | supplier party and the bound payout destination; signs nothing |
+| `<relayer>.testnet` | `DOCKSIDE_RELAYER_ACCOUNT` | submits relayed calls: 2 NEAR |
 
-Follow [scripts/testnet-deploy/README.md](../scripts/testnet-deploy/README.md) sections 1–3 with the wasm from
-step 1. Then check the deployed code is the tested artifact:
+For the full product run (§7) also create `<supplier-alt>.testnet` (destination change), optionally
+`<treasury>.testnet` (a second funder) and `<sender>.testnet` holding a testnet NEP-141 token (unexpected-asset
+recovery).
+
+## 3. Deploy, verify and run one trade: one command
 
 ```sh
-DOCKSIDE_NEAR_RPC_URL=https://rpc.testnet.near.org node scripts/testnet-deploy/verify-deploy.mjs <escrow>.testnet
+export DOCKSIDE_ESCROW_ACCOUNT=<escrow>.testnet DOCKSIDE_BUYER_ACCOUNT=<buyer>.testnet \
+       DOCKSIDE_SUPPLIER_ACCOUNT=<supplier>.testnet DOCKSIDE_RELAYER_ACCOUNT=<relayer>.testnet
+scripts/testnet-deploy/run-all --network testnet
+# PowerShell: .\scripts\testnet-deploy\run-all.ps1 --network testnet
 ```
 
-`onChainCodeHash` must equal `contract.nearCodeHash` in your manifest and `match` must be `true`. Write
-`<escrow>.testnet` and the on-chain hash into the manifest's `deployment` section and keep the deploy and init
-transaction hashes.
+`run-all` (ADR-0019, [scripts/testnet-deploy/README.md](../scripts/testnet-deploy/README.md)) checks the wasm against
+the manifest, checks the four accounts and their balances, deploys and initialises the contract in one transaction,
+checks the on-chain code hash and config, adds a relayer function-call key restricted to the escrow and checks it on
+chain, runs one trade to PAID with the supplier's balance delta and a ledger replay after every transaction, and
+writes `run-record.json`. `--network` has no default and mainnet is refused. It prints `run-all: PASS` and exits 0;
+any refusal exits 2 with a code (for example `WASM_MISMATCH`, `ESCROW_NOT_EMPTY`, `CODE_HASH_MISMATCH`) before the
+step that would be wrong. It was validated end to end on a local near-sandbox node, never on testnet.
+
+Keep the commit, `build-manifest.json`, `run-record.json`, `journey.json` and `deployment.json`. Write the escrow
+account and on-chain code hash into the manifest's `deployment` section. A second journey against the same
+deployment: `run-all --network testnet --skip-deploy --relayer-key-file <the key file from the first run>`.
+
+The run-all journey is a technical check of the deployed contract. It is not the product flow by separate people
+(§6–§7) and does not use the API or the web app.
 
 ## 4. Provision the relayer signer (code plus custody, both yours)
 
-The worker (`services/worker`) exits with code 78 and `RELAYER_SIGNER_NOT_PROVISIONED` until it has a signer. To
-provide one:
+The worker (`services/worker`) exits with code 78 and `RELAYER_SIGNER_NOT_PROVISIONED` until it has a signer:
 
 1. Pin an official NEAR transaction library (for example a specific `near-api-js` version) and review it.
 2. Implement the `TxSigner` interface from `@dockside/near` (`packages/near/src/tx.ts`):
-   `sign(call, { nonce, blockHash })` must build the NEAR transaction for that function call, sign it with the
-   relayer's FunctionCall key and return the serialized signed transaction and its hash (`SignedTx`).
+   `sign(call, { nonce, blockHash })` builds the NEAR transaction for that function call, signs it with the
+   relayer's function-call key and returns the serialized signed transaction and its hash (`SignedTx`).
 3. Keep that key in an OS keychain, HSM, KMS or an isolated signer process, never in the repository, the database or
-   a `DOCKSIDE_*` variable. Load it only in the worker process.
+   a `DOCKSIDE_*` variable. Load it only in the worker process. The function-call key `run-all` created is a
+   near-cli-rs key file; move it into your custody or create a new one.
 4. Change `services/worker/src/main.ts` to build `WorkerLoop` with that signer, `JsonRpcNearClient` pointed at
    `https://rpc.testnet.near.org` and `txValidityBlocks: 86400`.
 5. Add a test that the worker still refuses to start when the signer is absent.
 
-Party calls (trade registration, evidence policy, attestations, inspections, holds, intents, approvals, consents)
-come back from the API as `{relay: {receiverId, methodName, args, gas, deposit}}`. On testnet someone must submit
-each one. Either submit the `args` JSON with near-cli-rs from `<relayer>.testnet`:
-
-```sh
-near contract call-function as-transaction <escrow>.testnet <methodName> file-args relay-args.json \
-  prepaid-gas '100.0 Tgas' attached-deposit '0 NEAR' sign-as <relayer>.testnet network-config testnet sign-with-keychain send
-```
-
-or build a relay endpoint around your `TxSigner` that accepts exactly these calls. The local stack's `/relay` works
-only against the simulated chain. Funding is the one call the funder signs and sends from its own account.
+One relayer key serves the outbox and asset-recovery engines through the `withRelayerKey` lease (M15); more
+throughput needs more keys. Party calls come back from the API as `{relay: {receiverId, methodName, args, gas,
+deposit}}`; submit each `args` JSON from the relayer (the commands are in the runbook's "Manual calls") or build a
+relay endpoint around your `TxSigner`. The local stack's `/relay` works only against the simulated chain. Funding is
+the one call the funder signs and sends from its own account.
 
 ## 5. Run the API and web app against testnet
 
@@ -110,8 +136,10 @@ Run on a machine you control, behind HTTPS for anything other than loopback:
 
 ```sh
 pnpm run build
+pnpm run export-key generate --out <private dir>/audit-export.seed   # dedicated audit-export key (M17)
 DOCKSIDE_DB_PATH=<private dir>/dockside.sqlite \
 DOCKSIDE_OBJECT_STORE_DIR=<private dir>/objects \
+DOCKSIDE_AUDIT_EXPORT_KEY_FILE=<private dir>/audit-export.seed \
 DOCKSIDE_ORIGIN=https://<your web origin> \
 DOCKSIDE_ESCROW_CONTRACT_ID=<escrow>.testnet \
 DOCKSIDE_NEAR_RPC_URL=https://rpc.testnet.near.org \
@@ -120,7 +148,9 @@ pnpm run api
 ```
 
 Serve `apps/web` (`pnpm run web:build`) from the same origin, proxying `/v1`, `/healthz` and `/readyz` to the API
-(apps/web/README.md). Check `/readyz` reports `network: near-testnet` and `fundedPayouts: BLOCKED`.
+(apps/web/README.md). Check `/readyz` reports `network: near-testnet` and `fundedPayouts: BLOCKED`. The export key
+file is read only by an isolated signer child process; for HSM or KMS custody implement the same `ExportKeySigner`
+seam (ADR-0018).
 
 The ManifestAttestor and deterministic-policy services must run as their own processes with their own keys, ideally
 on another host. `packages/authority/signer/isolated-signer.mjs` is the local reference; for testnet, enrol them
@@ -134,26 +164,28 @@ Each person uses their own device and browser:
 2. The buyer administrator invites the buyer approver, inspector and risk/policy resolver; the supplier administrator
    invites the supplier signer. Each invitee accepts in their own browser, proving their own key, and the
    administrator grants the role afterwards.
-3. The buyer administrator enrols the ManifestAttestor and deterministic-policy services for the evidence policy.
+3. The buyer administrator enrols the ManifestAttestor and deterministic-policy services under **Organization →
+   Service identities** and sets the evidence policy, retention and integrations under **Organization → Policies,
+   Retention, Integrations**.
+4. Each person who signs as a NEAR account links it under **Organization → NEAR accounts** with a wallet that
+   announces itself on the page (NEP-413 signature, then `view_access_key` must report a full-access key). No
+   wallet product is bundled: connect one that implements the `near-wallet:announce` discovery (ADR-0018 §9). A
+   link grants no capability.
 
-The administrators enrol services under **Organization → Service identities** (the custody operator creates the
-key and signs the proof; the locator is never shown) and manage keys under **Organization → Keys**. A person who
-lost a key generates a recovery key under `/recovery` on the new device.
-
-Not built, and worth knowing before you start: no NEP-413 wallet connector in the browser (Dockside keys are
-WebCrypto keys in each browser), no check that a principal controls the NEAR account named in the terms (RPC
-`view_access_key`), and no way to create the trade revision that rebinds a rotated, revoked or recovered key. A
-trade bound to such a key says "new trade revision required" and can no longer be released with that key, so rotate
-or recover keys before you create the testnet trade, not during it.
+Keys are managed under **Organization → Keys**; a person who lost a key generates a recovery key under `/recovery`
+on the new device, and an expired recovery challenge can be re-issued there. A trade bound to a rotated, revoked or
+recovered key is rebound with the dual-signed key-rebinding revision on its Agreement tab (M14). A revision that
+replaces a participant or service is not built: if a role lost its capability or its enrollment was revoked, start a
+new trade.
 
 ## 7. Run the trade on testnet and keep the evidence
 
-Use the web app throughout and submit every relay from step 4. Keep each transaction hash and receipt.
+Use the web app throughout and submit every relay from §4. Keep each transaction hash and receipt.
 
 1. The buyer creates the trade proposal, the supplier countersigns, then `register_trade` and
    `register_evidence_policy`.
-2. `<buyer>.testnet` funds the exact amount with `fund` (README section 5). Optionally fund an excess from
-   `<treasury>.testnet` and run the EXCESS_FUNDING_RETURN refund back to it.
+2. `<buyer>.testnet` funds the exact amount with `fund`. Optionally fund an excess from `<treasury>.testnet` and run
+   the EXCESS_FUNDING_RETURN refund back to it.
 3. The supplier and inspector upload every slot. The ManifestAttestor attests and the inspector signs PASS.
 4. The deterministic-policy service SETs a hold. A deterministic-policy resolution must be refused. The buyer files a
    review request (no effect), and the risk/policy resolver RESOLVEs. Show that release is refused while the hold is
@@ -161,23 +193,24 @@ Use the web app throughout and submit every relay from step 4. Keep each transac
 5. The buyer locks the release intent and approves it. Exercise a dual-signed CANCEL on one intent, and an ABANDON
    after expiry plus grace on another, before the final one.
 6. Destination change on the Agreement tab: a forged and a unilateral change must be refused. A dual-consent change
-   to `<supplier-alt>.testnet` waits out the delay (`DOCKSIDE_DESTINATION_CHANGE_DELAY_MS`, default one day, at
-   least one minute), is activated and bound, and the old approval, manifest and inspection stop counting. Renew
-   them before releasing.
+   to `<supplier-alt>.testnet` waits out the delay (`DOCKSIDE_DESTINATION_CHANGE_DELAY_MS`, default one day), is
+   activated and bound, and the old approval, manifest and inspection stop counting. Renew them before releasing.
 7. The buyer executes. The worker submits once and the reconciler reaches PAID only with the final receipt to the
    bound destination. Stop the worker mid-flight once and restart it: there must be no second submission.
-8. Refunds on the Refund tab, on a second testnet trade: the treasury's excess return is prepared in the web app and
-   submitted from `<treasury>.testnet` itself with the exact call the page shows (no session or relayer can submit
-   it); revoke one to see QUARANTINED restored exactly; run a mutual cancellation from request and cosignature
-   through authorization after the period to REFUNDED at the original funder. Also run, at least once each,
-   `TRADE_EXPIRY`, `INSPECTION_FAIL` and `PERMANENT_HOLD`, which this build drove only to their refusals above the
-   contract.
-9. Optional, unexpected assets: `<sender>.testnet` sends a small NEP-141 amount to the escrow with `ft_transfer_call`.
-   It appears only in the "Asset recovery review" panel. The sender submits the request from its own account, the
-   risk/policy resolver approves, the 72-hour window passes, and execution returns the exact amount to the sender.
-10. Export the audit record (`GET /v1/trades/:id/audit-export`) and verify its checksum.
-11. Record: commit, manifest, deploy/init/register/fund/release/refund transaction hashes, receipts, `get_ledger` with
-   `conservation: true`, the supplier and funder balance deltas, the audit export and its checksum.
+8. Refunds on the Refund tab, on further testnet trades: the treasury's excess return submitted from
+   `<treasury>.testnet` itself with the exact call the page shows; a revocation that restores QUARANTINED exactly; a
+   mutual cancellation to REFUNDED at the original funder; and at least once each `TRADE_EXPIRY`, `INSPECTION_FAIL`
+   and `PERMANENT_HOLD`, which ran locally in the API and the browser (M15) but never on a real network. These wait
+   on the contract clock (24 to 48 hours).
+9. Optional, unexpected assets: `<sender>.testnet` sends a small NEP-141 amount to the escrow with
+   `ft_transfer_call`. It appears only in the "Asset recovery review" panel. The sender requests from its own
+   account, the risk/policy resolver approves, the 72-hour window passes, and execution (a full-access key attaching
+   one yoctoNEAR) returns the exact amount to the sender.
+10. On the Timeline tab prepare the signed audit export, download it and verify it offline:
+    `pnpm run verify-export <bundle.json> --trusted-keys <keys.json>` must exit 0, where `<keys.json>` is the
+    published key list (`GET /v1/audit-export-keys` or `pnpm run export-key list`) obtained out of band.
+11. Record: commit, manifest, deploy/init/register/fund/release/refund transaction hashes, receipts, `get_ledger`
+    with `conservation: true`, the supplier and funder balance deltas, the signed audit export and its verification.
 
 ## 8. Accessibility evidence
 
@@ -193,12 +226,12 @@ run T-024 and T-048 with redacted evidence. Only `PASS` supports `DRY_COMPATIBLE
 
 ## 10. Funded mainnet: separately authorized only
 
-`DOCKSIDE_NETWORK=near-mainnet` and any `DOCKSIDE_FUNDED_PAYOUTS` value other than `BLOCKED` are refused at startup.
-A funded corridor first needs a contract entry point that consumes a FundedPayoutAuthorization atomically, a verified
-corridor, an exposure cap and your explicit authorization of network, wallet, amount, signer and executor
-(REAL-PRODUCT-GATE "Separate funded-mainnet gate").
+`DOCKSIDE_NETWORK=near-mainnet` and any `DOCKSIDE_FUNDED_PAYOUTS` value other than `BLOCKED` are refused at startup,
+and the contract's `new` accepts only `near-testnet`. A funded corridor first needs a contract entry point that
+consumes a FundedPayoutAuthorization atomically, a verified corridor, an exposure cap and your explicit authorization
+of network, wallet, amount, signer and executor (REAL-PRODUCT-GATE "Separate funded-mainnet gate").
 
 ## When you are done
 
-Update BUILD-STATUS.md item by item with the evidence from steps 1–8. Promote the claim to `WORKING_TESTNET` only if
+Update BUILD-STATUS.md item by item with the evidence from §1–§8. Promote the claim to `WORKING_TESTNET` only if
 every required item is `PASS` for the same commit and wasm.

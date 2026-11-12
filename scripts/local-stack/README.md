@@ -16,7 +16,10 @@ DOCKSIDE_API_URL=http://127.0.0.1:8791 DOCKSIDE_RELAYER_URL=http://127.0.0.1:879
 Environment: `DOCKSIDE_STACK_API_PORT`, `DOCKSIDE_STACK_CONTROL_PORT`, `DOCKSIDE_ORIGIN` (must equal the web
 origin), `DOCKSIDE_STACK_DATA_DIR` (default: a fresh temporary directory), `DOCKSIDE_RECOVERY_DELAY_MS` (default
 the API default of two days; the browser tests use a short delay), `DOCKSIDE_DESTINATION_CHANGE_DELAY_MS` (the
-destination-change delay new proposals bind; default one day, minimum one minute; the browser tests use one minute).
+destination-change delay new proposals bind; default one day, minimum one minute; the browser tests use one minute),
+`DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS` (lifetime of a key-recovery challenge, M14), `DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS`
+(attestation lifetime in the stack's signed evidence policy, 1 hour to 30 days; the refund-reasons suite uses 4 days,
+M15).
 
 Control port (loopback only; never expose it):
 
@@ -28,6 +31,12 @@ Control port (loopback only; never expose it):
 | `POST /control/fund {tradeId, from, amountYocto}` | the funder's simulated wallet sends the `fund` deposit |
 | `POST /control/funder-call {from, call}` | the funder's simulated wallet submits a `request_refund` / `revoke_refund` call the API prepared for it (funder returns) |
 | `POST /control/chain-time {advanceMs}` | simulated chain only: block time moves forward (at most 7 days per call) so a contract timelock can elapse; the API, worker and sessions keep the wall clock |
+| `POST /control/clock {advanceMs}` | simulated stack only (M14): trade time and chain time move forward together (at most 30 days per call), so evidence passes its freshness deadline for the API and the contract alike; the authority, sessions and request proofs keep the wall clock |
+| `GET /control/balances` | simulated chain only (M15): native balances of the stack's accounts, so a test counts value movements on the chain itself |
+| `POST /control/token-transfer {amount, from?, msg?}`, `POST /control/nft-transfer {from?, tokenId?}` | the token sender's simulated wallet sends an unexpected NEP-141 amount (or a simulated NFT contract delivers a token) to the escrow (M11) |
+| `POST /control/sender-call {from, call}` | the sender's or a claimant's simulated wallet submits the asset-recovery request, revocation or challenge the API prepared for it (M11) |
+| `GET /control/token`, `POST /control/token-faults {failTransfers?, register?, unregister?}` | simulated token balances and fault switches (M11) |
+| `POST /control/access-keys {accountId, publicKey, permission?, delete?}` | simulated chain only (M17): stands in for the account's own AddKey/DeleteKey, so a test wallet key becomes (or stops being) an access key for `view_access_key` |
 | `POST /control/faults {statusDown?, down?, dropSendResponses?, hideAllReceipts?}` | chain fault switches |
 | `POST /control/custody/keys {serviceId, capability}` | the custody operator creates a new isolated service key that may sign only that capability's purpose (public key and opaque locator returned) |
 | `POST /control/custody/sign {challenge}` | the custody operator answers a service PoP challenge with the key it names (digest recomputed first) |
