@@ -14,7 +14,7 @@
 //!   Both parties rotated means two rebinding revisions, each anchored by the other party.
 //! * The new key of a rebound party comes from successor terms the counterparty may have written,
 //!   so the rebound party's **old** bound key keeps a veto: while it is not revoked on chain it
-//!   may revoke the pending rebinding (ADR-0022). Retiring that key on chain (a SELF revocation)
+//!   may revoke the pending rebinding (ADR-0023). Retiring that key on chain (a SELF revocation)
 //!   gives up the veto; a trade whose signed delay is zero leaves no veto window, so there a
 //!   party key is rebound only after its old key was revoked on chain.
 //! * A party that revokes a successor it had consented to withdraws that consent for good: its
