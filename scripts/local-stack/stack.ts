@@ -371,7 +371,7 @@ async function main(): Promise<void> {
   );
 
   /*
-   * Dedicated audit-export key (M17, ADR-0017): the operator's seed file is generated in the stack's
+   * Dedicated audit-export key (M17, ADR-0018): the operator's seed file is generated in the stack's
    * data directory (owner-only) and read only by its isolated signer process, then enrolled with a
    * proof of possession exactly as services/api/src/main.ts does for DOCKSIDE_AUDIT_EXPORT_KEY_FILE.
    */

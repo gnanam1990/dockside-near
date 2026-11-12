@@ -19,7 +19,7 @@ import { OrgNav } from "./common";
 import { failureText, Loaded } from "./Settings";
 
 /**
- * NEAR account ownership (M17, ADR-0017). The signed-in principal links a NEAR account: the server
+ * NEAR account ownership (M17, ADR-0018). The signed-in principal links a NEAR account: the server
  * issues a NEP-413 message, the user's NEAR wallet signs it through the wallet-connector boundary,
  * this browser checks the answer, and the server verifies the signature and asks the chain
  * (`view_access_key`) whether the key is a full-access key of the account. A link is an identity

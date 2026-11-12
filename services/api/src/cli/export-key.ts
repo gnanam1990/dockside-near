@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Operator tool for the dedicated audit-export signing key (ADR-0017).
+ * Operator tool for the dedicated audit-export signing key (ADR-0018).
  *
  *   export-key generate --out <file>
  *       Create a new Ed25519 key seed (32 random bytes, hex) in <file>, created exclusively with

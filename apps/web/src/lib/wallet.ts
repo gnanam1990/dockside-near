@@ -2,7 +2,7 @@ import { base58Decode, base58Encode } from "./base58";
 import { sha256 } from "./canonical";
 
 /**
- * Browser wallet-connector boundary (ADR-0017). A connector signs NEP-413 messages with the
+ * Browser wallet-connector boundary (ADR-0018). A connector signs NEP-413 messages with the
  * user's NEAR wallet; Dockside never sees the wallet's private key.
  *
  * The request and answer shapes equal the `signMessage` contract of NEAR wallets and of

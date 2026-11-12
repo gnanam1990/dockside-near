@@ -61,7 +61,7 @@ function chainAdapter(config: DocksideConfig) {
 }
 
 /**
- * The dedicated audit-export key (ADR-0017): read only by an isolated signer child process that may
+ * The dedicated audit-export key (ADR-0018): read only by an isolated signer child process that may
  * sign the enrollment proof and export statements, nothing else. Enrolled (or confirmed) at startup.
  */
 async function exportSigner(config: DocksideConfig, db: Database): Promise<ExportKeySigner | undefined> {

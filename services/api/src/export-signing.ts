@@ -20,7 +20,7 @@ import {
 } from "./verify-export.js";
 
 /**
- * Dedicated audit-export signing key (ADR-0017). The deployment operator generates the key with
+ * Dedicated audit-export signing key (ADR-0018). The deployment operator generates the key with
  * `export-key generate`; the private key is read only by an isolated signer child process that may
  * sign exactly two purposes (the enrollment proof and export statements). The API holds the public
  * key, proves possession at enrollment and records the key's lifecycle. A newer key retires the
