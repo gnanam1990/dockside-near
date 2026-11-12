@@ -12,7 +12,8 @@
 // script), PINNED_ACTIONS (owner/repo@<40-hex SHA> # vX.Y.Z), CHECKOUT_CREDENTIALS
 // (persist-credentials: false), TIMEOUTS (1 to 60 minutes per job), RUNNERS (ubuntu-24.04 and
 // windows-2022 only, both present), SHELL (bash), REQUIRED_COMMANDS, PACKAGE_SCRIPTS (every
-// `pnpm run <name>` exists).
+// `pnpm run <name>` exists), TOOLCHAIN (no RUSTUP_TOOLCHAIN in any env: the setup step selects the
+// toolchain with `rustup default`, so a local replay keeps the developer's own toolchain).
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,7 +28,8 @@ const MAX_TIMEOUT_MINUTES = 60;
 /** Commands each job must run, in this order (one line of a run script each). */
 export const REQUIRED = {
   test: [
-    /^rustup toolchain install .*--target wasm32-unknown-unknown/,
+    /^rustup toolchain install 1\.97\.1 .*--target wasm32-unknown-unknown/,
+    "rustup default 1.97.1",
     "pnpm install --frozen-lockfile",
     "pnpm run check",
     "pnpm run contract:test",
@@ -131,6 +133,8 @@ export function checkWorkflow(text) {
     } else if (isObj(v)) {
       for (const [k, x] of Object.entries(v)) {
         if (k === "secrets") fail("NO_SECRETS", `${path}.${k} is not allowed`);
+        if (k === "RUSTUP_TOOLCHAIN")
+          fail("TOOLCHAIN", `${path}.${k}: select the toolchain with rustup default`);
         walk(x, `${path}.${k}`);
       }
     }
