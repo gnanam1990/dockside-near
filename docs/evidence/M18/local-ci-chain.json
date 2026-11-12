@@ -1,0 +1,81 @@
+{
+  "schema": "dockside/local-ci-run@1",
+  "workflow": "<worktree>/.github/workflows/ci.yml",
+  "job": "chain",
+  "host": "win32-x64",
+  "node": "v22.23.1",
+  "commit": "419499acc65194efe1dc35986b9fbabbab448927",
+  "steps": [
+    {
+      "step": 1,
+      "name": "Check out",
+      "uses": "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+      "result": "SKIPPED",
+      "reason": "provided by the runner"
+    },
+    {
+      "step": 2,
+      "name": "Node.js 22",
+      "uses": "actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af",
+      "result": "SKIPPED",
+      "reason": "provided by the runner"
+    },
+    {
+      "step": 3,
+      "name": "pnpm from the packageManager field",
+      "command": "corepack enable\npnpm --version",
+      "result": "SKIPPED",
+      "reason": "runner setup"
+    },
+    {
+      "step": 4,
+      "name": "Install (frozen lockfile)",
+      "command": "pnpm install --frozen-lockfile",
+      "exitCode": 0,
+      "ms": 1416
+    },
+    {
+      "step": 5,
+      "name": "Build TypeScript",
+      "command": "pnpm run build",
+      "exitCode": 0,
+      "ms": 1063
+    },
+    {
+      "step": 6,
+      "name": "Docker Engine",
+      "command": "${DOCKSIDE_DOCKER:-docker} version --format '{{.Server.Version}}'",
+      "exitCode": 0,
+      "ms": 267
+    },
+    {
+      "step": 7,
+      "name": "Linux clean-checkout reproduction and deployable wasm (node:22-bookworm-slim)",
+      "command": "pnpm run contract:reproduce",
+      "exitCode": 0,
+      "ms": 1298988
+    },
+    {
+      "step": 8,
+      "name": "Escrow on a local near-sandbox node and run-all validation (node:22-trixie-slim)",
+      "command": "pnpm run contract:sandbox",
+      "exitCode": 0,
+      "ms": 1285258
+    },
+    {
+      "step": 9,
+      "name": "NEAR account ownership against a local nearcore sandbox",
+      "command": "pnpm run test:sandbox",
+      "exitCode": 0,
+      "ms": 33170
+    },
+    {
+      "step": 10,
+      "name": "Keep the reproduction and sandbox reports",
+      "uses": "actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882",
+      "result": "SKIPPED",
+      "reason": "provided by the runner"
+    }
+  ],
+  "result": "PASS"
+}
