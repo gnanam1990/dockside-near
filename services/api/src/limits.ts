@@ -3,8 +3,9 @@ import { type Clock, fail, sha256, toHex } from "@dockside/core";
 
 /**
  * Fixed-window request limiter (SECURITY.md "rate limits"). Keys are a client address for
- * unauthenticated routes and a digest of the presented session token for authenticated routes;
- * the token itself is never kept. Memory is bounded: when the table is full, expired windows are
+ * unauthenticated routes and failed authentications, and a digest of the session token for
+ * authenticated routes, allocated only once the token has authenticated (so invented tokens cannot
+ * fill the table); the token itself is never kept. Memory is bounded: when the table is full, expired windows are
  * swept, and a new key that still does not fit is refused (fail closed) rather than evicting a
  * live window an attacker could otherwise reset.
  */
@@ -33,6 +34,22 @@ export class RateLimiter {
     }
     if (w.count >= limit) this.refuse(w.start + this.windowMs - now);
     w.count += 1;
+  }
+
+  /**
+   * Refuse if `key` already has a live window that has reached `limit`, without counting or
+   * allocating anything. Used ahead of work whose key is only known to be legitimate afterwards.
+   */
+  check(key: string, limit: number): void {
+    const now = this.clock.now();
+    const w = this.windows.get(key);
+    if (w && now - w.start < this.windowMs && w.count >= limit) this.refuse(w.start + this.windowMs - now);
+  }
+
+  /** Whether `key` has a live (unexpired) window. */
+  has(key: string): boolean {
+    const w = this.windows.get(key);
+    return w !== undefined && this.clock.now() - w.start < this.windowMs;
   }
 
   get trackedKeys(): number {
