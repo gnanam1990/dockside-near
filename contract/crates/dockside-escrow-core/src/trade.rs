@@ -46,6 +46,8 @@ pub struct TradeRecord {
     pub revisions: alloc::vec::Vec<crate::destination::RevisionEntry>,
     /// Pending and historical dual-consent destination changes.
     pub destination: crate::destination::DestinationState,
+    /// Pending and historical dual-signed key-rebinding revisions.
+    pub rebinding: crate::rebinding::RebindingState,
 }
 
 pub fn digest_hex(domain: &str, v: &Value) -> R<(String, [u8; 32])> {
@@ -61,7 +63,7 @@ pub fn register(ctx: &Ctx<'_>, terms_typed: &J, buyer_signature: &str, supplier_
     let v = decode(terms_typed)?;
     let terms = parse_terms(&v, ctx.network, ctx.contract_id)?;
     if terms.revision != 1 {
-        return err("NOT_SUPPORTED", "successor revisions are activated only through the destination-change protocol");
+        return err("NOT_SUPPORTED", "successor revisions are activated only through the destination-change or key-rebinding protocol");
     }
     ensure(terms.expires_at > ctx.now_ms, "EXPIRED", "trade has already expired")?;
     let (hex, d) = digest_hex(domains::TRADE_REVISION, &v)?;
@@ -80,6 +82,7 @@ pub fn register(ctx: &Ctx<'_>, terms_typed: &J, buyer_signature: &str, supplier_
         release: Default::default(),
         revisions: alloc::vec![crate::destination::RevisionEntry { revision: 1, digest: hex.clone(), activated_at: ctx.now_ms }],
         destination: Default::default(),
+        rebinding: Default::default(),
     })
 }
 

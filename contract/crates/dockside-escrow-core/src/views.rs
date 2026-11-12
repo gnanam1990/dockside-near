@@ -202,6 +202,17 @@ fn change(c: &crate::destination::DestinationChange) -> J {
     })
 }
 
+fn rebinding(c: &crate::rebinding::KeyRebinding) -> J {
+    json!({
+        "successorDigest": c.successor_digest, "successorRevision": c.terms.revision,
+        "roles": c.roles, "rebindsParty": c.rebinds_party(),
+        "proposedBy": c.proposed_by, "proposedAt": c.proposed_at, "consentDeadline": c.consent_deadline,
+        "buyerConsentAt": c.buyer_consent_at, "supplierConsentAt": c.supplier_consent_at,
+        "delayUntil": c.delay_until, "status": c.status.as_str(), "closedAt": c.closed_at,
+        "supersededIntent": c.superseded_intent, "successorIntent": c.successor_intent,
+    })
+}
+
 pub fn release(t: &TradeRecord, now_ms: u64) -> J {
     json!({
         "tradeId": t.terms.trade_id,
@@ -215,6 +226,8 @@ pub fn release(t: &TradeRecord, now_ms: u64) -> J {
         "revisions": t.revisions.iter().map(|r| json!({"revision": r.revision, "digest": r.digest, "activatedAt": r.activated_at})).collect::<Vec<J>>(),
         "pendingDestinationChange": t.destination.pending.as_ref().map(change),
         "destinationHistory": t.destination.history.iter().map(change).collect::<Vec<J>>(),
+        "pendingKeyRebinding": t.rebinding.pending.as_ref().map(rebinding),
+        "keyRebindingHistory": t.rebinding.history.iter().map(rebinding).collect::<Vec<J>>(),
         "abandonPolicy": {"id": crate::release::ABANDON_POLICY_ID, "revision": crate::release::ABANDON_POLICY_REVISION, "graceMs": crate::release::ABANDON_GRACE_MS},
     })
 }
