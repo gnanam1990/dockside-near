@@ -44,6 +44,7 @@ export const ID_PREFIXES = {
   auditEvent: "aud",
   trade: "trd",
   refundIntent: "rfd",
+  refundSignature: "rfs",
   hold: "hld",
   evidenceItem: "evi",
   manifestAttestation: "mat",

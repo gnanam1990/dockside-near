@@ -10,7 +10,8 @@ import { buildPath, ENDPOINTS, type EndpointSpec } from "../src/lib/api/endpoint
 
 const routes = buildRoutes({} as never);
 const sampleId = `trd_${"a".repeat(32)}`;
-const sample = (s: EndpointSpec) => buildPath(s, { id: sampleId });
+const sampleRid = `rfd_${"b".repeat(32)}`;
+const sample = (s: EndpointSpec) => buildPath(s, { id: sampleId, rid: sampleRid });
 const served = (s: EndpointSpec) => routes.some((r) => r.method === s.method && r.pattern.test(sample(s)));
 
 describe("endpoint catalog matches services/api", () => {
@@ -32,6 +33,37 @@ describe("endpoint catalog matches services/api", () => {
       const hit = all.some((s) => s.method === r.method && r.pattern.test(sample(s)));
       expect(hit, `${r.method} ${r.pattern}`).toBe(true);
     }
+  });
+  it("serves the destination-change and refund request routes as implemented, none planned (M09, M10)", () => {
+    const ids = Object.keys(ENDPOINTS);
+    for (const id of [
+      "destinationChange",
+      "destinationChangeChallenge",
+      "destinationConsent",
+      "destinationRevocationChallenge",
+      "destinationRevocation",
+      "destinationActivation",
+      "destinationBinding",
+      "tradeRefund",
+      "refundChallenge",
+      "refundRequestSignature",
+      "refundCosignChallenge",
+      "refundCosignature",
+      "refundRevocationChallenge",
+      "refundRevocation",
+      "refundDisputeChallenge",
+      "refundDispute",
+      "refundAuthorization",
+      "refundAuthorizationChallenge",
+      "refundAuthorizationSignature",
+      "refundExecute",
+    ]) {
+      expect(ids, id).toContain(id);
+      const s = ENDPOINTS[id as keyof typeof ENDPOINTS] as EndpointSpec;
+      expect(s.availability, id).toBe("implemented");
+      expect(served(s), id).toBe(true);
+    }
+    expect(all.filter((x) => x.availability === "planned")).toEqual([]);
   });
   it("refuses identifiers the router would not accept", () => {
     expect(() => buildPath(ENDPOINTS.getTrade, { id: "../../v1/audit" })).toThrow();

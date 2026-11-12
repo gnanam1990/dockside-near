@@ -64,6 +64,8 @@ export type Dimension =
   | "attestationStatus"
   | "inspectionDecision"
   | "slotStatus"
+  | "refundState"
+  | "destinationChange"
   | "recoveryStatus"
   | "enrollmentStatus"
   | "bindingIssue"
@@ -79,6 +81,8 @@ export const VOCABULARY: Record<
     | "attestationStatus"
     | "inspectionDecision"
     | "slotStatus"
+    | "refundState"
+    | "destinationChange"
     | "recoveryStatus"
     | "enrollmentStatus"
     | "bindingIssue"
@@ -510,9 +514,142 @@ const OPERATION: Record<string, StatusMeaning> = {
   ),
 };
 
+const REFUND_LOCK = "The refund slice stays locked. No second refund, release or override is available.";
+
+/** Escrow refund-intent states (dockside-refund-v1; the contract's `get_refunds` view). */
+const REFUND_STATE: Record<string, StatusMeaning> = {
+  REQUESTED: {
+    label: "Refund requested",
+    tone: "warning",
+    icon: "pending",
+    sentence:
+      "The contract locked the exact funder slice; a required signature or clock has not started yet.",
+    locked: true,
+  },
+  TIMELOCKED: {
+    label: "Refund timelocked",
+    tone: "warning",
+    icon: "processing",
+    sentence: "The policy challenge or cooling period is running; the slice stays locked until the deadline.",
+    locked: true,
+  },
+  AUTHORIZED: {
+    label: "Refund authorized, not executed",
+    tone: "neutral",
+    icon: "authorized",
+    sentence: "The contract's predicates held after the deadline; execution returns the slice to its funder.",
+    locked: true,
+  },
+  EXECUTING: {
+    label: "Refund executing",
+    tone: "warning",
+    icon: "processing",
+    sentence: `The refund transfer was submitted once. ${REFUND_LOCK}`,
+    locked: true,
+  },
+  PROCESSING: {
+    label: "Refund processing",
+    tone: "warning",
+    icon: "processing",
+    sentence: `Awaiting an authoritative refund outcome. ${REFUND_LOCK}`,
+    locked: true,
+  },
+  UNKNOWN: {
+    label: "Refund outcome unknown",
+    tone: "unknown",
+    icon: "unknown",
+    sentence: `No authoritative refund outcome is available. ${REFUND_LOCK}`,
+    locked: true,
+  },
+  REVIEW: {
+    label: "Refund locked for review",
+    tone: "unknown",
+    icon: "review",
+    sentence: `A dispute, appeal or contradiction paused the refund. ${REFUND_LOCK}`,
+    locked: true,
+  },
+  RECONCILING: {
+    label: "Refund reconciling",
+    tone: "unknown",
+    icon: "reconciling",
+    sentence: `Authoritative reads are being compared. ${REFUND_LOCK}`,
+    locked: true,
+  },
+  ADJUDICATION: {
+    label: "Refund in adjudication",
+    tone: "unknown",
+    icon: "adjudication",
+    sentence: `A designated adjudicator must decide from evidence. ${REFUND_LOCK}`,
+    locked: true,
+  },
+  REFUNDED: {
+    label: "Refunded to the original funder",
+    tone: "neutral",
+    icon: "refunded",
+    sentence:
+      "The contract settled the slice to the recorded original funder; the journal holds the receipt.",
+    terminal: true,
+  },
+  FAILED: {
+    label: "Refund failed — no transfer (authoritative)",
+    tone: "negative",
+    icon: "failed",
+    sentence:
+      "Authoritative no-transfer evidence restored the exact source bucket. Another attempt needs a new refund intent.",
+    terminal: true,
+  },
+  REVOKED: {
+    label: "Refund revoked before execution",
+    tone: "neutral",
+    icon: "cancelled",
+    sentence: "An allowed signer revoked the request; the slice returned to its recorded source bucket.",
+    terminal: true,
+  },
+};
+
+/** Destination-change states (contract `pendingDestinationChange` / `destinationHistory`). */
+const DESTINATION_CHANGE: Record<string, StatusMeaning> = {
+  PROPOSED: {
+    label: "Destination revision proposed",
+    tone: "warning",
+    icon: "pending",
+    sentence: "One party signed the successor revision. It can never activate without the other party.",
+  },
+  CONSENTED: {
+    label: "Both parties consented; delay running",
+    tone: "warning",
+    icon: "processing",
+    sentence: "Both bound parties signed the same successor digest. Activation waits for the signed delay.",
+  },
+  ACTIVATED: {
+    label: "Destination revision activated",
+    tone: "neutral",
+    icon: "superseded",
+    sentence:
+      "The successor revision is effective. Manifest, inspection, hold view, intent and approval must be renewed.",
+    terminal: true,
+  },
+  REVOKED: {
+    label: "Destination revision cancelled",
+    tone: "neutral",
+    icon: "cancelled",
+    sentence: "A party revoked the proposal before activation; the bound destination is unchanged.",
+    terminal: true,
+  },
+  EXPIRED: {
+    label: "Destination revision expired",
+    tone: "neutral",
+    icon: "expired",
+    sentence: "The consent window closed before both parties signed; the bound destination is unchanged.",
+    terminal: true,
+  },
+};
+
 const EXTRA: Partial<Record<Dimension, Record<string, StatusMeaning>>> = {
   releaseIntentState: RELEASE_INTENT,
   operationState: OPERATION,
+  refundState: REFUND_STATE,
+  destinationChange: DESTINATION_CHANGE,
   attestationStatus: {
     CURRENT: {
       label: "Attestation current",

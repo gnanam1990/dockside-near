@@ -16,7 +16,6 @@ import {
   type TradeBindingImpact,
 } from "../../lib/api/types";
 import { capabilityLabel, formatUntil, formatUtc, networkLabel } from "../../lib/format";
-import { PUBLIC_KEY } from "./Keys";
 import {
   AffectedTrades,
   formatDelay,
@@ -27,6 +26,7 @@ import {
   rolesBinding,
   TradeImpactPanel,
 } from "./common";
+import { PUBLIC_KEY } from "./Keys";
 
 const CUSTODY_KINDS = [
   ["ISOLATED_SIGNER_PROCESS", "Isolated signer process"],

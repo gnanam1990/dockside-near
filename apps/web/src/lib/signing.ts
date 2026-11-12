@@ -25,6 +25,12 @@ export const SIGNING_DOMAINS = {
   CANCEL_CONSENT: "dockside/cancel-consent",
   REVOKE_CANCEL_CONSENT: "dockside/revoke-cancel-consent",
   ABANDON_RELEASE_INTENT: "dockside/abandon-release-intent",
+  // Destination change (M09 routes, M10 screen) and dockside-refund-v1 requests (M10).
+  DESTINATION_CHANGE_REVOKE: "dockside/destination-change-revoke",
+  REFUND_REQUEST: "dockside/refund-request",
+  REFUND_REVOKE: "dockside/refund-revoke",
+  REFUND_DISPUTE: "dockside/refund-dispute",
+  REFUND_AUTHORIZE: "dockside/refund-authorize",
 } as const;
 
 export type SigningPurpose = keyof typeof SIGNING_DOMAINS;
