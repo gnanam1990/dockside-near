@@ -1,0 +1,8 @@
+{
+  "settledTrue": true,
+  "releasePaid": true,
+  "supplierDeltaYocto": "50000000000000000000000",
+  "supplierReceivedExactAmount": true,
+  "ledgerConservation": true,
+  "releasedTotal": "50000000000000000000000"
+}
