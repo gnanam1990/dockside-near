@@ -1,10 +1,10 @@
-# ADR-0023 — Hold resolver liveness and deposits bound to the agreed terms digest
+# ADR-0024 — Hold resolver liveness and deposits bound to the agreed terms digest
 
 - Decision status: accepted (security fix for dockside m32, external security audit)
 - Date: 2026-11-12, Dockside platform team
 - Affected IDs: FR-02, FR-12, FR-14, INV-10; T-007, T-014, T-016
 - Relates to: ADR-0004 decision 11 (bound-key revocation, amended here), ADR-0006 decision 9 (refund
-  rows), ADR-0017 (key rebinding)
+  rows), ADR-0017 (key rebinding), ADR-0023 (rebinding veto)
 
 ## Context
 

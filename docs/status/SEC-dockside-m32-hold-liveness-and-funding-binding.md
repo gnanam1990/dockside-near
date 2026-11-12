@@ -8,7 +8,7 @@
 - Branch: `feat/dockside-m32-hold-liveness-and-funding-binding`, base main `49fbaf7`. Main was merged in
   twice: `66cfce9`, then `39435ec`, which brought m33 contract storage bounds and ADR-0022. The final runs
   are on `f4f41ba`.
-- Decision record: ADR-0023 (amends ADR-0004 decision 11). The sealed spec under `docs/spec/` was not edited.
+- Decision record: ADR-0024 (amends ADR-0004 decision 11). The sealed spec under `docs/spec/` was not edited.
 
 ## What the spec decides
 
@@ -114,7 +114,7 @@ fund` and passed on rerun.
     `16c01d84c32e483402253cbe7d1eafc88c216fa3935f6196f472bd7374f6282c` (code hash
     `2XossaAZqk1C3gJmmhtfSrxpkYGZCZh88gXtEaGz8tvw`), which is superseded.
 - Owner action: redeploy the escrow with this wasm. This change needs no state migration and no fresh account,
-  because it leaves the stored layout unchanged (ADR-0023 decision 3). See ADR-0022 for the m33 changes in
+  because it leaves the stored layout unchanged (ADR-0024 decision 3). See ADR-0022 for the m33 changes in
   the same wasm. Clients must send `terms_digest` with `fund`
   from then on. No testnet or mainnet transaction was sent from this branch.
 
