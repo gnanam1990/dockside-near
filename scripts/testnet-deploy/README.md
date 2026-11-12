@@ -1,72 +1,154 @@
-# NEAR testnet deployment runbook (M02) — BLOCKED until you run it
+# NEAR testnet deployment: `run-all`
 
-Status: **BLOCKED**. This build was not allowed to create accounts, use the faucet, sign transactions or
-move testnet NEAR. Nothing below has been run. Every step is for **you** to run with your own accounts.
-Mainnet is out of scope: the contract `new` refuses any network other than `near-testnet`.
+Status: **validated end to end on a local near-sandbox node; never run against NEAR testnet in
+this build.** `run-all --network sandbox` passed against nearcore 2.14.0 (sandbox build) with real
+transactions (docs/status/M16.md). Running it with `--network testnet` is yours to do, with your own
+accounts: this build was not allowed to create accounts, use a faucet, sign with user keys or move
+testnet NEAR. Mainnet is refused by the script and by the contract (`new` accepts only
+`near-testnet`).
 
-T-007 (real testnet deploy, fund from a recorded funder, read state) and REAL-PRODUCT-GATE item 2 stay
-`NOT_RUN` until these steps produce real transaction hashes. Direct release to the supplier is M04.
+T-007 and REAL-PRODUCT-GATE item 2 stay `NOT_RUN` on testnet until a testnet run produces real
+transaction hashes.
 
-## 0. What you need
+## What you run
 
-- [near-cli-rs](https://github.com/near/near-cli-rs) (`near --version`), Node 22, pnpm 10, Rust with
-  `wasm32-unknown-unknown`.
-- Three testnet accounts you control: escrow (contract), buyer (funder), supplier (payout destination).
-- About 6 testnet NEAR on the escrow account for storage staking (the wasm is ~450 KB: about 4.5 NEAR at
-  1 NEAR per 100 KB, plus state), and whatever you fund the trade with on the buyer account.
+You create the accounts. `run-all` does everything after that in one command:
 
-## 1. Build and record the artifact digest
+| Step | What happens | Signed by |
+|---|---|---|
+| 1 | The wasm's SHA-256 and NEAR code hash must equal the build manifest's (`verify-artifact`) | nothing |
+| 2 | Preflight: the four accounts exist; the escrow account has no code and holds enough for code storage (1 NEAR per 100 kB plus 1 NEAR); the buyer can pay the trade amount; the relayer holds 2 NEAR | nothing |
+| 3 | Deploy the wasm and call `new("near-testnet", null)` **in one transaction**, so nobody can initialise the contract between the two | escrow account (keychain) |
+| 4 | The on-chain code hash (`view_account`) must equal the manifest's `contract.nearCodeHash`, and `get_config` must report `near-testnet` | nothing |
+| 5 | Add a function-call access key to the relayer, restricted to the escrow contract (any method, allowance `1 NEAR`). near-cli-rs generates it and saves it to `~/.near-credentials/<network>/<relayer>/ed25519_<key>.json`; the script checks the key's permission on chain | relayer account (keychain) |
+| 6 | The journey (below), checking the supplier's balance rose by exactly the trade amount | buyer (funding only), relayer function-call key (everything else) |
+| 7 | Write `run-record.json` | nothing |
+
+The journey is one trade: `register_trade`, `register_evidence_policy`, `fund` (from the buyer's
+own account, which makes it the recorded funder), `submit_manifest_attestation`, `submit_inspection`
+(PASS), `create_release_intent`, `approve_release`, `execute_release`, then `PAID` at the bound
+supplier. Its Dockside payloads (terms, policy, attestation, inspection, intent, approval) are built
+and signed by `dockside-journey-mirror` (contract/integration/fixtures) with principal keys derived
+from a fresh random seed for that run; they are not NEAR keys and are not stored. After every
+transaction the mirror replays the call with the same `dockside-escrow-core` code at the receipt's
+block time, and the contract's `get_ledger` must equal the core's.
+
+The journey is a technical check of the deployed contract on the network, not the product flow: it
+is not the INV-13 acceptance by separate people (docs/USER-NEXT-STEPS.md §6–§7), and it does not use
+the API or the web app.
+
+## Prerequisites
+
+- Node 22, Rust 1.97 (cargo builds the payload builder; no C toolchain needed), git, a POSIX shell
+  (on Windows: Git for Windows, or use `run-all.ps1`).
+- [near-cli-rs](https://github.com/near/near-cli-rs) 0.31 (`near --version`); set `NEAR_CLI` if it is
+  not `near` on your `PATH`.
+- The deployable wasm and its manifest from the Linux container (ADR-0015), for the commit you deploy:
+
+  ```sh
+  mkdir -p .data/repro
+  docker run --rm -v "$PWD":/repo:ro -v "$PWD/.data/repro":/out \
+    -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
+    -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
+    node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh "$(git rev-parse HEAD)"
+  ```
+
+  This leaves `.data/repro/dockside_escrow.wasm` and `.data/repro/build-manifest.json`, the defaults
+  of `--wasm` and `--manifest`. Do not deploy a wasm built on your own machine (ADR-0015).
+
+- Four testnet accounts you control, with their full-access keys in the near-cli-rs keychain
+  (`save-to-keychain` or `save-to-legacy-keychain`):
+
+  ```sh
+  near account create-account sponsor-by-faucet-service <name>.testnet autogenerate-new-keypair save-to-keychain network-config testnet create
+  ```
+
+  | Variable | Account | Needs |
+  |---|---|---|
+  | `DOCKSIDE_ESCROW_ACCOUNT` | holds the contract | about 8.7 NEAR (7.7 for the 769 515-byte wasm, plus state); fund it with 10 |
+  | `DOCKSIDE_BUYER_ACCOUNT` | buyer party and funder | the trade amount plus 0.1 NEAR |
+  | `DOCKSIDE_SUPPLIER_ACCOUNT` | supplier party and payout destination | exists; it signs nothing |
+  | `DOCKSIDE_RELAYER_ACCOUNT` | submits the relayed calls | 2 NEAR |
+
+  All four must be different named `.testnet` accounts (the contract's testnet corridor accepts only
+  those).
+
+## Run
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm run contract:build        # prints: dockside_escrow.wasm <bytes> bytes sha256 <hex>
+export DOCKSIDE_ESCROW_ACCOUNT=<escrow>.testnet DOCKSIDE_BUYER_ACCOUNT=<buyer>.testnet \
+       DOCKSIDE_SUPPLIER_ACCOUNT=<supplier>.testnet DOCKSIDE_RELAYER_ACCOUNT=<relayer>.testnet
+scripts/testnet-deploy/run-all --network testnet
 ```
 
-Write the sha256 into your evidence. Optional, recommended before any real use: build again with
-`cargo near build` (it applies `--cfg near` itself) and compare. WASM feature compatibility with the current
-nearcore protocol was **not** verified on this host (no sandbox); the deploy step below is that check.
+PowerShell:
 
-## 2. Create accounts (you)
+```powershell
+$env:DOCKSIDE_ESCROW_ACCOUNT = "<escrow>.testnet"   # and the other three
+.\scripts\testnet-deploy\run-all.ps1 --network testnet
+```
+
+Options: `--rpc-url` (default `https://rpc.testnet.near.org`; must be https and not a mainnet host),
+`--wasm`, `--manifest`, `--amount-yocto` (default 50000000000000000000000, 0.05 NEAR), `--out`
+(default `.data/testnet-run/<network>-<UTC time>`), `--skip-deploy` (reuse an escrow that already runs
+the manifest's code), `--relayer-key-file` (reuse the key file from an earlier run),
+`--allowance` (default `1 NEAR`). `--network` has no default.
+
+On success it prints `run-all: PASS` and exits 0. Any refusal exits 2 with `run-all: <CODE>: ...`
+before the step that would be wrong (for example `NETWORK_REFUSED`, `WASM_MISMATCH`,
+`ESCROW_NOT_EMPTY`, `CODE_HASH_MISMATCH`, `INSUFFICIENT_BALANCE`); a failed near-cli-rs command
+exits 1 and leaves its output in the record directory.
+
+To run another journey against the same deployment:
 
 ```sh
-near account create-account sponsor-by-faucet-service <escrow>.testnet autogenerate-new-keypair save-to-keychain network-config testnet create
-near account create-account sponsor-by-faucet-service <buyer>.testnet  autogenerate-new-keypair save-to-keychain network-config testnet create
-near account create-account sponsor-by-faucet-service <supplier>.testnet autogenerate-new-keypair save-to-keychain network-config testnet create
+scripts/testnet-deploy/run-all --network testnet --skip-deploy \
+  --relayer-key-file ~/.near-credentials/testnet/<relayer>.testnet/ed25519_<key>.json
 ```
 
-## 3. Deploy and initialise
+## What it leaves behind
+
+In the record directory (git-ignored under `.data/`): `artifact.json`, `preflight.json`,
+`deploy.txt` and `deploy-tx.txt`, `deployment.json` (on-chain code hash, `match: true`,
+`get_config`), `relayer-key.txt` and `relayer.json` (public key and permission only),
+`args/` (the exact arguments of every journey call), `journey.json` (every transaction hash, block
+hash and block time, the release and ledger views) and `run-record.json` (summary). No file holds a
+private key; the relayer's function-call key file is the one near-cli-rs wrote in your keychain
+directory.
+
+For gate evidence keep: the commit, `build-manifest.json`, `run-record.json`, `journey.json` and
+`deployment.json`. Then T-007's deploy/fund/read half and the T-019 positive path can move from
+`NOT_RUN` for that build.
+
+## How it was validated (sandbox)
+
+`contract/integration/sandbox-tests/tests/run_all_on_sandbox.rs`, run by `pnpm run contract:sandbox`
+(scripts/sandbox/container-sandbox.sh, `node:22-trixie-slim`), plays the user's part on a local
+near-sandbox node: it creates the four accounts with real create-account transactions, puts their
+keys in a temporary near-cli-rs keychain and a near-cli-rs connection named `sandbox`, then runs
+`run-all --network sandbox` and checks the chain itself: the code hash, the relayer's two keys, the
+supplier's balance delta and `PAID`. It also checks that mainnet, a non-loopback sandbox RPC and a
+wrong wasm are refused before any transaction, that a second run refuses to redeploy
+(`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second journey.
+
+Differences you will meet on testnet: real block times (the journey needs no waiting), faucet-funded
+accounts, the OS keychain instead of `~/.near-credentials`, and testnet's protocol version, which can
+differ from the sandbox's (nearcore 2.14.0, protocol 88).
+
+## Manual calls (reference)
+
+The commands run-all issues, for single steps or other entry points (refunds, holds, destination
+changes, CANCEL/ABANDON, asset recovery). Party calls come from the API as
+`{relay: {receiverId, methodName, args, gas, deposit}}`; submit the `args` JSON from the relayer:
 
 ```sh
-near contract deploy <escrow>.testnet use-file contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm \
-  with-init-call new json-args '{"network":"near-testnet","min_deposit_yocto":null}' \
-  prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-keychain send
+near contract call-function as-transaction <escrow>.testnet <methodName> file-args relay-args.json \
+  prepaid-gas '100.0 Tgas' attached-deposit '0 NEAR' sign-as <relayer>.testnet network-config testnet \
+  sign-with-access-key-file ~/.near-credentials/testnet/<relayer>.testnet/ed25519_<key>.json send
 ```
 
-Record the transaction hash. Then verify the deployed code is the artifact you built (read-only):
-
-```sh
-DOCKSIDE_NEAR_RPC_URL=https://rpc.testnet.near.org node scripts/testnet-deploy/verify-deploy.mjs <escrow>.testnet
-```
-
-`verify-deploy.mjs` compares the on-chain `code_hash` with base58(sha256(local wasm)) and prints `get_config`.
-
-## 4. Register a trade
-
-The trade terms must name `<escrow>.testnet` as `escrowContractId`, `<buyer>.testnet` / `<supplier>.testnet`
-as party accounts and the supplier as `payout.destination`. Buyer and supplier sign the trade-revision digest
-with their **enrolled Dockside keys** (M01 principals), not with the NEAR account key; any account may relay
-the call. `EscrowContract.registerTradeCall(termsArg(terms), buyerSig, supplierSig)` in `@dockside/near`
-produces the exact arguments. Submit them with:
-
-```sh
-near contract call-function as-transaction <escrow>.testnet register_trade file-args register.json \
-  prepaid-gas '100.0 Tgas' attached-deposit '0 NEAR' sign-as <any-account>.testnet network-config testnet sign-with-keychain send
-```
-
-## 5. Fund from the recorded funder
-
-The NEAR account that signs this transaction becomes the deposit's original funder; refunds can only go back
-to it.
+Funding is the one call the funder signs from its own account (it becomes the deposit's original
+funder; refunds can only go back to it):
 
 ```sh
 near contract call-function as-transaction <escrow>.testnet fund json-args '{"trade_id":"<trd_...>"}' \
@@ -74,42 +156,6 @@ near contract call-function as-transaction <escrow>.testnet fund json-args '{"tr
 near contract call-function as-read-only <escrow>.testnet get_ledger json-args '{"trade_id":"<trd_...>"}' network-config testnet now
 ```
 
-Check `fullyFunded`, `funders.<buyer>.available` and `conservation: true`. Fund less than the amount to see
-`partial`, or more to see `quarantined` for the same funder.
-
-## 6. Evidence to keep
-
-Commit sha, wasm sha256, deploy/init/register/fund transaction hashes, `get_config`/`get_ledger` output and
-the `verify-deploy.mjs` output. Only then can T-007's deployment/funding half move from `NOT_RUN`.
-
-## 7. Direct release on testnet (M04, BLOCKED until steps 1-5 exist)
-
-The release path needs the evidence of M03 on chain first: `register_evidence_policy`,
-`submit_manifest_attestation` (signed by the isolated ManifestAttestor process) and `submit_inspection`
-(signed by the enrolled inspector). Then, with every payload produced by `@dockside/release`
-`ReleaseService` and signed by the acting principal's own enrolled key:
-
-1. Buyer approver: `prepareIntent` -> sign `RELEASE_INTENT` -> `recordIntentSignature` returns the
-   `create_release_intent` call. Submit it from any account:
-
-   ```sh
-   near contract call-function as-transaction <escrow>.testnet create_release_intent file-args intent.json \
-     prepaid-gas '50.0 Tgas' attached-deposit '0 NEAR' sign-as <any-account>.testnet network-config testnet sign-with-keychain send
-   ```
-
-2. Buyer approver: `prepareApproval` -> sign `BUYER_APPROVAL` -> `recordApproval` returns `approve_release`.
-3. Anyone: `prepareExecution` returns `execute_release` (100 Tgas). The contract recomputes the whole
-   conjunction, transfers the exact amount to the revision-bound `payout.destination` and settles in
-   `on_release_transfer`.
-4. Read back `get_release`, `get_ledger` and the supplier account balance:
-
-   ```sh
-   near contract call-function as-read-only <escrow>.testnet get_release json-args '{"trade_id":"<trd_...>"}' network-config testnet now
-   ```
-
-Evidence to keep: the create/approve/execute transaction hashes, the callback receipt outcome, `get_release`
-showing `PAID`, `get_ledger` showing `released` per funder and `conservation: true`, and the supplier's
-balance delta. Only then can T-007's release half and the T-019 testnet positive path move from `NOT_RUN`.
-Destination change (`propose_destination_change`, `consent_destination_change`, `activate_destination_change`)
-and CANCEL/ABANDON follow the same pattern; activation needs the trade's real `destinationChangeDelayMs` to
-pass on chain.
+`execute_asset_recovery` needs exactly one attached yoctoNEAR, which a function-call key cannot
+attach: submit it from a full-access key. `verify-deploy.mjs` remains as a read-only check of a
+deployment against a locally built wasm (`DOCKSIDE_NEAR_RPC_URL=... node scripts/testnet-deploy/verify-deploy.mjs <escrow>.testnet`).
