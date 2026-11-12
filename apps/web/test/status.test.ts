@@ -247,3 +247,63 @@ describe("refund and destination-change vocabularies (M10)", () => {
     expect(describeStatus("destinationChange", "ACTIVATED").sentence).toMatch(/renewed/);
   });
 });
+
+describe("unexpected-asset recovery vocabularies (M11)", () => {
+  const dims = {
+    assetRecord: [
+      "ASSET_RECOVERY_REVIEW",
+      "UNRECOVERABLE_OR_REVIEW",
+      "RECOVERY_REQUESTED",
+      "RECOVERY_CHALLENGE_PERIOD",
+      "RECOVERY_SUBMITTED",
+      "RECOVERED",
+    ],
+    assetRecovery: [
+      "REQUESTED",
+      "CHALLENGE_PERIOD",
+      "SUBMITTING",
+      "UNKNOWN",
+      "SUBMITTED",
+      "REVIEW",
+      "RECOVERED",
+      "FAILED",
+      "CHALLENGED",
+      "REVOKED",
+    ],
+    assetOperation: [
+      "QUEUED",
+      "SUBMITTING",
+      "UNKNOWN",
+      "PROCESSING",
+      "RECOVERED",
+      "FAILED",
+      "NOT_SUBMITTED",
+      "REVIEW",
+    ],
+  } as const;
+  const paid = describeStatus("payoutState", "PAID");
+  for (const [dim, states] of Object.entries(dims) as [keyof typeof dims, readonly string[]][]) {
+    it(`${dim}: every state is known, distinct, never positive and never shares the paid icon`, () => {
+      const labels = states.map((s) => describeStatus(dim, s).label);
+      expect(new Set(labels).size).toBe(states.length);
+      for (const s of states) {
+        const m = describeStatus(dim, s);
+        expect(m.label, s).not.toMatch(/^Unrecognized/);
+        expect(m.tone, s).not.toBe("positive");
+        expect(m.icon, s).not.toBe(paid.icon);
+      }
+    });
+  }
+  it("unknown and submitted recoveries are locked and say no retry exists", () => {
+    for (const s of ["SUBMITTING", "UNKNOWN", "SUBMITTED"]) {
+      const m = describeStatus("assetRecovery", s);
+      expect(m.locked, s).toBe(true);
+      expect(m.sentence, s).toMatch(/No retry/);
+    }
+    expect(describeStatus("assetRecovery", "UNKNOWN").tone).toBe("unknown");
+    expect(describeStatus("assetRecovery", "FAILED").sentence).toMatch(/new request/);
+    expect(describeStatus("assetRecord", "ASSET_RECOVERY_REVIEW").sentence).toMatch(
+      /never credited as native NEAR/,
+    );
+  });
+});

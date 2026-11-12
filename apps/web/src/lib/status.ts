@@ -69,7 +69,10 @@ export type Dimension =
   | "recoveryStatus"
   | "enrollmentStatus"
   | "bindingIssue"
-  | "attestorCoverage";
+  | "attestorCoverage"
+  | "assetRecord"
+  | "assetRecovery"
+  | "assetOperation";
 
 const LOCK = "Value stays reserved. No retry, exit or terminal override is available.";
 
@@ -87,6 +90,9 @@ export const VOCABULARY: Record<
     | "enrollmentStatus"
     | "bindingIssue"
     | "attestorCoverage"
+    | "assetRecord"
+    | "assetRecovery"
+    | "assetOperation"
   >,
   Record<string, StatusMeaning>
 > = {
@@ -645,7 +651,194 @@ const DESTINATION_CHANGE: Record<string, StatusMeaning> = {
   },
 };
 
+/* ------------------------------------------------------------------------- */
+/* Unexpected-asset recovery (M11): asset record, recovery and its journal.  */
+/* None of these is native-NEAR value; none can look paid.                    */
+/* ------------------------------------------------------------------------- */
+
+const ASSET_LOCK = "The exact asset stays locked on the contract. No retry or override is available.";
+
+/** Contract asset-record states (`get_unexpected_assets`). */
+const ASSET_RECORD: Record<string, StatusMeaning> = {
+  ASSET_RECOVERY_REVIEW: {
+    label: "In asset recovery review",
+    tone: "warning",
+    icon: "review",
+    sentence: "Recorded, never credited as native NEAR. Leaves only through the separate recovery policy.",
+  },
+  UNRECOVERABLE_OR_REVIEW: {
+    label: "No safe adapter: unrecoverable or review",
+    tone: "warning",
+    icon: "blocked",
+    sentence:
+      "This contract has no safe recovery adapter for the asset standard. It stays recorded in review.",
+  },
+  RECOVERY_REQUESTED: {
+    label: "Sender requested recovery",
+    tone: "warning",
+    icon: "pending",
+    sentence:
+      "The claimed sender's own account requested recovery to itself; risk/policy approval is pending.",
+  },
+  RECOVERY_CHALLENGE_PERIOD: {
+    label: "Approved; 72-hour challenge running",
+    tone: "warning",
+    icon: "processing",
+    sentence: "Risk/policy approved. Buyer, supplier, risk/policy or another claimant may still challenge.",
+  },
+  RECOVERY_SUBMITTED: {
+    label: "Recovery submitted; asset locked",
+    tone: "warning",
+    icon: "locked",
+    sentence: `The adapter transfer was submitted once. ${ASSET_LOCK}`,
+    locked: true,
+  },
+  RECOVERED: {
+    label: "Returned to the proven sender",
+    tone: "neutral",
+    icon: "complete",
+    sentence: "The contract recorded the adapter transfer of the exact observed amount to the proven sender.",
+    terminal: true,
+  },
+};
+
+/** One recovery attempt: contract state, or the journal's UNKNOWN/SUBMITTING while unproven. */
+const ASSET_RECOVERY: Record<string, StatusMeaning> = {
+  REQUESTED: {
+    label: "Requested by the sender",
+    tone: "warning",
+    icon: "pending",
+    sentence: "Awaiting the governing trade's risk/policy approval over a read-only validation.",
+  },
+  CHALLENGE_PERIOD: {
+    label: "Challenge window open",
+    tone: "warning",
+    icon: "processing",
+    sentence: "Execution is possible only after the contract's 72-hour deadline and without a challenge.",
+  },
+  SUBMITTING: {
+    label: "Execution being submitted",
+    tone: "warning",
+    icon: "processing",
+    sentence: `The execution transaction is persisted and being broadcast. ${ASSET_LOCK}`,
+    locked: true,
+  },
+  UNKNOWN: {
+    label: "Execution outcome unknown",
+    tone: "unknown",
+    icon: "unknown",
+    sentence: `The outcome is not yet proven; reconciliation uses the original transaction. ${ASSET_LOCK}`,
+    locked: true,
+  },
+  SUBMITTED: {
+    label: "Adapter transfer pending",
+    tone: "warning",
+    icon: "locked",
+    sentence: `The contract submitted the token transfer and awaits its outcome. ${ASSET_LOCK}`,
+    locked: true,
+  },
+  REVIEW: {
+    label: "Contradictory evidence: review",
+    tone: "negative",
+    icon: "review",
+    sentence: "Token balances contradict the contract record. Nothing here can force an outcome.",
+    locked: true,
+  },
+  RECOVERED: {
+    label: "Recovered to the proven sender",
+    tone: "neutral",
+    icon: "complete",
+    sentence: "The token contract accepted the transfer of the exact observed amount to the proven sender.",
+    terminal: true,
+  },
+  FAILED: {
+    label: "Adapter transfer refused",
+    tone: "negative",
+    icon: "failed",
+    sentence:
+      "The token contract reverted the transfer (no transfer). The asset is back in review; a new request is required.",
+    terminal: true,
+  },
+  CHALLENGED: {
+    label: "Challenged; back in review",
+    tone: "neutral",
+    icon: "review",
+    sentence: "A challenge ended this recovery before execution. Ownership stays unresolved in review.",
+    terminal: true,
+  },
+  REVOKED: {
+    label: "Revoked before execution",
+    tone: "neutral",
+    icon: "cancelled",
+    sentence: "The claimed sender or risk/policy revoked this recovery; the asset is back in review.",
+    terminal: true,
+  },
+};
+
+/** Asset-recovery journal operation states (0007_asset_recoveries.sql). */
+const ASSET_OPERATION: Record<string, StatusMeaning> = {
+  QUEUED: {
+    label: "Queued for the worker",
+    tone: "neutral",
+    icon: "pending",
+    sentence: "Persisted; not yet signed or sent.",
+  },
+  SUBMITTING: {
+    label: "Signed and persisted; broadcasting",
+    tone: "warning",
+    icon: "processing",
+    sentence: "The signed transaction and its hash were stored before broadcast.",
+    locked: true,
+  },
+  UNKNOWN: {
+    label: "Broadcast outcome unknown",
+    tone: "unknown",
+    icon: "unknown",
+    sentence: "Reconciling the original transaction by its hash; no new transaction is sent.",
+    locked: true,
+  },
+  PROCESSING: {
+    label: "Awaiting adapter outcome",
+    tone: "warning",
+    icon: "processing",
+    sentence: "The contract submitted the transfer; its callback has not settled yet.",
+    locked: true,
+  },
+  RECOVERED: {
+    label: "Settled: recovered",
+    tone: "neutral",
+    icon: "complete",
+    sentence: "Contract RECOVERED and the escrow token balance dropped by at least the exact amount.",
+    terminal: true,
+  },
+  FAILED: {
+    label: "Settled: adapter reverted",
+    tone: "negative",
+    icon: "failed",
+    sentence: "Authoritative no-transfer. This recovery cannot be retried.",
+    terminal: true,
+  },
+  NOT_SUBMITTED: {
+    label: "Execution did not take effect",
+    tone: "neutral",
+    icon: "cancelled",
+    sentence:
+      "The contract refused the call or the transaction expired un-included. A new execution may be requested.",
+    terminal: true,
+  },
+  REVIEW: {
+    label: "Journal review",
+    tone: "negative",
+    icon: "review",
+    sentence: "Evidence contradicts the contract record. No transition out of review exists here.",
+    locked: true,
+  },
+};
+
 const EXTRA: Partial<Record<Dimension, Record<string, StatusMeaning>>> = {
+  assetRecord: ASSET_RECORD,
+  assetRecovery: ASSET_RECOVERY,
+  assetOperation: ASSET_OPERATION,
   releaseIntentState: RELEASE_INTENT,
   operationState: OPERATION,
   refundState: REFUND_STATE,

@@ -42,6 +42,9 @@ const executablePath = chromiumPath();
 
 export default defineConfig({
   testDir: "./e2e",
+  // The unexpected-asset recovery spec moves the simulated chain clock 72 hours; it runs on its own
+  // stack (playwright.assets.config.ts) so this suite's chain clock is untouched.
+  testIgnore: ["asset-recovery.spec.ts"],
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
