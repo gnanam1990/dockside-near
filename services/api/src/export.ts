@@ -361,8 +361,9 @@ export function buildAuditExport(
         if (typeof v === "string") accounts.add(v);
     }
     for (const o of operations) if (typeof o["recipient"] === "string") accounts.add(o["recipient"]);
-    const ledger = (opts.observedChain as { ledger?: { funders?: Record<string, unknown> } } | null)?.ledger;
-    for (const f of Object.keys(ledger?.funders ?? {})) accounts.add(f);
+    // Contract views can name accounts no API record holds yet (proposed, revoked, expired or
+    // activated-but-unbound destination changes), so they feed the mask set too.
+    for (const acct of chainAccounts(opts.observedChain)) accounts.add(acct);
     for (const i of releaseIntents)
       for (const sl of (i["slices"] as { funder?: string }[] | undefined) ?? [])
         if (typeof sl.funder === "string") accounts.add(sl.funder);
@@ -370,6 +371,38 @@ export function buildAuditExport(
     normalised = maskAccounts(normalised, [...accounts]) as Omit<AuditExport, "checksum">;
   }
   return { ...normalised, checksum: exportChecksum(normalised) };
+}
+
+/** Every party, funder and destination account named by the embedded contract views. */
+function chainAccounts(observed: unknown): string[] {
+  type Change = { fromDestination?: unknown; toDestination?: unknown } | null | undefined;
+  const v = (observed ?? {}) as {
+    trade?: { buyerAccount?: unknown; supplierAccount?: unknown; payoutDestination?: unknown } | null;
+    ledger?: { funders?: Record<string, unknown>; deposits?: { funder?: unknown }[] } | null;
+    refunds?: { funder?: unknown }[] | null;
+    release?: {
+      payoutDestination?: unknown;
+      intents?: { destination?: unknown; slices?: { funder?: unknown }[] }[];
+      pendingDestinationChange?: Change;
+      destinationHistory?: Change[];
+    } | null;
+  };
+  const out: unknown[] = [
+    v.trade?.buyerAccount,
+    v.trade?.supplierAccount,
+    v.trade?.payoutDestination,
+    v.release?.payoutDestination,
+    ...Object.keys(v.ledger?.funders ?? {}),
+    ...(v.ledger?.deposits ?? []).map((d) => d.funder),
+    ...(Array.isArray(v.refunds) ? v.refunds : []).map((r) => r.funder),
+  ];
+  for (const i of v.release?.intents ?? []) {
+    out.push(i.destination);
+    for (const s of i.slices ?? []) out.push(s.funder);
+  }
+  for (const ch of [v.release?.pendingDestinationChange, ...(v.release?.destinationHistory ?? [])])
+    out.push(ch?.fromDestination, ch?.toDestination);
+  return out.filter((a): a is string => typeof a === "string" && a.length > 0);
 }
 
 export type DestinationMode = "MASKED" | "FULL";
