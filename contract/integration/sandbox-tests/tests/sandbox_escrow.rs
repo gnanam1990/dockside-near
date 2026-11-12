@@ -63,9 +63,9 @@ async fn funded_and_inspected(d: &mut Dock) -> Result<()> {
     let p = policy_args(d.rec());
     d.ok(&relayer, "register_evidence_policy", p, 0).await?;
     let (buyer, treasury, t) = (d.buyer.clone(), d.treasury.clone(), d.trade_id());
-    let f = d.ok(&buyer, "fund", fund_args(&t), 3 * NEAR).await?;
+    let f = d.ok(&buyer, "fund", fund_args(&t, &d.rec().terms_digest), 3 * NEAR).await?;
     assert_eq!(f.value["fullyFunded"], json!(false));
-    let f = d.ok(&treasury, "fund", fund_args(&t), 2 * NEAR).await?;
+    let f = d.ok(&treasury, "fund", fund_args(&t, &d.rec().terms_digest), 2 * NEAR).await?;
     assert_eq!(f.value["fullyFunded"], json!(true));
     let now = d.now().await?;
     let att = attestation_args(&d.fx, d.rec(), next_manifest_revision(d.rec()), now, "m1");
@@ -89,12 +89,14 @@ async fn t007_t019_t022_funding_and_direct_release_of_the_exact_value_to_the_bou
     let p = policy_args(d.rec());
     d.ok(&relayer, "register_evidence_policy", p, 0).await?;
     // A deposit below the minimum and a deposit to an unknown trade are refused; value returns.
-    assert_eq!(d.refused(&buyer, "fund", fund_args(&t), 1).await?, "INVALID_AMOUNT");
-    assert_eq!(d.refused(&buyer, "fund", fund_args("trd_00000000000000000000000000000000"), NEAR).await?, "NOT_FOUND");
-    d.ok(&buyer, "fund", fund_args(&t), 3 * NEAR).await?;
-    d.ok(&treasury, "fund", fund_args(&t), 2 * NEAR).await?;
+    assert_eq!(d.refused(&buyer, "fund", fund_args(&t, &d.rec().terms_digest), 1).await?, "INVALID_AMOUNT");
+    assert_eq!(d.refused(&buyer, "fund", fund_args("trd_00000000000000000000000000000000", &d.rec().terms_digest), NEAR).await?, "NOT_FOUND");
+    // A deposit naming another revision digest (a trade id squatted with other terms) is refused.
+    assert_eq!(d.refused(&buyer, "fund", fund_args(&t, &"00".repeat(32)), NEAR).await?, "STALE_REVISION");
+    d.ok(&buyer, "fund", fund_args(&t, &d.rec().terms_digest), 3 * NEAR).await?;
+    d.ok(&treasury, "fund", fund_args(&t, &d.rec().terms_digest), 2 * NEAR).await?;
     // Excess from the same funder is QUARANTINED, never counted toward the release.
-    let x = d.ok(&treasury, "fund", fund_args(&t), NEAR).await?;
+    let x = d.ok(&treasury, "fund", fund_args(&t, &d.rec().terms_digest), NEAR).await?;
     assert_eq!(x.value["quarantined"], json!(NEAR.to_string()));
     let ledger = d.view("get_ledger", json!({ "trade_id": t })).await?;
     assert_eq!(ledger["totals"]["available"], json!((5 * NEAR).to_string()));
@@ -154,8 +156,8 @@ async fn t008_t009_refunds_return_exact_value_to_the_original_funder_only() -> R
     let t = d.trade_id();
     let reg = register_args(&d.fx);
     d.ok(&relayer, "register_trade", reg, 0).await?;
-    d.ok(&buyer, "fund", fund_args(&t), 3 * NEAR).await?;
-    d.ok(&treasury, "fund", fund_args(&t), 3 * NEAR).await?;
+    d.ok(&buyer, "fund", fund_args(&t, &d.rec().terms_digest), 3 * NEAR).await?;
+    d.ok(&treasury, "fund", fund_args(&t, &d.rec().terms_digest), 3 * NEAR).await?;
     // Treasury overfunded by 1 NEAR: QUARANTINED for that funder.
     let ledger = d.view("get_ledger", json!({ "trade_id": t })).await?;
     assert_eq!(ledger["funders"][treasury.id().as_str()]["quarantined"], json!(NEAR.to_string()));
@@ -261,7 +263,7 @@ async fn t051_unexpected_nep141_returns_to_the_proven_sender_after_the_72_hour_w
     let reg = register_args(&d.fx);
     d.ok(&relayer, "register_trade", reg, 0).await?;
     let (buyer, t) = (d.buyer.clone(), d.trade_id());
-    d.ok(&buyer, "fund", fund_args(&t), 5 * NEAR).await?;
+    d.ok(&buyer, "fund", fund_args(&t, &d.rec().terms_digest), 5 * NEAR).await?;
     let ledger_before = d.view("get_ledger", json!({ "trade_id": t })).await?;
 
     // A real NEP-141 contract; the sender holds the whole supply.

@@ -216,9 +216,16 @@ describe("JsonRpcNearClient", () => {
       });
     const escrow = new EscrowContract(client(), "dockside-escrow.testnet");
     expect(await code(escrow.getTrade("trd_x"))).toBe("VALIDATION_FAILED");
-    expect(() => escrow.fundCall("trd_x", 0n)).toThrow(expect.objectContaining({ code: "INVALID_AMOUNT" }));
-    expect(escrow.fundCall("trd_x", 5n)).toMatchObject({
+    const digest = "ab".repeat(32);
+    expect(() => escrow.fundCall("trd_x", digest, 0n)).toThrow(
+      expect.objectContaining({ code: "INVALID_AMOUNT" }),
+    );
+    expect(() => escrow.fundCall("trd_x", "AB", 5n)).toThrow(
+      expect.objectContaining({ code: "VALIDATION_FAILED" }),
+    );
+    expect(escrow.fundCall("trd_x", digest, 5n)).toMatchObject({
       methodName: "fund",
+      args: { trade_id: "trd_x", terms_digest: digest },
       depositYocto: "5",
       receiverId: "dockside-escrow.testnet",
     });

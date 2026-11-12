@@ -195,9 +195,11 @@ function Funding() {
                 <Callout tone="neutral" icon="pending" title="How funding happens" headingLevel={3}>
                   <p>
                     A funder sends a <code>fund</code> call with an attached deposit to{" "}
-                    <code>{tr.escrowContractId}</code> on {tr.network} from its own NEAR account. This build
-                    has no wallet connector (BLOCKED); the contract records each deposit against the original
-                    funder.
+                    <code>{tr.escrowContractId}</code> on {tr.network} from its own NEAR account, naming{" "}
+                    <code>terms_digest</code> <code>{tr.termsDigest}</code>, the revision both parties signed.
+                    The contract refuses (and returns) a deposit whose digest differs from the trade it
+                    reaches. This build has no wallet connector (BLOCKED); the contract records each deposit
+                    against the original funder.
                   </p>
                 </Callout>
               ) : null}

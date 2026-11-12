@@ -139,7 +139,10 @@ impl TradeRecord {
     }
 
     /// Revoke the key bound to `role` for this revision. Revocation only removes authority, so
-    /// it may be signed by the key itself or, for non-party roles, by either trade party.
+    /// it may be signed by the key itself or, for non-party roles other than the risk resolver,
+    /// by either trade party. The risk resolver is the only principal that can RESOLVE a hold
+    /// (and authorize the hold-dependent refunds), so one party alone revoking it could strand
+    /// the escrow behind an unresolved hold; replacing it takes a dual-consented key rebinding.
     pub fn revoke_key(&mut self, ctx: &Ctx<'_>, payload: &J, signature: &str) -> R<String> {
         let v = decode(payload)?;
         let o = Obj::exact(
@@ -162,6 +165,7 @@ impl TradeRecord {
         };
         if signer != "SELF" {
             ensure(role != "buyer" && role != "supplier", "FORBIDDEN", "a party cannot revoke the other party's key")?;
+            ensure(role != "riskResolver", "FORBIDDEN", "a party alone cannot revoke the risk resolver key; rebind it with both parties' consent")?;
         }
         let reason = o.str("reasonCode")?;
         ensure(!reason.is_empty() && reason.len() <= 64, "VALIDATION_FAILED", "reasonCode required")?;

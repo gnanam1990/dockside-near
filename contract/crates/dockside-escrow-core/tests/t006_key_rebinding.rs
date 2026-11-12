@@ -236,7 +236,7 @@ fn t006_revoked_role_is_cleared_only_for_the_rebound_role_and_a_revoked_anchor_b
     // The inspector key is revoked on chain; a rebinding to its new key clears that mark.
     let (w, mut rec) = ready();
     revoke(&w, &mut rec, "inspector", "BUYER", "buyer", "ri");
-    revoke(&w, &mut rec, "riskResolver", "BUYER", "buyer", "rr");
+    revoke(&w, &mut rec, "riskResolver", "SELF", "risk", "rr");
     let t = rebound(&rec, &evidence_terms(), &[("inspector", "inspector-2")]);
     let d = propose_rb(&w, &mut rec, &t, "BUYER", "buyer").unwrap();
     consent_rb(&w, &mut rec, &t, "SUPPLIER", "supplier").unwrap();
