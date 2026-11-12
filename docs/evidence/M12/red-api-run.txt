@@ -1,0 +1,156 @@
+
+ RUN  v4.1.12 <home>/Documents/Codex/Projects/wt/dockside-m12
+
+(node:41520) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ services/api/test/m12-key-management.test.ts (8 tests | 8 failed) 740ms
+     × a security admin sees its own organization's principals, keys, services and recoveries 18ms
+     × non-admins and other organizations cannot read the directory 3ms
+     × every principal reads only its own key history 9ms
+     × lists only the roles bound to the caller's organization, all current 14ms
+     × is listed for the trade as SCOPE_MISMATCH and not bound 70ms
+     × supersedes the bound version, invalidates the attestation and flags the trade 53ms
+     × the buyer's old version is SUPERSEDED, the new session is not the bound key 54ms
+     × a different admin starts, the principal proves, the delay holds, completion revokes the bound key 55ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > organization directory and own keys > a security admin sees its own organization's principals, keys, services and recoveries
+AssertionError: {"error":{"code":"NOT_FOUND","message":"no such endpoint","details":{}}}: expected 404 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 404
+
+ ❯ services/api/test/m12-key-management.test.ts:67:30
+     65|   it("a security admin sees its own organization's principals, keys, s…
+     66|     const r = await a.http(actor("buyerAdmin"), "GET", "/v1/organizati…
+     67|     expect(r.status, r.text).toBe(200);
+       |                              ^
+     68|     const d = r.json;
+     69|     expect(d.organization.id).toBe(actor("buyerAdmin").organizationId);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > organization directory and own keys > non-admins and other organizations cannot read the directory
+AssertionError: buyer: expected 404 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 404
+
+ ❯ services/api/test/m12-key-management.test.ts:88:30
+     86|     for (const role of ["buyer", "supplier", "inspector", "risk"]) {
+     87|       const r = await a.http(actor(role), "GET", "/v1/organization/dir…
+     88|       expect(r.status, role).toBe(403);
+       |                              ^
+     89|       expect(r.json.error.code).toBe("FORBIDDEN");
+     90|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > organization directory and own keys > every principal reads only its own key history
+AssertionError: {"error":{"code":"NOT_FOUND","message":"no such endpoint","details":{}}}: expected 404 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 404
+
+ ❯ services/api/test/m12-key-management.test.ts:100:30
+     98|   it("every principal reads only its own key history", async () => {
+     99|     const r = await a.http(actor("supplier"), "GET", "/v1/me/keys");
+    100|     expect(r.status, r.text).toBe(200);
+       |                              ^
+    101|     expect(r.json.principalId).toBe(actor("supplier").principalId);
+    102|     expect(r.json.currentKeyVersionId).toBe(actor("supplier").keyVersi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > trade-binding impact before any change > lists only the roles bound to the caller's organization, all current
+AssertionError: {"error":{"code":"NOT_FOUND","message":"no such endpoint","details":{}}}: expected 404 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 404
+
+ ❯ bindingsFor services/api/test/m12-key-management.test.ts:57:28
+     55| async function bindingsFor(admin: Actor) {
+     56|   const r = await a.http(admin, "GET", "/v1/organization/trade-binding…
+     57|   expect(r.status, r.text).toBe(200);
+       |                            ^
+     58|   return r.json.trades.find((t: { tradeId: string }) => t.tradeId === …
+     59|     requiresNewRevision: boolean;
+ ❯ services/api/test/m12-key-management.test.ts:110:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > wrong attestor scope: an attestor enrolled for another policy revision > is listed for the trade as SCOPE_MISMATCH and not bound
+TypeError: Cannot read properties of undefined (reading 'find')
+ ❯ services/api/test/m12-key-management.test.ts:160:26
+    158|       activeKeyVersion: number;
+    159|     }[];
+    160|     const other = listed.find((x) => x.enrollmentId === e.json.enrollm…
+       |                          ^
+    161|     expect(other).toMatchObject({ boundByRevision: false, coverage: "S…
+    162|     const bound = listed.find((x) => x.boundByRevision);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > a rotated ManifestAttestor key (wrong key version) requires a new trade revision > supersedes the bound version, invalidates the attestation and flags the trade
+AssertionError: {"error":{"code":"NOT_FOUND","message":"no such endpoint","details":{}}}: expected 404 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 404
+
+ ❯ bindingsFor services/api/test/m12-key-management.test.ts:57:28
+     55| async function bindingsFor(admin: Actor) {
+     56|   const r = await a.http(admin, "GET", "/v1/organization/trade-binding…
+     57|   expect(r.status, r.text).toBe(200);
+       |                            ^
+     58|   return r.json.trades.find((t: { tradeId: string }) => t.tradeId === …
+     59|     requiresNewRevision: boolean;
+ ❯ services/api/test/m12-key-management.test.ts:190:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > a rotated human key requires a new trade revision > the buyer's old version is SUPERSEDED, the new session is not the bound key
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ services/api/test/m12-key-management.test.ts:227:27
+    225|     const fresh = await login(buyer.principalId, key);
+    226|     const mine = await a.http(fresh, "GET", "/v1/me/keys");
+    227|     expect(mine.json.keys.map((k: { status: string }) => k.status)).to…
+       |                           ^
+    228|     const b = await bindingsFor(actor("buyerAdmin"));
+    229|     expect(b.roles.find((r) => r.role === "buyer")).toMatchObject({ ke…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  services/api/test/m12-key-management.test.ts > a recovered human key requires a new trade revision > a different admin starts, the principal proves, the delay holds, completion revokes the bound key
+TypeError: Cannot read properties of undefined (reading 'find')
+ ❯ services/api/test/m12-key-management.test.ts:258:37
+    256|     expect(proved.status, proved.text).toBe(201);
+    257|     const dir = await a.http(admin, "GET", "/v1/organization/directory…
+    258|     const rec = dir.json.recoveries.find((r: { id: string }) => r.id =…
+       |                                     ^
+    259|     expect(rec).toMatchObject({ status: "WAITING", principalId: risk.p…
+    260|     const early = await a.http(admin, "POST", `/v1/recoveries/${recove…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  06:38:02
+   Duration  1.94s (transform 420ms, setup 0ms, import 1.03s, tests 740ms, environment 0ms)
+

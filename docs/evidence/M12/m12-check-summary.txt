@@ -1,0 +1,25 @@
+> dockside@0.1.0 check <home>\Documents\Codex\Projects\wt\dockside-m12
+> pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run security
+> dockside@0.1.0 format:check <home>\Documents\Codex\Projects\wt\dockside-m12
+> biome format .
+Checked 158 files in 47ms. No fixes applied.
+> dockside@0.1.0 lint <home>\Documents\Codex\Projects\wt\dockside-m12
+> biome lint .
+Checked 159 files in 70ms. No fixes applied.
+> dockside@0.1.0 typecheck <home>\Documents\Codex\Projects\wt\dockside-m12
+> tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json && pnpm --filter @dockside/web run typecheck
+> @dockside/web@0.1.0 typecheck <home>\Documents\Codex\Projects\wt\dockside-m12\apps\web
+> tsc -p tsconfig.json && tsc -p tsconfig.node.json
+> dockside@0.1.0 pretest <home>\Documents\Codex\Projects\wt\dockside-m12
+> pnpm run build && pnpm run contract:build
+> dockside@0.1.0 build <home>\Documents\Codex\Projects\wt\dockside-m12
+> tsc -b tsconfig.build.json
+> dockside@0.1.0 contract:build <home>\Documents\Codex\Projects\wt\dockside-m12
+> node scripts/build-contract.mjs
+> dockside@0.1.0 test <home>\Documents\Codex\Projects\wt\dockside-m12
+> vitest run
+ Test Files  37 passed (37)
+      Tests  403 passed (403)
+> dockside@0.1.0 security <home>\Documents\Codex\Projects\wt\dockside-m12
+> node scripts/secret-scan.mjs
+secret-scan: 318 files clean
