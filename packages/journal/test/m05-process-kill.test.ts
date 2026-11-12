@@ -8,6 +8,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { tradeRevisionDigest } from "@dockside/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { approve, dualCancel, evidenceReady, lockIntent } from "../../release/test/chain.js";
 import {
@@ -293,7 +294,10 @@ describe("T-057 refund submit and reconciliation boundaries survive process kill
   ] as const) {
     it(`kill at refund ${boundary}: restart refunds the original funder exactly once (or never, if not broadcast)`, async () => {
       w = await jworld();
-      w.c.ok(w.c.escrow.fundCall(w.c.t, 2n * NEAR), TREASURY);
+      w.c.ok(
+        w.c.escrow.fundCall(w.c.t, tradeRevisionDigest(w.c.w.evidence.terms(w.c.t)), 2n * NEAR),
+        TREASURY,
+      );
       const rid = await excessRefund(w);
       await authorizeAfterDelay(w, rid);
       const balance = w.c.sim.balance(TREASURY);

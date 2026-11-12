@@ -52,6 +52,7 @@ import {
   type TypedJson,
   toHex,
   toTypedJson,
+  tradeRevisionDigest,
 } from "@dockside/core";
 import { EvidenceService, HoldService, LocalObjectStore } from "@dockside/evidence";
 import {
@@ -644,10 +645,13 @@ async function main(): Promise<void> {
           return json(res, 200, { signature: await signer.sign("SERVICE_POP_CHALLENGE", payload as never) });
         }
         if (req.method === "POST" && url.pathname === "/control/fund") {
-          // A funder's wallet sends the deposit itself (predecessor = funder account).
+          // A funder's wallet sends the deposit itself (predecessor = funder account), naming the
+          // trade revision digest the API binds (or the one the caller passes).
           const b = await readBody(req);
           const from = String(b["from"] ?? BUYER_ACCT);
-          const call = escrow.fundCall(String(b["tradeId"]), BigInt(String(b["amountYocto"])));
+          const tradeId = String(b["tradeId"]);
+          const digest = String(b["termsDigest"] ?? tradeRevisionDigest(evidence.terms(tradeId)));
+          const call = escrow.fundCall(tradeId, digest, BigInt(String(b["amountYocto"])));
           return json(res, 200, await submit(from, call));
         }
         if (req.method === "POST" && url.pathname === "/control/funder-call") {

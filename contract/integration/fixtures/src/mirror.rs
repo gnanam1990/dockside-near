@@ -141,7 +141,8 @@ impl Mirror {
             }
             "fund" => {
                 let min = self.min_deposit;
-                let o = self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.fund(ctx, c.deposit, min))?;
+                let digest = arg_str(a, "terms_digest")?;
+                let o = self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.fund_exact(ctx, &digest, c.deposit, min))?;
                 Ok(json!({
                     "index": o.index, "accepted": o.accepted.to_string(),
                     "quarantined": o.quarantined.to_string(), "fullyFunded": o.fully_funded,

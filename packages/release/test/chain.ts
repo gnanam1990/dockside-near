@@ -12,6 +12,7 @@ import {
   signFor,
   type TypedJson,
   toTypedJson,
+  tradeRevisionDigest,
   tradeTermsCanonical,
 } from "@dockside/core";
 import {
@@ -155,8 +156,8 @@ export async function chain(opts: { policy?: EvidencePolicyInput } = {}): Promis
 }
 
 export function fund(c: Chain): void {
-  c.ok(c.escrow.fundCall(c.t, 6n * NEAR), BUYER_ACCT);
-  c.ok(c.escrow.fundCall(c.t, 4n * NEAR), TREASURY);
+  c.ok(c.escrow.fundCall(c.t, tradeRevisionDigest(c.w.evidence.terms(c.t)), 6n * NEAR), BUYER_ACCT);
+  c.ok(c.escrow.fundCall(c.t, tradeRevisionDigest(c.w.evidence.terms(c.t)), 4n * NEAR), TREASURY);
 }
 
 /** Upload, attest (isolated attestor), relay; inspect, record, relay. Returns the manifest digest. */

@@ -1,3 +1,4 @@
+import { tradeRevisionDigest } from "@dockside/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { codeOfAsync } from "../../release/test/chain.js";
 import { postTerminalIncident } from "../src/index.js";
@@ -111,7 +112,10 @@ describe("M26 unavailable contract read during the post-terminal watch", () => {
 
   it("REFUNDED refund: one failed refunds view opens no incident", async () => {
     w = await jworld();
-    w!.c.ok(w!.c.escrow.fundCall(w!.c.t, 2n * NEAR), TREASURY);
+    w!.c.ok(
+      w!.c.escrow.fundCall(w!.c.t, tradeRevisionDigest(w!.c.w.evidence.terms(w!.c.t)), 2n * NEAR),
+      TREASURY,
+    );
     const rid = await excessRefund(w);
     await authorizeAfterDelay(w, rid);
     const { operationId } = await w!.svc.enqueueRefund(w!.c.t, rid);

@@ -466,10 +466,17 @@ export class EscrowContract {
     );
   }
 
-  /** Native NEAR deposit from the signing wallet; that account becomes the deposit's original funder. */
-  fundCall(tradeId: string, amountYocto: bigint): FunctionCall {
+  /**
+   * Native NEAR deposit from the signing wallet; that account becomes the deposit's original funder.
+   * `termsDigest` is the trade revision digest the funder agreed to: the contract refuses the deposit
+   * (and returns it) when the record under `tradeId` binds another digest, for example a trade id
+   * registered first by someone else with other terms.
+   */
+  fundCall(tradeId: string, termsDigest: string, amountYocto: bigint): FunctionCall {
     if (amountYocto <= 0n) fail("INVALID_AMOUNT", "deposit must be positive");
-    return this.call("fund", { trade_id: tradeId }, 30n, amountYocto);
+    if (!/^[0-9a-f]{64}$/.test(termsDigest))
+      fail("VALIDATION_FAILED", "termsDigest must be 64 lowercase hex characters");
+    return this.call("fund", { trade_id: tradeId, terms_digest: termsDigest }, 30n, amountYocto);
   }
 
   /** Store the EvidencePolicy whose digest the registered revision binds (anyone may relay it). */

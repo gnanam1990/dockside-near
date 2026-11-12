@@ -9,7 +9,7 @@
  * native-ledger drift. Simulated: the chain, the token and the relayer signer, not testnet.
  */
 import { fileURLToPath } from "node:url";
-import { randomIds, systemClock } from "@dockside/core";
+import { randomIds, systemClock, tradeRevisionDigest } from "@dockside/core";
 import { AssetRecoveryJournal } from "@dockside/journal";
 import { afterEach, describe, expect, it } from "vitest";
 import { killAll, killAt, runToEnd, startProcess } from "../../../packages/journal/test/proc.js";
@@ -83,7 +83,7 @@ async function queueBoth(): Promise<Queued> {
   expect(c.exec(await requestCall(aw, 0, k.h.clock.now()), SENDER).ok).toBe(true);
   expect((await approve(aw, 0, "risk", k.h.clock.now())).ok).toBe(true);
   // The treasury's 2 NEAR excess is quarantined; its own wallet requests the return.
-  c.ok(c.escrow.fundCall(c.t, 2n * NEAR), TREASURY);
+  c.ok(c.escrow.fundCall(c.t, tradeRevisionDigest(c.w.evidence.terms(c.t)), 2n * NEAR), TREASURY);
   const rid = await excessRefund(w);
   await authorizeAfterDelay(w, rid);
   const { operationId: refundOp } = await w.svc.enqueueRefund(c.t, rid);

@@ -207,7 +207,7 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
     // Re-registration and tampered terms fail.
     expect(panicCode(register(w))).toBe("INVALID_STATE");
 
-    const fund = w.exec(w.escrow.fundCall(w.terms.tradeId, 10n * NEAR), BUYER);
+    const fund = w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 10n * NEAR), BUYER);
     expect(fund.ok, fund.error ?? "").toBe(true);
     expect(fund.value).toEqual({
       index: 0,
@@ -223,6 +223,35 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
     expect(trade.ledger.funders[BUYER]?.available).toBe(10n * NEAR);
     expect(trade.ledger.deposits[0]?.funder).toBe(BUYER);
     expect(trade.ledger.conservation).toBe(true);
+  });
+
+  it("a deposit names the agreed terms digest: a trade id registered first with other terms cannot capture it", async () => {
+    // Someone who saw the proposal registers the same trade id first with keys and payout it controls.
+    const k = { buyer: generateEd25519KeyPair(), supplier: generateEd25519KeyPair() };
+    const squat: TradeTerms = {
+      ...w.terms,
+      buyer: { ...w.terms.buyer, publicKey: k.buyer.publicKey },
+      supplier: { ...w.terms.supplier, publicKey: k.supplier.publicKey },
+      payout: { ...w.terms.payout, destination: OTHER as TradeTerms["payout"]["destination"] },
+    };
+    const sc = tradeTermsCanonical(squat);
+    const reg = w.exec(
+      w.escrow.registerTradeCall(
+        termsArg(squat),
+        signFor(k.buyer.privateKey, "TRADE_REVISION", sc),
+        signFor(k.supplier.privateKey, "TRADE_REVISION", sc),
+      ),
+      "relayer.testnet",
+    );
+    expect(reg.ok, reg.error ?? "").toBe(true);
+    expect(panicCode(register(w))).toBe("INVALID_STATE");
+    const before = w.sim.balance(BUYER);
+    // The buyer funds the digest both parties signed: refused, and the deposit returns.
+    const f = w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 10n * NEAR), BUYER);
+    expect(panicCode(f)).toBe("STALE_REVISION");
+    expect(w.sim.balance(BUYER)).toBe(before);
+    expect((await w.escrow.getLedger(w.terms.tradeId)).totals.funded).toBe(0n);
+    expect(w.sim.balance(CONTRACT)).toBe(0n);
   });
 
   it("T-007: tampered terms, wrong signer and a different contract are rejected by the wasm", () => {
@@ -252,12 +281,14 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
 
   it("T-008: partial funding is unavailable, excess is quarantined per funder, failed calls revert", async () => {
     expect(register(w).ok).toBe(true);
-    expect(w.exec(w.escrow.fundCall(w.terms.tradeId, 6n * NEAR), BUYER).ok).toBe(true);
+    expect(
+      w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 6n * NEAR), BUYER).ok,
+    ).toBe(true);
     let l = await w.escrow.getLedger(w.terms.tradeId);
     expect(l.fullyFunded).toBe(false);
     expect(l.totals.available).toBe(0n);
     expect(l.funders[BUYER]?.partial).toBe(6n * NEAR);
-    const o = w.exec(w.escrow.fundCall(w.terms.tradeId, 7n * NEAR), OTHER);
+    const o = w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 7n * NEAR), OTHER);
     expect(o.value).toMatchObject({
       accepted: (4n * NEAR).toString(),
       quarantined: (3n * NEAR).toString(),
@@ -270,21 +301,27 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
     expect(l.totals.funded).toBe(13n * NEAR);
     // Dust below the storage minimum is refused and the deposit returns to the sender.
     const before = w.sim.balance(OTHER);
-    expect(panicCode(w.exec(w.escrow.fundCall(w.terms.tradeId, 1n), OTHER))).toBe("INVALID_AMOUNT");
+    expect(
+      panicCode(w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 1n), OTHER)),
+    ).toBe("INVALID_AMOUNT");
     expect(w.sim.balance(OTHER)).toBe(before);
     expect((await w.escrow.getLedger(w.terms.tradeId)).deposits).toHaveLength(2);
     // Unknown trade.
-    expect(panicCode(w.exec(w.escrow.fundCall(randomIds.next("trd"), NEAR), OTHER))).toBe("NOT_FOUND");
+    expect(
+      panicCode(w.exec(w.escrow.fundCall(randomIds.next("trd"), tradeRevisionDigest(w.terms), NEAR), OTHER)),
+    ).toBe("NOT_FOUND");
     // Expired trade.
     w.sim.nowMs = w.terms.expiresAt;
-    expect(panicCode(w.exec(w.escrow.fundCall(w.terms.tradeId, NEAR), OTHER))).toBe("EXPIRED");
+    expect(
+      panicCode(w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), NEAR), OTHER)),
+    ).toBe("EXPIRED");
     expect(w.sim.balance(CONTRACT)).toBe(13n * NEAR);
   });
 
   it("T-008: excess return executes a native transfer to the original funder only; FAILED restores QUARANTINED", async () => {
     expect(register(w).ok).toBe(true);
-    w.exec(w.escrow.fundCall(w.terms.tradeId, 10n * NEAR), BUYER);
-    w.exec(w.escrow.fundCall(w.terms.tradeId, 2n * NEAR), OTHER);
+    w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 10n * NEAR), BUYER);
+    w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 2n * NEAR), OTHER);
     const b = tradeBinding(w.terms);
     const mk = (id: string) =>
       refundRequestPayload(b, {
@@ -356,7 +393,7 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
 
   it("T-051: token and NFT transfers are recorded for review only and never touch native fields", async () => {
     expect(register(w).ok).toBe(true);
-    w.exec(w.escrow.fundCall(w.terms.tradeId, 10n * NEAR), BUYER);
+    w.exec(w.escrow.fundCall(w.terms.tradeId, tradeRevisionDigest(w.terms), 10n * NEAR), BUYER);
     const ledgerBefore = await w.escrow.getLedger(w.terms.tradeId);
     const ft = w.sim.call(
       "ft_on_transfer",
