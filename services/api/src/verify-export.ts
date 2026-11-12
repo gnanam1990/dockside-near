@@ -2,7 +2,7 @@ import { type CanonicalValue, digestHexFor, verifyFor } from "@dockside/core";
 import { verifyAuditExport } from "./export.js";
 
 /**
- * Offline verification of a signed audit export bundle (ADR-0017). Pure: no database, no network,
+ * Offline verification of a signed audit export bundle (ADR-0018). Pure: no database, no network,
  * no clock. The verifier is given the bundle and the operator's published export keys (the trust
  * anchor, obtained out of band from `GET /v1/audit-export-keys` or `export-key show`) and answers
  * every check separately, so a failure names exactly what does not hold.

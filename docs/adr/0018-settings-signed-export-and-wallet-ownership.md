@@ -1,4 +1,4 @@
-# ADR-0017 — Organization settings, signed audit export and NEP-413 account ownership
+# ADR-0018 — Organization settings, signed audit export and NEP-413 account ownership
 
 - Decision status: accepted (M17)
 - Date: 2026-11-12, Dockside build stage M17
