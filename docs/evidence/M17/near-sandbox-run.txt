@@ -1,4 +1,4 @@
-# pnpm run test:sandbox: nearcore 2.13.4 sandbox in node:22-trixie-slim, Docker inside WSL 2
+# pnpm run test:sandbox after merging main d19860d: nearcore 2.13.4 sandbox in node:22-trixie-slim, Docker inside WSL 2
 
 > dockside@0.1.0 test:sandbox <worktree>
 > node scripts/near-sandbox/run-test.mjs
@@ -9,7 +9,7 @@
 
  Test Files  1 passed (1)
       Tests  3 passed (3)
-   Start at  11:53:13
-   Duration  15.13s (transform 385ms, setup 0ms, import 977ms, tests 13.98s, environment 0ms)
+   Start at  12:25:47
+   Duration  15.43s (transform 467ms, setup 0ms, import 1.19s, tests 14.05s, environment 0ms)
 
 exit=0
