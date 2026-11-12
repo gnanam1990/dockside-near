@@ -653,6 +653,12 @@ export class TradeApi {
   operation(operationId: string) {
     return this.call<OperationView>("getOperation", { params: { id: operationId } });
   }
+  signedAuditExport(tradeId: string) {
+    return this.call<Record<string, unknown>>("signedAuditExport", { params: { id: tradeId } });
+  }
+  auditExportKeys() {
+    return this.call<{ keys: import("../export-verify").ExportKeyEntry[] }>("auditExportKeys");
+  }
   auditExport(tradeId: string, destinations: "masked" | "full" = "masked") {
     return this.call<Record<string, unknown>>("auditExport", {
       params: { id: tradeId },
