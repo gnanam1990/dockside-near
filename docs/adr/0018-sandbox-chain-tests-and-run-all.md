@@ -1,4 +1,4 @@
-# ADR-0017 — Real-chain tests on near-sandbox and the one-command testnet run
+# ADR-0018 — Real-chain tests on near-sandbox and the one-command testnet run
 
 - Decision status: accepted (M16)
 - Date: 2026-11-12, Dockside platform team (M16)
