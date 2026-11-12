@@ -485,6 +485,23 @@ pub fn consent_destination_args(fx: &Fixture, rec: &TradeRecord, dest: &str, rol
     })
 }
 
+/// `revoke_destination_change` arguments for the pending successor to `dest`, signed by `signer`.
+pub fn revoke_destination_args(fx: &Fixture, rec: &TradeRecord, dest: &str, role: &str, signer: &str, now: u64, n: &str) -> J {
+    let t = successor_terms(fx, rec, dest);
+    let p = with_header(
+        rec,
+        &fx.accounts.contract,
+        vec![
+            ("successorDigest", s(&digest_hex("dockside/trade-revision", &t))),
+            ("signerRole", s(role)),
+            ("issuedAt", u(now)),
+            ("expiresAt", u(now + HOUR)),
+            ("nonce", s(&fx.nonce(&format!("destination-revoke/{n}")))),
+        ],
+    );
+    json!({ "trade_id": rec.terms.trade_id, "signature": fx.sign(signer, "dockside/destination-change-revoke", &p), "payload": p })
+}
+
 pub fn activate_destination_args(fx: &Fixture, rec: &TradeRecord, dest: &str) -> J {
     let t = successor_terms(fx, rec, dest);
     json!({ "trade_id": rec.terms.trade_id, "successor_digest": digest_hex("dockside/trade-revision", &t) })
