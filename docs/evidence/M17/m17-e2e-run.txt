@@ -1,18 +1,18 @@
-# pnpm run web:e2e with DOCKSIDE_E2E_*_PORT = 8931 (API), 8932 (web), 4531 (stack), after merging main 294bab3
+# pnpm run web:e2e with DOCKSIDE_E2E_*_PORT = 8931 (API), 8932 (web), 4531 (stack) for all four Playwright configs, after merging main d19860d
 
 > dockside@0.1.0 web:e2e <worktree>
 > pnpm --filter @dockside/web run e2e
 
 
 > @dockside/web@0.1.0 e2e <worktree>\apps\web
-> vite build && playwright test && playwright test -c playwright.assets.config.ts && playwright test -c playwright.reasons.config.ts
+> vite build && playwright test && playwright test -c playwright.assets.config.ts && playwright test -c playwright.reasons.config.ts && playwright test -c playwright.clock.config.ts
 
 vite v8.3.5 building client environment for production...
 transforming...
-✓ 1976 modules transformed.
+✓ 1977 modules transformed.
 rendering chunks...
 computing gzip size...
-dist/index.html                                                     0.53 kB │ gzip:   0.31 kB
+dist/index.html                                                     0.53 kB │ gzip:   0.32 kB
 dist/assets/ibm-plex-mono-vietnamese-400-normal-DDuiU_S-.woff       5.62 kB
 dist/assets/ibm-plex-mono-cyrillic-ext-400-normal-DMdlQ8Kv.woff     5.82 kB
 dist/assets/ibm-plex-mono-vietnamese-400-normal-BulugwFq.woff2      5.86 kB
@@ -48,89 +48,102 @@ dist/assets/ibm-plex-sans-latin-400-normal-CDDApCn2.woff2          22.58 kB
 dist/assets/ibm-plex-sans-latin-600-normal-Cu4Hd6ag.woff           23.87 kB
 dist/assets/ibm-plex-sans-latin-600-normal-CuJfVYMP.woff2          24.25 kB
 dist/assets/index-CaTeMPyZ.css                                     21.24 kB │ gzip:   4.51 kB
-dist/assets/index-CQTKvjQq.js                                     538.20 kB │ gzip: 149.40 kB │ map: 1,942.52 kB
+dist/assets/index-Dn3X5ja0.js                                     555.65 kB │ gzip: 152.31 kB │ map: 1,990.38 kB
 
 [plugin builtin:vite-reporter] 
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 449ms
+✓ built in 3.65s
 
-Running 46 tests using 1 worker
+Running 51 tests using 1 worker
 
-  ok  1 e2e\destination.spec.ts:51:1 › setup: registered, funded, evidence attested, inspector PASS, buyer approved a pre-submit intent (7.3s)
-  ok  2 e2e\destination.spec.ts:66:1 › T-042 UI: non-party, malformed, unchanged and one-sided changes are visibly denied (6.1s)
-  ok  3 e2e\destination.spec.ts:127:1 › T-042 UI: dual consent, the signed delay, activation supersedes every release fact (1.2m)
-  ok  4 e2e\destination.spec.ts:206:1 › T-042 UI: renewed evidence, attestation, inspection and approval pay only the new destination (12.4s)
-  ok  5 e2e\keys.spec.ts:191:1 › M12 the administrator enrolls ManifestAttestor and policy services; custody proves; the locator stays write-only (8.3s)
-  ok  6 e2e\keys.spec.ts:212:1 › M12 buyer and supplier bind the organization's services in a trade; evidence is attested by the enrolled custody key (6.3s)
-  ok  7 e2e\keys.spec.ts:306:1 › T-037 wrong scope and wrong attestor are shown against the trade and never look bound (1.1s)
-  ok  8 e2e\keys.spec.ts:331:1 › T-037 rotating the bound attestor (wrong key version) invalidates the attestation and requires a new trade revision (7.0s)
-  ok  9 e2e\keys.spec.ts:378:1 › M12 the buyer rotates its own key; the old session ends; the trade refuses the new key until a new revision (1.4s)
-  ok 10 e2e\keys.spec.ts:413:1 › M12 delayed recovery: the principal proves on a new device, early completion is refused, completion revokes the bound key (23.1s)
-  ok 11 e2e\keys.spec.ts:490:1 › M12 a principal vetoes a recovery with its existing key; the administrator then revokes a key (3.0s)
-  ok 12 e2e\product.spec.ts:45:1 › T-036 buyer proposes, supplier countersigns in a separate session, contract registers the trade (1.6s)
-  ok 13 e2e\product.spec.ts:116:1 › T-037 evidence slots show the exact predicate and recovery, refuse bad content and preserve work on conflict (8.6s)
-  ok 14 e2e\product.spec.ts:214:1 › T-054 deterministic policy SETs, buyer requests, only the risk session signs RESOLVE; expired-unresolved keeps blocking (1.2m)
-  ok 15 e2e\product.spec.ts:295:1 › T-036 buyer locks and approves; T-038 a lost outcome stays locked and never looks paid; then PAID (25.2s)
-  ok 16 e2e\product.spec.ts:422:1 › T-034 client boundary: no session token, invitation secret or evidence bytes in DOM, storage or accessibility tree (1.3s)
-  ok 17 e2e\product.spec.ts:449:1 › T-040 every trade tab with live data fits, passes axe at every width, at 720 px (200% zoom approximation) and in dark mode (38.6s)
-  ok 18 e2e\refund.spec.ts:68:1 › T-008 UI: excess is quarantined for its funder; only the funder's wallet returns it, revocation restores QUARANTINED (5.8s)
-  ok 19 e2e\refund.spec.ts:154:1 › T-009 UI: a disputed funder return pauses in REVIEW, stays locked and offers no authorization or execution (5.6s)
-  ok 20 e2e\refund.spec.ts:197:1 › T-009/T-010 UI: mutual cancellation needs both signers and the contract clock, then refunds the original funder (19.2s)
-  ok 21 e2e\settings.spec.ts:58:1 › M17 evidence policies: the owning administrator drafts and registers a revision; others read only (1.3s)
-  ok 22 e2e\settings.spec.ts:98:1 › M17 trade for the export: the buyer proposes, the supplier countersigns, the contract registers it (935ms)
-  ok 23 e2e\settings.spec.ts:107:1 › M17 retention: compare-and-swap save, stale administrator refused, auditor read-only, eligibility preview (1.3s)
-  ok 24 e2e\settings.spec.ts:153:1 › M17 integrations: RPC connection test proves connectivity only; 1Click NOT_RUN; export key listed (4.4s)
-  ok 25 e2e\settings.spec.ts:169:1 › M17 signed audit export: verified in the browser, downloaded, and accepted by the offline verifier (1.7s)
-  ok 26 e2e\settings.spec.ts:211:1 › M17 settings screens pass axe and fit at every width, signed in as administrator (6.7s)
-  ok 27 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 375 px (11.0s)
-  ok 28 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 768 px (10.6s)
-  ok 29 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 1024 px (8.6s)
-  ok 30 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 1440 px (11.0s)
-  ok 31 e2e\shell.spec.ts:51:3 › signed out › data routes ask for sign-in instead of showing data (812ms)
-  ok 32 e2e\shell.spec.ts:74:3 › signed in against the real API › bootstrap, then every route is accessible and fits at every viewport (40.7s)
-  ok 33 e2e\shell.spec.ts:87:3 › signed in against the real API › organization and audit render real API data; planned endpoints render the API's own answer (846ms)
-  ok 34 e2e\shell.spec.ts:114:3 › signed in against the real API › invitation is accepted in a separate session and granted later by the administrator (4.7s)
-  ok 35 e2e\shell.spec.ts:157:3 › signed in against the real API › a stored device key signs in again after sign-out (948ms)
-  ok 36 e2e\shell.spec.ts:169:3 › signed in against the real API › create trade validates on blur, focuses a linked error summary and keeps inputs on server refusal (1.0s)
-  ok 37 e2e\shell.spec.ts:210:3 › signed in against the real API › disconnected API freezes data, disables mutations, and reconnects (762ms)
-  ok 38 e2e\shell.spec.ts:228:3 › signed in against the real API › a tampered challenge is refused before any signature (501ms)
-  ok 39 e2e\shell.spec.ts:250:3 › preferences and input modes › skip link is the first tab stop and moves focus to main (240ms)
-  ok 40 e2e\shell.spec.ts:259:3 › preferences and input modes › reduced motion removes transitions (229ms)
-  ok 41 e2e\shell.spec.ts:269:3 › preferences and input modes › dark colour scheme passes contrast and accessibility checks (3.0s)
-  ok 42 e2e\shell.spec.ts:279:3 › preferences and input modes › narrow 720 px viewport (1440 px at 200% zoom) keeps content operable without overflow (2.5s)
-  ok 43 e2e\wallet.spec.ts:128:1 › M17 without a wallet the connector says so and offers no signing (1.2s)
-  ok 44 e2e\wallet.spec.ts:135:1 › M17 T-004 a real NEP-413 wallet signature links the account only when the key is a full-access key on chain (1.9s)
-  ok 45 e2e\wallet.spec.ts:171:1 › M17 the browser refuses a wallet answer for another account; the server refuses another key (720ms)
-  ok 46 e2e\wallet.spec.ts:189:1 › M17 re-check after the key is deleted on chain shows it is no longer owned; the administrator sees the link (2.6s)
+  ok  1 e2e\destination.spec.ts:51:1 › setup: registered, funded, evidence attested, inspector PASS, buyer approved a pre-submit intent (6.6s)
+  ok  2 e2e\destination.spec.ts:66:1 › T-042 UI: non-party, malformed, unchanged and one-sided changes are visibly denied (5.1s)
+  ok  3 e2e\destination.spec.ts:127:1 › T-042 UI: dual consent, the signed delay, activation supersedes every release fact (1.1m)
+  ok  4 e2e\destination.spec.ts:206:1 › T-042 UI: renewed evidence, attestation, inspection and approval pay only the new destination (6.5s)
+  ok  5 e2e\keys.spec.ts:191:1 › M12 the administrator enrolls ManifestAttestor and policy services; custody proves; the locator stays write-only (3.6s)
+  ok  6 e2e\keys.spec.ts:212:1 › M12 buyer and supplier bind the organization's services in a trade; evidence is attested by the enrolled custody key (6.0s)
+  ok  7 e2e\keys.spec.ts:306:1 › T-037 wrong scope and wrong attestor are shown against the trade and never look bound (848ms)
+  ok  8 e2e\keys.spec.ts:331:1 › T-037 rotating the bound attestor (wrong key version) invalidates the attestation and requires a new trade revision (5.6s)
+  ok  9 e2e\keys.spec.ts:378:1 › M12 the buyer rotates its own key; the old session ends; the trade refuses the new key until a new revision (1.2s)
+  ok 10 e2e\keys.spec.ts:413:1 › M12 delayed recovery: the principal proves on a new device, early completion is refused, completion revokes the bound key (22.9s)
+  ok 11 e2e\keys.spec.ts:490:1 › M12 a principal vetoes a recovery with its existing key; the administrator then revokes a key (4.1s)
+  ok 12 e2e\keys.spec.ts:555:1 › M14 an expired recovery challenge is re-issued by the administrator and the new package proves (34.3s)
+  ok 13 e2e\product.spec.ts:45:1 › T-036 buyer proposes, supplier countersigns in a separate session, contract registers the trade (2.1s)
+  ok 14 e2e\product.spec.ts:116:1 › T-037 evidence slots show the exact predicate and recovery, refuse bad content and preserve work on conflict (8.3s)
+  ok 15 e2e\product.spec.ts:214:1 › T-054 deterministic policy SETs, buyer requests, only the risk session signs RESOLVE; expired-unresolved keeps blocking (1.3m)
+  ok 16 e2e\product.spec.ts:295:1 › T-036 buyer locks and approves; T-038 a lost outcome stays locked and never looks paid; then PAID (15.2s)
+  ok 17 e2e\product.spec.ts:422:1 › T-034 client boundary: no session token, invitation secret or evidence bytes in DOM, storage or accessibility tree (679ms)
+  ok 18 e2e\product.spec.ts:449:1 › T-040 every trade tab with live data fits, passes axe at every width, at 720 px (200% zoom approximation) and in dark mode (29.4s)
+  ok 19 e2e\rebinding.spec.ts:78:1 › setup: registered, funded, evidence attested, inspector PASS, buyer approved a pre-submit intent (6.5s)
+  ok 20 e2e\rebinding.spec.ts:99:1 › T-006 UI: the buyer rotates its key; every tab requires a new revision and links to the rebinding control (4.4s)
+  ok 21 e2e\rebinding.spec.ts:146:1 › T-006 UI: the new buyer key and the bound supplier key sign one successor; the signed delay is enforced (1.2m)
+  ok 22 e2e\rebinding.spec.ts:214:1 › T-006 UI: the rebound revision invalidated every release fact; renewed authority pays the bound supplier (11.3s)
+  ok 23 e2e\refund.spec.ts:68:1 › T-008 UI: excess is quarantined for its funder; only the funder's wallet returns it, revocation restores QUARANTINED (5.7s)
+  ok 24 e2e\refund.spec.ts:154:1 › T-009 UI: a disputed funder return pauses in REVIEW, stays locked and offers no authorization or execution (4.3s)
+  ok 25 e2e\refund.spec.ts:197:1 › T-009/T-010 UI: mutual cancellation needs both signers and the contract clock, then refunds the original funder (14.0s)
+  ok 26 e2e\settings.spec.ts:58:1 › M17 evidence policies: the owning administrator drafts and registers a revision; others read only (1.1s)
+  ok 27 e2e\settings.spec.ts:98:1 › M17 trade for the export: the buyer proposes, the supplier countersigns, the contract registers it (817ms)
+  ok 28 e2e\settings.spec.ts:107:1 › M17 retention: compare-and-swap save, stale administrator refused, auditor read-only, eligibility preview (1.0s)
+  ok 29 e2e\settings.spec.ts:153:1 › M17 integrations: RPC connection test proves connectivity only; 1Click NOT_RUN; export key listed (620ms)
+  ok 30 e2e\settings.spec.ts:169:1 › M17 signed audit export: verified in the browser, downloaded, and accepted by the offline verifier (1.5s)
+  ok 31 e2e\settings.spec.ts:211:1 › M17 settings screens pass axe and fit at every width, signed in as administrator (5.3s)
+  ok 32 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 375 px (9.4s)
+  ok 33 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 768 px (6.7s)
+  ok 34 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 1024 px (6.8s)
+  ok 35 e2e\shell.spec.ts:40:5 › signed out › every route is accessible and fits at 1440 px (6.6s)
+  ok 36 e2e\shell.spec.ts:51:3 › signed out › data routes ask for sign-in instead of showing data (711ms)
+  ok 37 e2e\shell.spec.ts:74:3 › signed in against the real API › bootstrap, then every route is accessible and fits at every viewport (25.8s)
+  ok 38 e2e\shell.spec.ts:87:3 › signed in against the real API › organization and audit render real API data; planned endpoints render the API's own answer (784ms)
+  ok 39 e2e\shell.spec.ts:114:3 › signed in against the real API › invitation is accepted in a separate session and granted later by the administrator (1.3s)
+  ok 40 e2e\shell.spec.ts:157:3 › signed in against the real API › a stored device key signs in again after sign-out (684ms)
+  ok 41 e2e\shell.spec.ts:169:3 › signed in against the real API › create trade validates on blur, focuses a linked error summary and keeps inputs on server refusal (902ms)
+  ok 42 e2e\shell.spec.ts:210:3 › signed in against the real API › disconnected API freezes data, disables mutations, and reconnects (684ms)
+  ok 43 e2e\shell.spec.ts:228:3 › signed in against the real API › a tampered challenge is refused before any signature (441ms)
+  ok 44 e2e\shell.spec.ts:250:3 › preferences and input modes › skip link is the first tab stop and moves focus to main (203ms)
+  ok 45 e2e\shell.spec.ts:259:3 › preferences and input modes › reduced motion removes transitions (201ms)
+  ok 46 e2e\shell.spec.ts:269:3 › preferences and input modes › dark colour scheme passes contrast and accessibility checks (2.8s)
+  ok 47 e2e\shell.spec.ts:279:3 › preferences and input modes › narrow 720 px viewport (1440 px at 200% zoom) keeps content operable without overflow (2.4s)
+  ok 48 e2e\wallet.spec.ts:128:1 › M17 without a wallet the connector says so and offers no signing (840ms)
+  ok 49 e2e\wallet.spec.ts:135:1 › M17 T-004 a real NEP-413 wallet signature links the account only when the key is a full-access key on chain (1.6s)
+  ok 50 e2e\wallet.spec.ts:171:1 › M17 the browser refuses a wallet answer for another account; the server refuses another key (683ms)
+  ok 51 e2e\wallet.spec.ts:189:1 › M17 re-check after the key is deleted on chain shows it is no longer owned; the administrator sees the link (2.1s)
 
-  46 passed (8.0m)
+  51 passed (8.8m)
 
 Running 3 tests using 1 worker
 
-  ok 1 e2e\asset-recovery.spec.ts:118:1 › gate 9/11 UI: unexpected assets have their own review panel; the sender requests, risk approves, an early execution is refused (6.9s)
-  ok 2 e2e\asset-recovery.spec.ts:169:1 › challenge and revocation: the supplier's signed challenge and the sender's own revocation return the asset to review (7.0s)
-  ok 3 e2e\asset-recovery.spec.ts:199:1 › after the simulated chain passes 72 hours, the journaled execution returns the exact amount to the proven sender (5.7s)
+  ok 1 e2e\asset-recovery.spec.ts:118:1 › gate 9/11 UI: unexpected assets have their own review panel; the sender requests, risk approves, an early execution is refused (6.3s)
+  ok 2 e2e\asset-recovery.spec.ts:169:1 › challenge and revocation: the supplier's signed challenge and the sender's own revocation return the asset to review (3.2s)
+  ok 3 e2e\asset-recovery.spec.ts:199:1 › after the simulated chain passes 72 hours, the journaled execution returns the exact amount to the proven sender (2.1s)
 
-  3 passed (33.1s)
+  3 passed (20.7s)
 
 Running 8 tests using 1 worker
 
-  ok 1 e2e\refund-reasons.spec.ts:175:1 › setup: five trades registered and funded by their original funders; a destination change is consented (6.2s)
-  ok 2 e2e\refund-reasons.spec.ts:218:1 › T-009 INSPECTION_FAIL: FAIL sets a policy hold; requests lock each slice; the supplier's appeal pauses in REVIEW and risk revokes it (20.0s)
-  ok 3 e2e\refund-reasons.spec.ts:280:1 › T-009 PERMANENT_HOLD: risk initiates after RESOLVE_TO_REFUND, the supplier consents; a second slice is revoked during cooling (11.7s)
+  ok 1 e2e\refund-reasons.spec.ts:175:1 › setup: five trades registered and funded by their original funders; a destination change is consented (6.1s)
+  ok 2 e2e\refund-reasons.spec.ts:218:1 › T-009 INSPECTION_FAIL: FAIL sets a policy hold; requests lock each slice; the supplier's appeal pauses in REVIEW and risk revokes it (15.8s)
+  ok 3 e2e\refund-reasons.spec.ts:280:1 › T-009 PERMANENT_HOLD: risk initiates after RESOLVE_TO_REFUND, the supplier consents; a second slice is revoked during cooling (9.8s)
 RACE_WINNER RELEASE lock="Contract accepted" refund="Contract did not accept the call: {"ActionError":{"kind":{"FunctionCallError":{"ExecutionError":"DOCKSIDE:VALUE_LOCKED: a release intent holds value"}}}}."
-  ok 4 e2e\refund-reasons.spec.ts:329:1 › T-010 race: release-intent lock and mutual-cancel request submitted at once from two contexts; one lock wins (11.3s)
-  ok 5 e2e\refund-reasons.spec.ts:427:1 › T-010 destination activation during a live refund: the contract refuses VALUE_LOCKED, then the API refuses, the destination stays (17.1s)
-  ok 6 e2e\refund-reasons.spec.ts:476:1 › T-009 TRADE_EXPIRY on the contract clock: chain +25 h; buyer request timelocked, supplier's request disputed into REVIEW (6.2s)
-  ok 7 e2e\refund-reasons.spec.ts:516:1 › T-009/T-010 chain +24 h: every reason authorizes and refunds its original funder exactly once (5.9s)
-  ok 8 e2e\refund-reasons.spec.ts:589:1 › T-010 after the refund settled, activation is still refused (INVALID_STATE) and the payout destination never changed (1.4s)
+  ok 4 e2e\refund-reasons.spec.ts:329:1 › T-010 race: release-intent lock and mutual-cancel request submitted at once from two contexts; one lock wins (8.3s)
+  ok 5 e2e\refund-reasons.spec.ts:427:1 › T-010 destination activation during a live refund: the contract refuses VALUE_LOCKED, then the API refuses, the destination stays (26.2s)
+  ok 6 e2e\refund-reasons.spec.ts:476:1 › T-009 TRADE_EXPIRY on the contract clock: chain +25 h; buyer request timelocked, supplier's request disputed into REVIEW (5.5s)
+  ok 7 e2e\refund-reasons.spec.ts:516:1 › T-009/T-010 chain +24 h: every reason authorizes and refunds its original funder exactly once (4.8s)
+  ok 8 e2e\refund-reasons.spec.ts:589:1 › T-010 after the refund settled, activation is still refused (INVALID_STATE) and the payout destination never changed (1.2s)
 
   8 passed (1.5m)
 
-real	10m6.473s
-user	0m0.075s
-sys	0m0.046s
+Running 3 tests using 1 worker
+
+  ok 1 e2e\evidence-stale.spec.ts:43:1 › setup: complete, attested, inspected and approved: release is ready (6.8s)
+  ok 2 e2e\evidence-stale.spec.ts:62:1 › T-037 UI: simulated time passes the freshness rule; the slot is STALE and never looks complete (3.6s)
+  ok 3 e2e\evidence-stale.spec.ts:103:1 › T-037 UI: a replacement issued by the wall clock is older than the simulated deadline and is refused (1.2s)
+
+  3 passed (19.4s)
+
+real	11m7.876s
+user	0m0.122s
+sys	0m0.135s
 exit=0
