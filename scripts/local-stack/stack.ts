@@ -223,6 +223,12 @@ async function main(): Promise<void> {
   // Simulated chain time = wall clock + an offset that only moves forward (see /control/chain-time).
   let chainOffsetMs = 0;
   const chainNow = () => Date.now() + chainOffsetMs;
+  // Simulated trade time (M14): the trade modules (evidence, holds, release, journal, worker) and
+  // the API routes read wall clock + this offset; /control/clock moves it and the chain together so
+  // evidence freshness, attestation lifetimes and contract windows can pass in a browser test.
+  // Sessions, request proofs and the authority keep the wall clock (the browser signs with it).
+  let tradeOffsetMs = 0;
+  const tradeClock = { now: () => Date.now() + tradeOffsetMs };
   const sim = new NearSim(CONTRACT, chainNow());
   for (const a of [
     BUYER_ACCT,
@@ -270,6 +276,10 @@ async function main(): Promise<void> {
     ...(env["DOCKSIDE_RECOVERY_DELAY_MS"] === undefined
       ? {}
       : { DOCKSIDE_RECOVERY_DELAY_MS: env["DOCKSIDE_RECOVERY_DELAY_MS"] }),
+    // The browser tests shorten the recovery challenge lifetime so an expired one can be re-issued.
+    ...(env["DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS"] === undefined
+      ? {}
+      : { DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS: env["DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS"] }),
     // The browser tests shorten the destination-change delay new proposals bind (never below 1 minute).
     ...(env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"]
       ? { DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"] }
@@ -288,6 +298,9 @@ async function main(): Promise<void> {
       sessionTtlMs: config.DOCKSIDE_SESSION_TTL_MS,
       invitationTtlMs: config.DOCKSIDE_INVITATION_TTL_MS,
       recoveryDelayMs: config.DOCKSIDE_RECOVERY_DELAY_MS,
+      ...(config.DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS === undefined
+        ? {}
+        : { recoveryChallengeTtlMs: config.DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS }),
       requestProofSkewMs: config.DOCKSIDE_REQUEST_PROOF_SKEW_MS,
     },
   });
@@ -300,16 +313,16 @@ async function main(): Promise<void> {
     });
   // Trade modules exactly as services/api/src/main.ts wires them.
   const escrow = new EscrowContract(rpc(), CONTRACT);
-  const deps = { db, clock: systemClock, ids: randomIds, authority };
+  const deps = { db, clock: tradeClock, ids: randomIds, authority };
   const evidence = new EvidenceService({
     ...deps,
     objects: new LocalObjectStore(config.DOCKSIDE_OBJECT_STORE_DIR, `stack-${process.pid}`),
   });
   const holds = new HoldService({ ...deps, evidence });
   const release = new ReleaseService({ ...deps, evidence, holds, escrow });
-  const journal = new JournalService({ db, clock: systemClock, ids: randomIds, escrow, release });
+  const journal = new JournalService({ db, clock: tradeClock, ids: randomIds, escrow, release });
   const assetRecovery = {
-    journal: new AssetRecoveryJournal(db, systemClock, randomIds),
+    journal: new AssetRecoveryJournal(db, tradeClock, randomIds),
     token: (contract: string) => new Nep141Reader(rpc(), contract),
     tx: new NearTxClient(rpc()),
   };
@@ -445,10 +458,10 @@ async function main(): Promise<void> {
     maxBackoffMs: 2_000,
     watchMs: DAY,
   };
-  const wj = new Journal(db, systemClock, randomIds);
+  const wj = new Journal(db, tradeClock, randomIds);
   const reconciler = new Reconciler(wj, ports, engineCfg);
   const assetEngine = new AssetRecoveryEngine(
-    new AssetRecoveryJournal(db, systemClock, randomIds),
+    new AssetRecoveryJournal(db, tradeClock, randomIds),
     { ...ports, token: (c: string) => new Nep141Reader(rpc(), c) },
     new SimTxSigner(WORKER_RELAYER),
     { holder: "stack-worker", leaseTtlMs: 30_000, baseBackoffMs: 500, maxBackoffMs: 2_000 },
@@ -469,7 +482,7 @@ async function main(): Promise<void> {
         config,
         db,
         authority,
-        clock: systemClock,
+        clock: tradeClock,
         ids: randomIds,
         log,
         modules: { evidence, holds, release, journal, escrow, assetRecovery, chain: new NearTxClient(rpc()) },
@@ -524,6 +537,7 @@ async function main(): Promise<void> {
             destinationChangeDelayMs: config.DOCKSIDE_DESTINATION_CHANGE_DELAY_MS,
             attestationLifetimeMs: POLICY.attestationLifetimeMs,
             chainOffsetMs,
+            tradeOffsetMs,
             organizations: Object.fromEntries(
               Object.entries(admins).map(([k, a]) => [
                 k,
@@ -696,6 +710,26 @@ async function main(): Promise<void> {
           chainOffsetMs += ms;
           log({ event: "chain.time_advanced", advanceMs: ms, chainOffsetMs });
           return json(res, 200, { chainOffsetMs, chainNowMs: chainNow() });
+        }
+        if (req.method === "POST" && url.pathname === "/control/clock") {
+          // Simulated stack only (M14): trade time and chain time move forward together, so
+          // evidence passes its freshness deadline as the API and the contract both see it. The
+          // authority, sessions and request proofs keep the wall clock. A real chain cannot do this.
+          const b = await readBody(req);
+          const ms = Number(b["advanceMs"]);
+          if (!Number.isInteger(ms) || ms <= 0 || ms > 30 * DAY)
+            throw Object.assign(new Error("advanceMs must be a positive integer up to 30 days"), {
+              code: "VALIDATION_FAILED",
+            });
+          tradeOffsetMs += ms;
+          chainOffsetMs += ms;
+          log({ event: "clock.advanced", advanceMs: ms, tradeOffsetMs, chainOffsetMs });
+          return json(res, 200, {
+            tradeOffsetMs,
+            chainOffsetMs,
+            tradeNowMs: tradeClock.now(),
+            chainNowMs: chainNow(),
+          });
         }
         if (req.method === "POST" && url.pathname === "/control/faults") {
           const b = await readBody(req);

@@ -118,6 +118,11 @@ impl TradeRecord {
             let stale = p.status == ChangeStatus::Proposed && ctx.now_ms >= p.consent_deadline;
             ensure(stale, "DESTINATION_CHANGE_PENDING", "another destination change is pending; it must be revoked first")?;
         }
+        ensure(
+            self.revision_pending(ctx.now_ms) != Some("KEY_REBINDING_PENDING"),
+            "KEY_REBINDING_PENDING",
+            "a key rebinding is pending; it must be revoked or activated first",
+        )?;
         ensure(!self.released(), "INVALID_STATE", "the trade value has already been released")?;
         ensure(ctx.now_ms < self.terms.expires_at, "EXPIRED", "trade has expired")?;
         let key = party_key(proposer_role)?;
@@ -125,6 +130,13 @@ impl TradeRecord {
         self.verify_role(ctx, key, &d, signature)?;
         if self.destination.pending.is_some() {
             self.close_pending(ChangeStatus::Expired, ctx.now_ms);
+        }
+        if self.rebinding.pending.as_ref().is_some_and(|p| p.status == ChangeStatus::Proposed) {
+            // A stale, never-countersigned key rebinding cannot outlive a newer revision.
+            let mut p = self.rebinding.pending.take().expect("pending");
+            p.status = ChangeStatus::Expired;
+            p.closed_at = Some(ctx.now_ms);
+            self.rebinding.history.push(p);
         }
         let now = ctx.now_ms;
         self.destination.pending = Some(DestinationChange {

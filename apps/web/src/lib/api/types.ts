@@ -217,6 +217,8 @@ export interface RecoveryView {
   readonly completedBy: string | null;
   readonly completedAt: number | null;
   readonly cancelledAt: number | null;
+  /** Expiry of the latest RECOVERY_KEY challenge for this recovery (M14; absent before M14). */
+  readonly challengeExpiresAt?: number | null;
 }
 
 export interface ServiceScope {

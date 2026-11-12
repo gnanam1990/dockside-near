@@ -291,6 +291,26 @@ impl Escrow {
         serde_json::json!({ "termsDigest": digest, "successorIntent": successor })
     }
 
+    /* -------------------------- key rebinding -------------------------- */
+
+    pub fn propose_key_rebinding(&mut self, trade_id: String, successor_terms: J, proposer_role: String, signature: String) -> String {
+        self.mutate(&trade_id, |t, ctx| t.propose_key_rebinding(ctx, &successor_terms, &proposer_role, &signature))
+    }
+
+    /// Returns the time (ms) at which activation becomes possible.
+    pub fn consent_key_rebinding(&mut self, trade_id: String, successor_digest: String, role: String, signature: String) -> u64 {
+        self.mutate(&trade_id, |t, ctx| t.consent_key_rebinding(ctx, &successor_digest, &role, &signature))
+    }
+
+    pub fn revoke_key_rebinding(&mut self, trade_id: String, payload: J, signature: String) {
+        self.mutate(&trade_id, |t, ctx| t.revoke_key_rebinding(ctx, &payload, &signature))
+    }
+
+    pub fn activate_key_rebinding(&mut self, trade_id: String, successor_digest: String) -> J {
+        let (digest, successor) = self.mutate(&trade_id, |t, ctx| t.activate_key_rebinding(ctx, &successor_digest));
+        serde_json::json!({ "termsDigest": digest, "successorIntent": successor })
+    }
+
     pub fn cosign_refund(&mut self, trade_id: String, refund_intent_id: String, role: String, signature: String) {
         self.mutate(&trade_id, |t, ctx| t.cosign_refund(ctx, &refund_intent_id, &role, &signature))
     }

@@ -66,6 +66,7 @@ export type Dimension =
   | "slotStatus"
   | "refundState"
   | "destinationChange"
+  | "keyRebinding"
   | "recoveryStatus"
   | "enrollmentStatus"
   | "bindingIssue"
@@ -86,6 +87,7 @@ export const VOCABULARY: Record<
     | "slotStatus"
     | "refundState"
     | "destinationChange"
+    | "keyRebinding"
     | "recoveryStatus"
     | "enrollmentStatus"
     | "bindingIssue"
@@ -651,6 +653,45 @@ const DESTINATION_CHANGE: Record<string, StatusMeaning> = {
   },
 };
 
+/** Key-rebinding revision (M14): same lifecycle as a destination revision, other consequence. */
+const KEY_REBINDING: Record<string, StatusMeaning> = {
+  PROPOSED: {
+    label: "Key rebinding proposed",
+    tone: "warning",
+    icon: "pending",
+    sentence: "One party signed the successor revision. It can never activate without the other party.",
+  },
+  CONSENTED: {
+    label: "Key rebinding consented",
+    tone: "warning",
+    icon: "processing",
+    sentence:
+      "Both bound parties signed the same successor digest. A party key change waits for the signed delay; activation is a relay the contract re-checks.",
+  },
+  ACTIVATED: {
+    label: "Key rebinding activated",
+    tone: "neutral",
+    icon: "superseded",
+    sentence:
+      "The successor revision binds the current keys. Manifest attestation, inspection, hold view, intent and approval must be renewed.",
+    terminal: true,
+  },
+  REVOKED: {
+    label: "Key rebinding cancelled",
+    tone: "neutral",
+    icon: "cancelled",
+    sentence: "A party revoked the proposal before activation; the bound keys are unchanged.",
+    terminal: true,
+  },
+  EXPIRED: {
+    label: "Key rebinding expired",
+    tone: "neutral",
+    icon: "expired",
+    sentence: "The consent window closed before both parties signed; the bound keys are unchanged.",
+    terminal: true,
+  },
+};
+
 /* ------------------------------------------------------------------------- */
 /* Unexpected-asset recovery (M11): asset record, recovery and its journal.  */
 /* None of these is native-NEAR value; none can look paid.                    */
@@ -843,6 +884,7 @@ const EXTRA: Partial<Record<Dimension, Record<string, StatusMeaning>>> = {
   operationState: OPERATION,
   refundState: REFUND_STATE,
   destinationChange: DESTINATION_CHANGE,
+  keyRebinding: KEY_REBINDING,
   attestationStatus: {
     CURRENT: {
       label: "Attestation current",
