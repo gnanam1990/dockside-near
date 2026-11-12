@@ -83,6 +83,9 @@ export const ERROR_CODES = {
   AMOUNT_MISMATCH: { http: 409, retry: "never" },
   ASSET_MISMATCH: { http: 409, retry: "never" },
   RECIPIENT_NOT_SENDER: { http: 409, retry: "never" },
+  // NEAR account ownership (M17): the NEP-413 signing key is not a full-access key of the account.
+  ACCESS_KEY_NOT_FOUND: { http: 403, retry: "never" },
+  ACCESS_KEY_NOT_FULL_ACCESS: { http: 403, retry: "never" },
   // Hardening (M09).
   RATE_LIMITED: { http: 429, retry: "later" },
   INTERNAL: { http: 500, retry: "unknown" },
