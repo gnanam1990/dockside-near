@@ -1,0 +1,28 @@
+M10 red evidence (worktree, Windows 11, Node 22.23.1, pnpm 10.34.9)
+
+API mutation runs: each mutant applied to services/api/src/refunds.ts, then
+`npx vitest run services/api/test/m10-refund-routes.test.ts`, then the file restored with git checkout.
+
+M1  disputeRule without the role check (supplier may dispute an excess return)
+    exit 1: x "EXCESS_FUNDING_RETURN dispute: only buyer or risk may dispute; REVIEW blocks authorization and execution"
+M2  cosignRule lets the buyer cosign its own MUTUAL_CANCEL request
+    exit 1: x "MUTUAL_CANCEL: the buyer signs, the supplier cosigns the identical digest, the timelock holds, the journal refunds"
+            Tests 1 failed | 8 passed (9)
+M3  eligibleSlice ignores the release reservation (VALUE_LOCKED check removed)
+    exit 1: x "a live release intent blocks party refunds (VALUE_LOCKED) but not the funder's quarantined excess"
+            Tests 1 failed | 8 passed (9)
+Unmutated: exit 0, Tests 9 passed (9)
+
+Browser red runs (pnpm exec playwright test refund, ports 8891/8892/4491):
+
+R1  expected the buyer's MUTUAL_CANCEL candidate to read VALUE_LOCKED after the request; the contract had moved
+    the slice from AVAILABLE to refund-locked, so the projection correctly read NOTHING_ELIGIBLE. The assertion
+    was wrong; it now checks refundLocked = 6 NEAR and NOTHING_ELIGIBLE.
+R2  expected the finished request control to stay visible after a page reload; the pin is per page, so the
+    control (correctly) no longer renders for a locked slice. The assertion now checks it is absent.
+R3  a dispute signed after the simulated chain clock had moved forward 61 minutes was refused by the contract:
+    "DOCKSIDE:EXPIRED: signature has expired" (the API issues dispute payloads with a one-hour lifetime on the
+    wall clock). The time advance now happens once, in the last refund test (ADR-0013 decision 7).
+R4  the dispute test's locator was filtered on data-state="TIMELOCKED" and could not find the intent once it was
+    REVIEW; fixed by keeping the refund intent id.
+Then: 3 passed (refund spec), and the destination spec 4 passed on its first run.
