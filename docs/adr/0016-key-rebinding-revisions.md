@@ -59,9 +59,10 @@ could not be re-issued, and T-037's STALE slot was never driven in the browser.
    the successor the first consent journaled, so a plan that changes in between cannot swap the digest.
 7. **Routes and authority.** `GET /v1/trades/:id/key-rebinding` (any trade relation) and six POST routes
    (challenge, consent, revocation challenge, revocation, activation, binding). Every POST needs the
-   `ACCEPT_TRADE_REVISION` capability and the trade's bound buyer approver or supplier signer principal (refusals
-   audited as `KEY_REBINDING_DENIED`), then the session key that this successor binds for that party (refusals
-   audited as `RELEASE_ACTION_DENIED`). Consents and revocations are verified, journaled in `release_signatures`
+   `ACCEPT_TRADE_REVISION` capability, a relation to the trade (otherwise the same `NOT_FOUND` as for a trade that
+   does not exist) and the trade's bound buyer approver or supplier signer principal (a capability holder that is
+   not the bound party is refused and audited as `KEY_REBINDING_DENIED`), then the session key that this successor
+   binds for that party (refusals audited as `RELEASE_ACTION_DENIED`). Consents and revocations are verified, journaled in `release_signatures`
    (migration 0008 rebuilds that append-only table to admit the two new kinds) and audited
    (`KEY_REBINDING_CONSENT_RECORDED`, `KEY_REBINDING_REVOCATION_RECORDED`, `KEY_REBINDING_ACTIVATION_PREPARED`,
    `KEY_REBINDING_REVISION_BOUND`). Activation and binding are relays the contract re-checks; binding reuses the
