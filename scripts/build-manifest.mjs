@@ -18,7 +18,12 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WASM = "contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm";
 const DIST_ROOTS = ["packages", "services"];
-const shell = process.platform === "win32";
+// Only the pnpm shim (pnpm.cmd) needs a shell on Windows; git, rustc and cargo are real
+// executables and must never be run through cmd.exe, which would re-parse their arguments.
+const SHELL_COMMANDS = new Set(["pnpm"]);
+// A manifest may come from elsewhere (a CI artifact), so its commit is accepted only as a full
+// SHA-1 or SHA-256 object id before it reaches git; anything else could be read as a git option.
+const FULL_COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 
 const sha256 = (b) => createHash("sha256").update(b).digest("hex");
 const rel = (p) => relative(ROOT, p).split("\\").join("/");
@@ -43,7 +48,7 @@ function run(cmd, args) {
     return execFileSync(cmd, args, {
       cwd: ROOT,
       encoding: "utf8",
-      shell,
+      shell: process.platform === "win32" && SHELL_COMMANDS.has(cmd),
       stdio: ["ignore", "pipe", "pipe"],
     }).trim();
   } catch {
@@ -130,8 +135,12 @@ function verify(file) {
   same(have.contract?.sha256, want.contract?.sha256, "contract wasm sha256");
   same(have.contract?.nearCodeHash, want.contract?.nearCodeHash, "contract code hash");
   if (want.commit && have.commit && want.commit !== have.commit) {
-    const changed = run("git", ["diff", "--name-only", want.commit, have.commit]);
-    if (changed === null) problems.push(`commit ${want.commit} is not in this repository`);
+    const changed =
+      typeof want.commit === "string" && FULL_COMMIT.test(want.commit)
+        ? run("git", ["diff", "--name-only", want.commit, have.commit, "--"])
+        : undefined;
+    if (changed === undefined) problems.push(`commit ${JSON.stringify(want.commit)} is not a full commit id`);
+    else if (changed === null) problems.push(`commit ${want.commit} is not in this repository`);
     else {
       // Evidence and status documents may follow the build; nothing that is built or run may.
       const docsOnly = (p) => p.startsWith("docs/") || /^[A-Z0-9-]+\.md$/.test(p);

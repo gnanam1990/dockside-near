@@ -24,7 +24,9 @@ Playwright 1.64.1 with its Chromium headless shell. No PostgreSQL and no C toolc
 Engine 29.1 runs inside the WSL 2 distribution Ubuntu-24.04: the Linux reproduction runs in `node:22-bookworm-slim`
 (ADR-0015), the real-chain suites in `node:22-trixie-slim` with near-sandbox 2.14.0 and near-cli-rs 0.31.1 pinned by
 SHA-256 (ADR-0019), and the account-ownership suite against nearcore 2.13.4 (ADR-0018). Nothing was installed or
-changed on Windows for them. Stack decision: [ADR-0001](docs/adr/0001-stack-and-monorepo-layout.md).
+changed on Windows for them. Since the vuln-0002 fix, both images are pinned by digest, Rust comes from a
+rustup-init pinned by SHA-256 and the nearcore 2.13.4 binary from a SHA-256 pin with a locked npm install (ADR-0021,
+[evidence](docs/status/SEC-dockside-vuln-0002.md)). Stack decision: [ADR-0001](docs/adr/0001-stack-and-monorepo-layout.md).
 
 ## REAL-PRODUCT-GATE evidence matrix
 

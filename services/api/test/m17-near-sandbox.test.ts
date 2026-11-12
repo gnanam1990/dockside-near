@@ -32,9 +32,18 @@ const ENABLED = process.env["DOCKSIDE_NEAR_SANDBOX"] === "1";
 const PORT = Number(process.env["DOCKSIDE_NEAR_SANDBOX_PORT"] ?? 4531);
 const RPC = `http://127.0.0.1:${PORT}`;
 const CONTAINER = "dockside-m17-near-sandbox";
-// The sandbox 2.13.4 binary needs glibc 2.38+, so Debian 13 (trixie), not bookworm.
-const IMAGE = "node:22-trixie-slim";
-const SANDBOX_PACKAGE = "near-sandbox@0.3.4";
+// The sandbox 2.13.4 binary needs glibc 2.38+, so Debian 13 (trixie), not bookworm. Pinned by digest,
+// the same as IMAGES.trixie in scripts/lib/docker.mjs (ADR-0021).
+const IMAGE = "node:22-trixie-slim@sha256:68c76cfad89921b927eae28ba21407475e29d0ce450afcdbe70c1532db042b64";
+// near-sandbox 0.3.4 and its dependencies come from the committed lockfile in
+// scripts/near-sandbox/npm/ (npm ci, install scripts off); the nearcore binary it runs is fetched
+// and checked against its pinned SHA-256 by scripts/near-sandbox/fetch-sandbox.mjs (ADR-0021).
+const SETUP = [
+  "mkdir -p /work && cd /work",
+  "cp /launcher/npm/package.json /launcher/npm/package-lock.json /launcher/launch.mjs .",
+  "npm ci --ignore-scripts --no-audit --no-fund >/dev/null",
+  "node /launcher/fetch-sandbox.mjs /work/bin >/dev/null",
+].join(" && ");
 // Named like a testnet account because this API is configured for near-testnet account ids.
 const ACCOUNT = "dockside-wallet.testnet";
 
@@ -127,7 +136,7 @@ describe.skipIf(!ENABLED)("M17 NEAR account ownership on a local nearcore sandbo
       IMAGE,
       "sh",
       "-c",
-      `mkdir -p /work && cd /work && npm init -y >/dev/null && npm install --no-audit --no-fund ${SANDBOX_PACKAGE} >/dev/null && cp /launcher/launch.mjs . && exec node launch.mjs ${ACCOUNT} ${walletPublicKey}`,
+      `${SETUP} && NEAR_SANDBOX_BIN_PATH=/work/bin/near-sandbox exec node launch.mjs ${ACCOUNT} ${walletPublicKey}`,
     ]);
     expect(run.status, run.stderr).toBe(0);
     await rpcReady(Date.now() + 400_000);

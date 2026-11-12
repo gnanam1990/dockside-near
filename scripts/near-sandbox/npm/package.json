@@ -1,0 +1,10 @@
+{
+  "name": "dockside-near-sandbox-launcher",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Locked dependencies of scripts/near-sandbox/launch.mjs inside the M17 sandbox container (ADR-0021)",
+  "type": "module",
+  "dependencies": {
+    "near-sandbox": "0.3.4"
+  }
+}
