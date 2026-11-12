@@ -43,7 +43,7 @@ function tradeModules(
     token: (assetContract: string) => new Nep141Reader(rpc, assetContract),
     tx: new NearTxClient(rpc),
   };
-  return { evidence, holds, release, journal, escrow, assetRecovery };
+  return { evidence, holds, release, journal, escrow, assetRecovery, chain: assetRecovery.tx };
 }
 
 /** Local entry point. Configuration comes only from DOCKSIDE_* environment variables. */
