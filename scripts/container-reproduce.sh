@@ -11,8 +11,10 @@
 #     -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
 #     node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh <commit> [--e2e]
-# Writes /out/clean-checkout-report.json and /out/build-manifest.json. With --e2e it first installs
-# the Playwright Chromium headless shell and its system libraries for the locked Playwright version.
+# Writes /out/clean-checkout-report.json, /out/build-manifest.json and /out/dockside_escrow.wasm (the
+# deployable artifact, rebuilt from the same commit in this container and checked against the
+# manifest's SHA-256). With --e2e it first installs the Playwright Chromium headless shell and its
+# system libraries for the locked Playwright version.
 set -eu
 REF="${1:?usage: container-reproduce.sh <commit> [--e2e]}"
 E2E="${2:-}"
@@ -40,3 +42,15 @@ if [ "$E2E" = "--e2e" ]; then
 fi
 node scripts/clean-checkout.mjs --ref "$REF" $E2E --report /out/clean-checkout-report.json \
   --manifest /out/build-manifest.json
+# Export the deployable wasm: rebuild it here (same container, same CARGO_HOME) and refuse to copy
+# it unless its digest equals the one the clean checkout recorded.
+pnpm run contract:build >/dev/null
+WASM=contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm
+WANT=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/out/build-manifest.json","utf8")).contract.sha256)')
+HAVE=$(sha256sum "$WASM" | cut -d' ' -f1)
+if [ "$WANT" != "$HAVE" ]; then
+  echo "wasm digest $HAVE differs from the clean checkout's $WANT" >&2
+  exit 1
+fi
+cp "$WASM" /out/dockside_escrow.wasm
+echo "deployable wasm: /out/dockside_escrow.wasm sha256 $HAVE"
