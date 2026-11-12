@@ -18,6 +18,11 @@ export interface Route {
   schema?: z.ZodType;
   /** Route-specific request body limit (defaults to MAX_BODY_BYTES). */
   maxBody?: number;
+  /**
+   * Top-level result fields that are one-time secrets: returned to the caller once and never
+   * persisted, so an Idempotency-Key replay omits them.
+   */
+  oneTimeFields?: readonly string[];
   handler: Handler;
 }
 
@@ -28,10 +33,12 @@ export function route(
   auth: boolean,
   schema: z.ZodType | undefined,
   handler: Handler,
-  opts: { maxBody?: number } = {},
+  opts: { maxBody?: number; oneTimeFields?: readonly string[] } = {},
 ): Route {
   const pattern = new RegExp(`^${path.replace(/:([a-zA-Z]+)/g, "(?<$1>[a-z]{2,8}_[0-9a-f]{32})")}$`);
-  const base: Route =
+  let base: Route =
     schema === undefined ? { method, pattern, auth, handler } : { method, pattern, auth, schema, handler };
-  return opts.maxBody === undefined ? base : { ...base, maxBody: opts.maxBody };
+  if (opts.maxBody !== undefined) base = { ...base, maxBody: opts.maxBody };
+  if (opts.oneTimeFields !== undefined) base = { ...base, oneTimeFields: opts.oneTimeFields };
+  return base;
 }
