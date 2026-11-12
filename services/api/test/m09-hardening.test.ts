@@ -1,7 +1,7 @@
 /**
  * M09 hardening at the HTTP boundary: request limits on unauthenticated routes (per client
  * address) and authenticated routes (per presented session), counted before any body is read or
- * signature verified, with invented session tokens also counted against the address; health
+ * signature verified, with invented session tokens counted only against the address; health
  * probes exempt; the limiter's memory bounded and failing closed; socket-level server limits.
  */
 import { createServer, type Server } from "node:http";
@@ -86,7 +86,7 @@ describe("M09 request limits", () => {
     expect(third.status).toBe(429);
     // Another session is not affected by the first one's window.
     expect((await s.me(b)).status).toBe(200);
-    // Made-up session tokens each get a fresh session window, so failures count per address.
+    // Made-up session tokens get no session window of their own; failures count per address.
     for (let i = 0; i < 4; i++) {
       const r = await fetch(`${s.base}/v1/me`, {
         headers: { authorization: `Dockside-Session invented-${i}`, "dockside-proof": "e30" },
