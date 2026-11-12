@@ -111,10 +111,33 @@ pub fn trade(t: &TradeRecord, now_ms: u64) -> J {
 }
 
 pub fn unexpected(a: &UnexpectedAsset) -> J {
+    let recoveries: Vec<J> = a
+        .recoveries
+        .iter()
+        .map(|r| {
+            json!({
+                "recoveryId": r.id, "tradeId": r.trade_id, "tradeRevision": r.trade_revision,
+                "recipient": r.recipient, "amount": r.amount, "recoveryCapability": r.capability,
+                "requestDigest": r.request_digest, "evidenceDigest": r.evidence_digest, "state": r.state.as_str(),
+                "requestedAt": r.requested_at, "requestExpiresAt": r.request_expires_at,
+                "approvalDigest": r.approval_digest, "validationDigest": r.validation_digest,
+                "approvedAt": r.approved_at, "deadline": r.deadline,
+                "challenge": r.challenge.as_ref().map(|c| json!({
+                    "role": c.role, "account": c.account, "reasonCode": c.reason_code,
+                    "evidenceDigest": c.evidence_digest, "digest": c.digest, "at": c.at,
+                })),
+                "revokedBy": r.revoked_by, "executor": r.executor,
+                "history": r.history.iter().map(|(s, t)| json!([s, t])).collect::<Vec<J>>(),
+            })
+        })
+        .collect();
     json!({
         "index": a.index, "standard": a.standard, "assetContract": a.asset_contract, "tokenId": a.token_id,
         "observedAmount": a.observed_amount, "claimedSender": a.claimed_sender, "msgDigest": a.msg_digest,
         "observedAt": a.observed_at, "state": a.state, "originalFunder": J::Null, "withdrawable": false,
+        "recoveryCapability": crate::assets::capability_for(&a.standard),
+        "liveRecoveryId": a.live().map(|r| r.id.clone()),
+        "recoveries": recoveries,
     })
 }
 

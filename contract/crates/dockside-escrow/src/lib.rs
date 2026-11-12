@@ -15,6 +15,8 @@ use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise};
 use serde_json::Value as J;
 
 const SETTLE_GAS: Gas = Gas::from_tgas(15);
+/// Gas for the NEP-141 adapter call (`ft_transfer` on the observed token contract).
+const FT_TRANSFER_GAS: Gas = Gas::from_tgas(20);
 
 struct NearVerifier;
 
@@ -71,6 +73,42 @@ impl Escrow {
         self.trades
             .get(trade_id)
             .unwrap_or_else(|| fail(Error { code: "NOT_FOUND", message: "trade not found".into() }))
+    }
+
+    fn asset(&self, index: u64) -> UnexpectedAsset {
+        u32::try_from(index)
+            .ok()
+            .and_then(|i| self.unexpected.get(i).cloned())
+            .unwrap_or_else(|| fail(Error { code: "NOT_FOUND", message: "unexpected asset not found".into() }))
+    }
+
+    fn store_asset(&mut self, a: UnexpectedAsset) {
+        let i = u32::try_from(a.index).unwrap_or_else(|_| fail(Error { code: "NOT_FOUND", message: "index".into() }));
+        self.unexpected.replace(i, a);
+    }
+
+    /// Run an asset-recovery step that needs the governing trade's authority (bound keys, nonces).
+    /// The trade's native ledger is rechecked for conservation and is never changed by recovery.
+    fn govern<T>(
+        &mut self,
+        asset_index: u64,
+        trade_id: &str,
+        f: impl FnOnce(&mut UnexpectedAsset, &mut TradeRecord, &Ctx<'_>) -> Result<T, Error>,
+    ) -> T {
+        let mut a = self.asset(asset_index);
+        let mut t = match self.trades.get(trade_id) {
+            Some(t) => t.clone(),
+            None => fail(Error { code: "NOT_FOUND", message: "trade not found".into() }),
+        };
+        let ledger = t.ledger.clone();
+        let out = ok(self.with_ctx(|ctx| f(&mut a, &mut t, ctx)));
+        if t.ledger != ledger {
+            fail(Error { code: "INTERNAL", message: "asset recovery must not change native value".into() });
+        }
+        ok(t.ledger.check_conservation());
+        self.trades.insert(trade_id.to_owned(), t);
+        self.store_asset(a);
+        out
     }
 
     fn record_unexpected(&mut self, standard: &str, token_id: Option<String>, amount: String, sender: &str, msg: &str) {
@@ -323,6 +361,72 @@ impl Escrow {
         amounts.iter().map(|_| U128(0)).collect()
     }
 
+    /* ------------------- unexpected-asset recovery ------------------- */
+
+    /// UNEXPECTED_ASSET_RECOVERY step 1. The transaction signer must be the claimed sender.
+    pub fn request_asset_recovery(&mut self, asset_index: u64, trade_id: String, payload: J) -> String {
+        self.govern(asset_index, &trade_id, |a, t, ctx| assets::request_recovery(a, t, ctx, &payload))
+    }
+
+    /// Risk/policy approval of the governing trade; returns the end of the 72-hour challenge.
+    pub fn approve_asset_recovery(&mut self, asset_index: u64, trade_id: String, payload: J, signature: String) -> u64 {
+        self.govern(asset_index, &trade_id, |a, t, ctx| assets::approve_recovery(a, t, ctx, &payload, &signature))
+    }
+
+    pub fn challenge_asset_recovery(&mut self, asset_index: u64, trade_id: String, payload: J, signature: Option<String>) {
+        self.govern(asset_index, &trade_id, |a, t, ctx| assets::challenge_recovery(a, t, ctx, &payload, signature.as_deref()))
+    }
+
+    pub fn revoke_asset_recovery(&mut self, asset_index: u64, trade_id: String, payload: J, signature: Option<String>) {
+        self.govern(asset_index, &trade_id, |a, t, ctx| assets::revoke_recovery(a, t, ctx, &payload, signature.as_deref()))
+    }
+
+    /// After the unchallenged window, anyone may execute through the NEP-141 adapter, attaching
+    /// exactly one yoctoNEAR (the adapter deposit). The asset is locked until the outcome settles.
+    #[payable]
+    pub fn execute_asset_recovery(&mut self, asset_index: u64, recovery_id: String) -> Promise {
+        let mut a = self.asset(asset_index);
+        let attached = env::attached_deposit().as_yoctonear();
+        let (token, to, amount) = ok(self.with_ctx(|ctx| assets::begin_recovery(&mut a, ctx, &recovery_id, attached)));
+        self.store_asset(a);
+        let token: AccountId = token
+            .parse()
+            .unwrap_or_else(|_| fail(Error { code: "INVALID_ADDRESS", message: "asset contract invalid".into() }));
+        let args = serde_json::json!({
+            "receiver_id": to,
+            "amount": amount.to_string(),
+            "memo": format!("dockside asset recovery {recovery_id}"),
+        });
+        Promise::new(token)
+            .function_call(
+                "ft_transfer".to_string(),
+                args.to_string().into_bytes(),
+                NearToken::from_yoctonear(assets::ADAPTER_DEPOSIT_YOCTO),
+                FT_TRANSFER_GAS,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(SETTLE_GAS)
+                    .on_asset_recovery_transfer(asset_index, recovery_id),
+            )
+    }
+
+    /// Adapter outcome. A failed `ft_transfer` is reverted by the token contract (authoritative
+    /// no-transfer): the asset returns to review and the executor gets its deposit back.
+    #[private]
+    pub fn on_asset_recovery_transfer(&mut self, asset_index: u64, recovery_id: String) -> bool {
+        let transferred = env::promise_results_count() == 1 && env::promise_result_checked(0, 64).is_ok();
+        let mut a = self.asset(asset_index);
+        let executor = ok(self.with_ctx(|ctx| assets::complete_recovery(&mut a, ctx, &recovery_id, transferred)));
+        self.store_asset(a);
+        if !transferred {
+            if let Ok(to) = executor.parse::<AccountId>() {
+                let _ = Promise::new(to).transfer(NearToken::from_yoctonear(assets::ADAPTER_DEPOSIT_YOCTO));
+            }
+        }
+        transferred
+    }
+
     /* ----------------------------- views ----------------------------- */
 
     pub fn get_config(&self) -> J {
@@ -355,6 +459,10 @@ impl Escrow {
 
     pub fn get_holds(&self, trade_id: String) -> J {
         views::holds(self.read(&trade_id), env::block_timestamp_ms())
+    }
+
+    pub fn get_unexpected_asset(&self, asset_index: u64) -> J {
+        views::unexpected(&self.asset(asset_index))
     }
 
     pub fn get_unexpected_assets(&self, from_index: Option<u32>, limit: Option<u32>) -> Vec<J> {

@@ -27,4 +27,10 @@ pub const HOLDS_VIEW: &str = "dockside/holds-view";
 pub const DESTINATION_CHANGE_REVOKE: &str = "dockside/destination-change-revoke";
 pub const REFUND_AUTHORIZE: &str = "dockside/refund-authorize";
 
+/// Separate unexpected-asset recovery policy (UNEXPECTED_ASSET_RECOVERY).
+pub const ASSET_RECOVERY_REQUEST: &str = "dockside/asset-recovery-request";
+pub const ASSET_RECOVERY_APPROVAL: &str = "dockside/asset-recovery-approval";
+pub const ASSET_RECOVERY_CHALLENGE: &str = "dockside/asset-recovery-challenge";
+pub const ASSET_RECOVERY_REVOKE: &str = "dockside/asset-recovery-revoke";
+
 pub const VERSION: u16 = 1;
