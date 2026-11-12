@@ -14,7 +14,7 @@ import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { isFailure, nearCli, successValue, ToolError } from "./near-tools.mjs";
+import { describeNearFailure, isFailure, runNear, successValue, ToolError } from "./near-tools.mjs";
 
 const HOUR = 3_600_000;
 
@@ -87,7 +87,7 @@ export async function runJourney(o) {
       const funder = b.method === "fund";
       const signer = funder ? accounts.buyer : accounts.relayer;
       const signing = funder ? ["sign-with-keychain"] : ["sign-with-access-key-file", relayerKeyFile];
-      const r = near([
+      const r = await near([
         "contract",
         "call-function",
         "as-transaction",
@@ -107,10 +107,7 @@ export async function runJourney(o) {
         "send",
       ]);
       if (!r.txHash)
-        throw new ToolError(
-          "SUBMIT_FAILED",
-          `${b.method}: near-cli-rs printed no transaction id\n${tail(r.clean)}`,
-        );
+        throw new ToolError("SUBMIT_FAILED", `${b.method}: ${describeNearFailure(r)}\n${tail(r.clean)}`);
       const tx = await rpc.txStatus(r.txHash, signer);
       const outcomes = tx.receipts_outcome;
       const mainIdx = outcomes.findIndex((x) => x.outcome.executor_id === accounts.escrow);
@@ -234,7 +231,10 @@ function tail(text) {
   return text.split("\n").slice(-15).join("\n");
 }
 
-/** near-cli-rs bound to one binary. */
-export function nearRunner(bin) {
-  return (args) => nearCli(bin, args);
+/**
+ * near-cli-rs bound to one binary: stdin closed, and an expired transaction (never included)
+ * signed again up to `attempts` times.
+ */
+export function nearRunner(bin, { attempts = 3, log = () => {} } = {}) {
+  return (args) => runNear(bin, args, { attempts, log });
 }
