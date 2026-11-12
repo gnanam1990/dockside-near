@@ -1,0 +1,65 @@
+== M1 approval ignores the journaled validation: services/api/src/assets.ts
+   replace: if (!v || v.verdict !== "SAFE" || field(payload, "validationDigest") !== v.digest)
+   with:    if (!v)
+    ❯ services/api/test/m11-asset-recovery-routes.test.ts (7 tests | 2 failed) 1904ms
+   ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+       235|     expect(tamperedRes.json.error.code).toBe("VALIDATION_FAILED");
+    Test Files  1 failed (1)
+         Tests  2 failed | 5 passed (7)
+   exit 1 (KILLED)
+== M2 any bound role may validate and approve: services/api/src/assets.ts
+   replace: allow(role === "RISK_RESOLVER", "only the bound risk/policy resolver approves an asset recovery");
+      const { a, r: rec } = await governed(m, t, rid);
+      inState(rec, ["REQUESTED"], "only a requested recovery can be approved");
+      const token
+   with:    const { a, r: rec } = await governed(m, t, rid);
+      inState(rec, ["REQUESTED"], "only a requested recovery can be approved");
+      const token
+    ❯ services/api/test/m11-asset-recovery-routes.test.ts (7 tests | 2 failed) 1862ms
+   ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+    Test Files  1 failed (1)
+         Tests  2 failed | 5 passed (7)
+   exit 1 (KILLED)
+== M3 transfer evidence not checked against the record: services/api/src/assets.ts
+   replace: args["amount"] === a.observedAmount
+   with:    true
+    ❯ services/api/test/m11-asset-recovery-routes.test.ts (7 tests | 3 failed) 1866ms
+   ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+    Test Files  1 failed (1)
+         Tests  3 failed | 4 passed (7)
+   exit 1 (KILLED)
+== C1 request without proof of control: contract/crates/dockside-escrow-core/src/assets.rs
+   replace: ensure(ctx.predecessor == a.claimed_sender, "FORBIDDEN"
+   with:    ensure(true, "FORBIDDEN"
+   test request_requires_the_claimed_sender_exact_fields_and_a_safe_adapter ... FAILED
+   thread 'request_requires_the_claimed_sender_exact_fields_and_a_safe_adapter' (5860) panicked at crates\dockside-escrow-core\tests\t051_asset_recovery.rs:180:5:
+   assertion `left == right` failed
+   test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+   error: test failed, to rerun pass `-p dockside-escrow-core --test t051_asset_recovery`
+   exit 101 (KILLED)
+== C2 challenge window not enforced at execution: contract/crates/dockside-escrow-core/src/assets.rs
+   replace: ensure(r.deadline.is_some_and(|dl| ctx.now_ms >= dl), "DELAY_NOT_ELAPSED"
+   with:    ensure(true, "DELAY_NOT_ELAPSED"
+   test full_recovery_reaches_the_proven_sender_after_the_72_hour_challenge ... FAILED
+   thread 'full_recovery_reaches_the_proven_sender_after_the_72_hour_challenge' (19912) panicked at crates\dockside-escrow-core\tests\t051_asset_recovery.rs:128:5:
+   assertion `left == right` failed
+   test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+   error: test failed, to rerun pass `-p dockside-escrow-core --test t051_asset_recovery`
+   exit 101 (KILLED)
+== C3 recipient may differ from the claimed sender: contract/crates/dockside-escrow-core/src/assets.rs
+   replace: o.expect_str("recipient", &a.claimed_sender, "RECIPIENT_NOT_SENDER")?;
+   with:    
+   test request_requires_the_claimed_sender_exact_fields_and_a_safe_adapter ... FAILED
+   thread 'request_requires_the_claimed_sender_exact_fields_and_a_safe_adapter' (5156) panicked at crates\dockside-escrow-core\tests\t051_asset_recovery.rs:200:9:
+   assertion `left == right` failed: recipient
+   test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+   error: test failed, to rerun pass `-p dockside-escrow-core --test t051_asset_recovery`
+   exit 101 (KILLED)
+== J1 RECOVERED without the token balance check: packages/journal/src/assets.ts
+   replace: const moved = op.tokenBalanceBefore === null ? false : op.tokenBalanceBefore - after >= op.amount;
+   with:    const moved = true;
+    ❯ packages/journal/test/m11-asset-recovery-journal.test.ts (7 tests | 1 failed) 1336ms
+   ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+    Test Files  1 failed (1)
+         Tests  1 failed | 6 passed (7)
+   exit 1 (KILLED)

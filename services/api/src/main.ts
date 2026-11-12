@@ -2,8 +2,8 @@ import { createServer } from "node:http";
 import { AuthorityService } from "@dockside/authority";
 import { type DocksideConfig, loadConfig, randomIds, redactConfig, systemClock } from "@dockside/core";
 import { EvidenceService, HoldService, LocalObjectStore } from "@dockside/evidence";
-import { JournalService } from "@dockside/journal";
-import { EscrowContract, JsonRpcNearClient } from "@dockside/near";
+import { AssetRecoveryJournal, JournalService } from "@dockside/journal";
+import { EscrowContract, JsonRpcNearClient, NearTxClient, Nep141Reader } from "@dockside/near";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
 import { createApp, hardenServer } from "./app.js";
@@ -36,7 +36,14 @@ function tradeModules(
   const holds = new HoldService({ ...deps, evidence });
   const release = new ReleaseService({ ...deps, evidence, holds, escrow });
   const journal = new JournalService({ db, clock: systemClock, ids: randomIds, escrow, release });
-  return { evidence, holds, release, journal, escrow };
+  // Unexpected-asset recovery (M11): token views and transfer lookups use the same RPC endpoint.
+  // Execution is queued here; only a worker with a provisioned relayer signer submits it.
+  const assetRecovery = {
+    journal: new AssetRecoveryJournal(db, systemClock, randomIds),
+    token: (assetContract: string) => new Nep141Reader(rpc, assetContract),
+    tx: new NearTxClient(rpc),
+  };
+  return { evidence, holds, release, journal, escrow, assetRecovery };
 }
 
 /** Local entry point. Configuration comes only from DOCKSIDE_* environment variables. */
