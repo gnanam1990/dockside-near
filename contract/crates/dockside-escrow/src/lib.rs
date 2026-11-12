@@ -111,6 +111,9 @@ impl Escrow {
         out
     }
 
+    /// Persist one receiver record. The caller has checked [`assets::ensure_capacity`] for the
+    /// whole call, so any account calling a receiver directly can add at most
+    /// `assets::MAX_UNEXPECTED_ASSETS` records in total.
     fn record_unexpected(&mut self, standard: &str, token_id: Option<String>, amount: String, sender: &str, msg: &str) {
         let index = self.unexpected.len() as u64;
         let a = ok(assets::record(
@@ -353,7 +356,9 @@ impl Escrow {
     }
 
     /// NEP-141: tokens are never credited to native-NEAR funding. Keep and record for review.
+    /// Past the record cap the call fails and the token contract refunds the whole amount.
     pub fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> U128 {
+        ok(assets::ensure_capacity(self.unexpected.len() as u64, 1));
         self.record_unexpected("NEP-141", None, amount.0.to_string(), sender_id.as_str(), &msg);
         U128(0)
     }
@@ -361,6 +366,7 @@ impl Escrow {
     /// NEP-171: returning false keeps the token; it is recorded for review only.
     pub fn nft_on_transfer(&mut self, sender_id: AccountId, previous_owner_id: AccountId, token_id: String, msg: String) -> bool {
         let _ = previous_owner_id;
+        ok(assets::ensure_capacity(self.unexpected.len() as u64, 1));
         self.record_unexpected("NEP-171", Some(token_id), "1".into(), sender_id.as_str(), &msg);
         false
     }
@@ -378,6 +384,7 @@ impl Escrow {
         if token_ids.len() != amounts.len() || token_ids.len() > 32 {
             fail(Error { code: "VALIDATION_FAILED", message: "token ids and amounts must align".into() });
         }
+        ok(assets::ensure_capacity(self.unexpected.len() as u64, token_ids.len()));
         for (id, a) in token_ids.iter().zip(amounts.iter()) {
             self.record_unexpected("NEP-245", Some(id.clone()), a.0.to_string(), sender_id.as_str(), &msg);
         }
