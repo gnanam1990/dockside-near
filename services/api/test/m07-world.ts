@@ -17,6 +17,7 @@ import {
   signFor,
   type TypedJson,
 } from "@dockside/core";
+import type { EvidencePolicyInput } from "@dockside/evidence";
 import { AssetRecoveryJournal } from "@dockside/journal";
 import { type FunctionCall, NearTxClient, Nep141Reader } from "@dockside/near";
 import { expect } from "vitest";
@@ -68,7 +69,12 @@ export interface ApiWorld {
 }
 
 export async function apiWorld(
-  opts: { funded?: boolean; evidence?: boolean; extra?: (w: JWorld) => Partial<AppDeps> } = {},
+  opts: {
+    funded?: boolean;
+    evidence?: boolean;
+    policy?: EvidencePolicyInput;
+    extra?: (w: JWorld) => Partial<AppDeps>;
+  } = {},
 ): Promise<ApiWorld> {
   const w = await jworld(opts);
   const c = w.c;
@@ -91,6 +97,8 @@ export async function apiWorld(
         release: c.rel,
         journal: w.svc,
         escrow: c.escrow,
+        // M15: the contract's clock (final block time) over the simulated chain's JSON-RPC.
+        chain: new NearTxClient(rpcFor(w.url)),
         // M11: token views and transaction lookups go through the simulated chain's JSON-RPC.
         assetRecovery: {
           journal: new AssetRecoveryJournal(h.db, h.clock, randomIds),

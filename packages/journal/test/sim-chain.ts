@@ -202,7 +202,17 @@ export class SimChainServer {
     try {
       switch (body.method) {
         case "block":
-          return reply({ result: { header: { height: this.height, hash: this.blockHash(this.height) } } });
+          return reply({
+            result: {
+              header: {
+                height: this.height,
+                hash: this.blockHash(this.height),
+                // NEAR block headers carry the block time in nanoseconds (as a string, and as a number).
+                timestamp: this.now() * 1_000_000,
+                timestamp_nanosec: (BigInt(this.now()) * 1_000_000n).toString(10),
+              },
+            },
+          });
         case "query":
           return this.query(body.params, reply, error);
         case "send_tx": {

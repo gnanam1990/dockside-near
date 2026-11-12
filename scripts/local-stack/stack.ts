@@ -95,6 +95,12 @@ export const TOKEN_SENDER = "token-sender.testnet";
 export const CLAIMANT = "other-claimant.testnet";
 const NFT_CONTRACT = "sim-nft.testnet";
 const WORKER_RELAYER = "relayer.testnet";
+/**
+ * The attestor and policy services relay with their own account. The worker's relayer key is
+ * sequenced by the journal (packages/journal/src/relayer.ts); a second, unsequenced submitter on
+ * the same key would race its nonces and strand one of the two transactions (M15).
+ */
+const SERVICE_RELAYER = "service-relayer.testnet";
 const PARTY_RELAYER = "party-relayer.testnet";
 const NEAR = 10n ** 24n;
 const DAY = 24 * 3600_000;
@@ -131,12 +137,28 @@ function slot(slotId: string, issuer: string, uploaders: string[], freshnessMs: 
   };
 }
 
+/**
+ * Attestation lifetime of the stack's policy: one day by default. A stack that must keep an
+ * inspection current past the 48-hour INSPECTION_FAIL appeal window (the refund-reasons browser
+ * suite, M15) sets DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS; it is part of the signed policy digest.
+ */
+function attestationLifetimeMs(): number {
+  const raw = env["DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS"];
+  if (raw === undefined) return DAY;
+  const ms = Number(raw);
+  if (!Number.isInteger(ms) || ms < 3600_000 || ms > 30 * DAY)
+    throw new Error(
+      "DOCKSIDE_STACK_ATTESTATION_LIFETIME_MS must be whole milliseconds from 1 hour to 30 days",
+    );
+  return ms;
+}
+
 /** The organisation's registered EvidencePolicy (same shape as the M03 commercial policy). */
 const POLICY = {
   schema: "dockside/evidence-policy@1" as const,
   policyId: "commercial-docs",
   revision: 1,
-  attestationLifetimeMs: DAY,
+  attestationLifetimeMs: attestationLifetimeMs(),
   slots: [
     slot("commercial-invoice", "SUPPLIER_SIGNER", ["SUPPLIER_SIGNER", "EVIDENCE_UPLOADER"], 30 * DAY),
     slot("inspection-report", "INSPECTOR", ["INSPECTOR"], 7 * DAY),
@@ -216,6 +238,7 @@ async function main(): Promise<void> {
     SUPPLIER_ACCT,
     SUPPLIER_ALT_ACCT,
     WORKER_RELAYER,
+    SERVICE_RELAYER,
     PARTY_RELAYER,
     TOKEN_SENDER,
     CLAIMANT,
@@ -408,7 +431,7 @@ async function main(): Promise<void> {
           const onChain = await escrow.getEvidence(t);
           if (onChain.current?.digest === att.manifestDigest) continue;
           const res = await submit(
-            WORKER_RELAYER,
+            SERVICE_RELAYER,
             escrow.submitManifestAttestationCall(t, att.typed, att.signature),
           );
           log({ event: "attestor.submitted", tradeId: t, outcome: res.outcome });
@@ -434,7 +457,7 @@ async function main(): Promise<void> {
           evaluated.set(t, key);
           for (const h of await holds.applyDeterministicPolicy(t, signer)) {
             const res = await submit(
-              WORKER_RELAYER,
+              SERVICE_RELAYER,
               escrow.setHoldCall(t, toTypedJson(h.setPayload), h.setSignature),
             );
             log({ event: "policy.hold_set", tradeId: t, ruleId: h.ruleId, outcome: res.outcome });
@@ -486,7 +509,7 @@ async function main(): Promise<void> {
         clock: systemClock,
         ids: randomIds,
         log,
-        modules: { evidence, holds, release, journal, escrow, assetRecovery },
+        modules: { evidence, holds, release, journal, escrow, assetRecovery, chain: new NearTxClient(rpc()) },
         // NEAR account ownership checks and the RPC connection test use the same simulated chain (M17).
         chain: { rpc: rpc(), tx: new NearTxClient(rpc()) },
         exportSigner,
@@ -540,6 +563,7 @@ async function main(): Promise<void> {
               token: TOKEN,
             },
             destinationChangeDelayMs: config.DOCKSIDE_DESTINATION_CHANGE_DELAY_MS,
+            attestationLifetimeMs: POLICY.attestationLifetimeMs,
             chainOffsetMs,
             organizations: Object.fromEntries(
               Object.entries(admins).map(([k, a]) => [
@@ -679,6 +703,12 @@ async function main(): Promise<void> {
               code: "VALIDATION_FAILED",
             });
           return json(res, 200, await submit(from, call));
+        }
+        if (req.method === "GET" && url.pathname === "/control/balances") {
+          // Simulated chain only: native balances of the stack's accounts, so a browser test can
+          // count value movements on the chain itself rather than trusting any Dockside view.
+          const accounts = [BUYER_ACCT, TREASURY, SUPPLIER_ACCT, SUPPLIER_ALT_ACCT, CONTRACT];
+          return json(res, 200, Object.fromEntries(accounts.map((a) => [a, sim.balance(a).toString(10)])));
         }
         if (req.method === "GET" && url.pathname === "/control/token") {
           return json(res, 200, {
