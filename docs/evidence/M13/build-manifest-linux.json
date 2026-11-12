@@ -1,0 +1,63 @@
+{
+  "schema": "dockside/build-manifest@1",
+  "commit": "153bade1c6662c8f5c9204ac9e3a6c25d751855f",
+  "trackedTreeClean": true,
+  "toolchain": {
+    "node": "v22.23.5",
+    "pnpm": "10.34.9",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+    "platform": "linux-x64"
+  },
+  "lockfiles": {
+    "pnpm-lock.yaml": "7e56a469461ca8d26f86effb79f6cde8c308ca61b44f64614c9503752b5b21d8",
+    "contract/Cargo.lock": "7676107e9fc5e311862c03adc8f25a0df3ec997667c39dce0b627df89d10b26d"
+  },
+  "migrations": [
+    {
+      "file": "0001_foundation.sql",
+      "sha256": "ca65e5083d96299f759cbc6b16c2f9ff7b4130980346bf761b066d41b58ff74b"
+    },
+    {
+      "file": "0002_authority.sql",
+      "sha256": "617a8ecd6c85d3d9f787eb37a378b1b155140c991000250eded45b457e7ac3cb"
+    },
+    {
+      "file": "0003_evidence.sql",
+      "sha256": "c0f77a535947bf1dba4a91d77410ba0e76cb348e07c8fd51155699486ea8b765"
+    },
+    {
+      "file": "0004_release.sql",
+      "sha256": "b0f1211b46f9b3b08977f3d3eabbc986551325612469347e40ca0177d7ba438d"
+    },
+    {
+      "file": "0005_journal.sql",
+      "sha256": "6cc53f75e4820466401b283c368f049295b7c0ca4bd09ef11b55fc6e9ad2e945"
+    },
+    {
+      "file": "0006_refund_requests.sql",
+      "sha256": "b1368ae2f74367e2392db01d37279098a80dc0a870015f503b713fd50a4ba80c"
+    },
+    {
+      "file": "0007_asset_recoveries.sql",
+      "sha256": "006bef3212c4eb3217cbc503450cf6e75ca12f42fbab48bea26e8f2a2582a71f"
+    }
+  ],
+  "dist": {
+    "files": 228,
+    "digest": "5096db1fbe7aef0700964b87fd0f69de55370a7c701c406e35f6b77ec2210c21"
+  },
+  "contract": {
+    "path": "contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm",
+    "bytes": 769515,
+    "sha256": "65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7",
+    "nearCodeHash": "7r13FvcfXPUvKMcoZeZNiuvFafYRaAZ3b7upu47w3zwx",
+    "builtAt": "2026-11-12T03:53:54.365Z"
+  },
+  "deployment": {
+    "network": "near-testnet",
+    "accountId": null,
+    "codeHashOnChain": null,
+    "status": "BLOCKED"
+  }
+}

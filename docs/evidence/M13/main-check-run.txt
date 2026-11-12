@@ -1,0 +1,31 @@
+> dockside@0.1.0 check <home>\Documents\Codex\Projects\wt\dockside-m13
+> pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run security
+> dockside@0.1.0 format:check <home>\Documents\Codex\Projects\wt\dockside-m13
+> biome format .
+Checked 177 files in 146ms. No fixes applied.
+> dockside@0.1.0 lint <home>\Documents\Codex\Projects\wt\dockside-m13
+> biome lint .
+Checked 178 files in 85ms. No fixes applied.
+> dockside@0.1.0 typecheck <home>\Documents\Codex\Projects\wt\dockside-m13
+> tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json && pnpm --filter @dockside/web run typecheck
+> @dockside/web@0.1.0 typecheck <home>\Documents\Codex\Projects\wt\dockside-m13\apps\web
+> tsc -p tsconfig.json && tsc -p tsconfig.node.json
+> dockside@0.1.0 pretest <home>\Documents\Codex\Projects\wt\dockside-m13
+> pnpm run build && pnpm run contract:build
+> dockside@0.1.0 build <home>\Documents\Codex\Projects\wt\dockside-m13
+> tsc -b tsconfig.build.json
+> dockside@0.1.0 contract:build <home>\Documents\Codex\Projects\wt\dockside-m13
+> node scripts/build-contract.mjs
+    Finished `release` profile [optimized] target(s) in 1m 03s
+dockside_escrow.wasm 769847 bytes sha256 c4dd8115a42fe340408f388be88d2fadbb9b57fe7558233a76b35aca99ad601a
+> dockside@0.1.0 test <home>\Documents\Codex\Projects\wt\dockside-m13
+> vitest run
+ RUN  v4.1.12 <home>/Documents/Codex/Projects/wt/dockside-m13
+ Test Files  41 passed (41)
+      Tests  468 passed (468)
+   Start at  08:37:32
+   Duration  30.33s (transform 14.72s, setup 0ms, import 40.07s, tests 133.69s, environment 5ms)
+> dockside@0.1.0 security <home>\Documents\Codex\Projects\wt\dockside-m13
+> node scripts/secret-scan.mjs
+secret-scan: 358 files clean
+EXIT 0
