@@ -9,6 +9,7 @@ import type { ApiFailure } from "../../lib/api/client";
 import type { HoldWithRequests, ManifestItem, SlotPolicy } from "../../lib/api/trade";
 import { formatUtc } from "../../lib/format";
 import { issuanceValue, signPrepared } from "../../lib/signing";
+import { OrganizationAttestorsTable } from "./Authority";
 import { Section, useTrade } from "./common";
 
 const RECOVERY: Record<string, string> = {
@@ -696,25 +697,45 @@ export function EvidenceTab() {
         )}
         <Section what="attestor binding" state={att.state} outcome={att.outcome} reload={att.reload}>
           {(a) => (
-            <IdentityList
-              items={[
-                ["Service", `${a.binding.serviceId} (${a.binding.enrollmentId})`],
-                ["Key version", String(a.binding.keyVersion)],
-                [
-                  "Public key",
-                  <code key="k" className="wrap">
-                    {a.binding.publicKey}
-                  </code>,
-                ],
-                ["Capability", "MANIFEST_ATTEST, isolated signer custody (secret never shown)"],
-                [
-                  "Binding issues",
-                  a.issues.length
-                    ? a.issues.map((i) => `${i.code}: a new trade revision is required`).join("; ")
-                    : "None: the revision's bound key is active",
-                ],
-              ]}
-            />
+            <>
+              <IdentityList
+                items={[
+                  ["Service", `${a.binding.serviceId} (${a.binding.enrollmentId})`],
+                  ["Key version", String(a.binding.keyVersion)],
+                  [
+                    "Public key",
+                    <code key="k" className="wrap">
+                      {a.binding.publicKey}
+                    </code>,
+                  ],
+                  ["Capability", "MANIFEST_ATTEST, isolated signer custody (secret never shown)"],
+                  [
+                    "Binding issues",
+                    a.issues.length ? (
+                      <span key="i" data-testid="attestor-binding-issues">
+                        {a.issues.map((i) => (
+                          <StatusBadge
+                            key={i.code}
+                            dimension="bindingIssue"
+                            value={i.code}
+                            source="authority bindingStatus"
+                            observedAt={t.receivedAt}
+                          />
+                        ))}
+                      </span>
+                    ) : (
+                      "None: the revision's bound key is active"
+                    ),
+                  ],
+                ]}
+              />
+              {a.organizationAttestors ? (
+                <OrganizationAttestorsTable
+                  attestors={a.organizationAttestors}
+                  boundKeyVersion={a.binding.keyVersion}
+                />
+              ) : null}
+            </>
           )}
         </Section>
       </section>

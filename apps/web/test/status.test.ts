@@ -175,6 +175,28 @@ describe("backend vocabularies served since M04/M05 (release journal, operation 
       expect(describeStatus("inspectionDecision", s).label).not.toMatch(/^Unrecognized/);
     for (const s of ["MISSING", "UNDERFILLED", "STALE", "FILLED"])
       expect(describeStatus("slotStatus", s).label).not.toMatch(/^Unrecognized/);
+    for (const s of ["PENDING_PROOF", "WAITING", "COMPLETED", "CANCELLED"])
+      expect(describeStatus("recoveryStatus", s).label).not.toMatch(/^Unrecognized/);
+    for (const s of ["PENDING_PROOF", "ACTIVE", "REVOKED"])
+      expect(describeStatus("enrollmentStatus", s).label).not.toMatch(/^Unrecognized/);
+    // Every binding issue the authority service reports says a new trade revision is required.
+    for (const s of [
+      "KEY_SUPERSEDED",
+      "KEY_REVOKED",
+      "KEY_NOT_BOUND",
+      "CAPABILITY_MISSING",
+      "SCOPE_MISMATCH",
+    ]) {
+      const m = describeStatus("bindingIssue", s);
+      expect(m.label).not.toMatch(/^Unrecognized/);
+      expect(m.tone).toBe("negative");
+      expect(m.sentence).toMatch(/new trade revision is required/);
+    }
+    expect(describeStatus("attestorCoverage", "SCOPE_MISMATCH").label).toBe("Wrong scope");
+    // No key-management value borrows a positive tone either.
+    for (const d of ["recoveryStatus", "enrollmentStatus", "attestorCoverage"] as const)
+      for (const s of ["COMPLETED", "ACTIVE", "COVERS"])
+        expect(describeStatus(d, s).tone).not.toBe("positive");
     // No evidence-side value borrows a positive tone: completeness is not payment.
     for (const d of ["attestationStatus", "inspectionDecision", "slotStatus"] as const)
       for (const s of ["CURRENT", "PASS", "FILLED"]) expect(describeStatus(d, s).tone).not.toBe("positive");

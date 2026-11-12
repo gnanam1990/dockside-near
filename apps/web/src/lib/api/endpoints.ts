@@ -135,6 +135,24 @@ export const ENDPOINTS = {
     "M01",
   ),
   audit: e("audit", "GET", "/v1/audit", true, "implemented", "M01"),
+  /* M12 read models behind the key-management screens (mutations are the M01 routes above). */
+  myKeys: e("myKeys", "GET", "/v1/me/keys", true, "implemented", "M12"),
+  organizationDirectory: e(
+    "organizationDirectory",
+    "GET",
+    "/v1/organization/directory",
+    true,
+    "implemented",
+    "M12",
+  ),
+  organizationTradeBindings: e(
+    "organizationTradeBindings",
+    "GET",
+    "/v1/organization/trade-bindings",
+    true,
+    "implemented",
+    "M12",
+  ),
 
   /* M07 integrated trade, evidence, hold, release, journal and audit surface. */
   listTrades: e("listTrades", "GET", "/v1/trades", true, "implemented", "M07"),

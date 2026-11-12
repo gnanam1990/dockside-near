@@ -65,7 +65,11 @@ export type Dimension =
   | "inspectionDecision"
   | "slotStatus"
   | "refundState"
-  | "destinationChange";
+  | "destinationChange"
+  | "recoveryStatus"
+  | "enrollmentStatus"
+  | "bindingIssue"
+  | "attestorCoverage";
 
 const LOCK = "Value stays reserved. No retry, exit or terminal override is available.";
 
@@ -79,6 +83,10 @@ export const VOCABULARY: Record<
     | "slotStatus"
     | "refundState"
     | "destinationChange"
+    | "recoveryStatus"
+    | "enrollmentStatus"
+    | "bindingIssue"
+    | "attestorCoverage"
   >,
   Record<string, StatusMeaning>
 > = {
@@ -692,6 +700,103 @@ const EXTRA: Partial<Record<Dimension, Record<string, StatusMeaning>>> = {
       tone: "warning",
       icon: "review",
       sentence: "The inspector asked for review; release is blocked until a later PASS.",
+    },
+  },
+  /* M12 key management: recovery, service enrollment, revision binding and attestor coverage. */
+  recoveryStatus: {
+    PENDING_PROOF: {
+      label: "Recovery: awaiting key proof",
+      tone: "warning",
+      icon: "pending",
+      sentence:
+        "The principal's keys are suspended; the new key must prove possession from the principal's own device.",
+    },
+    WAITING: {
+      label: "Recovery: delay running",
+      tone: "warning",
+      icon: "pending",
+      sentence:
+        "The new key is proven. A security administrator other than the recovered principal may complete it only after the delay; the principal can veto with its existing key until then.",
+    },
+    COMPLETED: {
+      label: "Recovery completed",
+      tone: "neutral",
+      icon: "active",
+      sentence: "The new key is active and the suspended keys are revoked.",
+    },
+    CANCELLED: {
+      label: "Recovery vetoed",
+      tone: "neutral",
+      icon: "cancelled",
+      sentence:
+        "The principal vetoed with its existing key; the prior keys were restored and the new key revoked.",
+    },
+  },
+  enrollmentStatus: {
+    PENDING_PROOF: {
+      label: "Enrollment pending",
+      tone: "warning",
+      icon: "pending",
+      sentence: "The service key must prove possession, then a security administrator activates it.",
+    },
+    ACTIVE: {
+      label: "Enrollment active",
+      tone: "neutral",
+      icon: "active",
+      sentence: "The service holds its capability within its enrolled scope only.",
+    },
+    REVOKED: { label: "Enrollment revoked", tone: "negative", icon: "revoked", sentence: "No key may sign." },
+  },
+  bindingIssue: {
+    KEY_SUPERSEDED: {
+      label: "Bound key rotated",
+      tone: "negative",
+      icon: "superseded",
+      sentence:
+        "The key version this revision binds was replaced. Its new version is refused for this revision (wrong key version); a new trade revision is required.",
+    },
+    KEY_REVOKED: {
+      label: "Bound key revoked or suspended",
+      tone: "negative",
+      icon: "revoked",
+      sentence:
+        "The key this revision binds was revoked, or suspended by a recovery. A new trade revision is required, binding a usable key.",
+    },
+    KEY_NOT_BOUND: {
+      label: "Bound key not enrolled",
+      tone: "negative",
+      icon: "blocked",
+      sentence:
+        "The revision names a key that is not the enrolled active version. A new trade revision is required.",
+    },
+    CAPABILITY_MISSING: {
+      label: "Capability no longer held",
+      tone: "negative",
+      icon: "blocked",
+      sentence:
+        "The bound principal no longer holds the capability this role needs. A new trade revision is required.",
+    },
+    SCOPE_MISMATCH: {
+      label: "Scope does not cover this trade",
+      tone: "negative",
+      icon: "blocked",
+      sentence:
+        "The enrolled service scope does not cover this organization, trade and EvidencePolicy. A new trade revision is required.",
+    },
+  },
+  attestorCoverage: {
+    COVERS: {
+      label: "Scope covers this trade",
+      tone: "neutral",
+      icon: "complete",
+      sentence: "Enrolled organization, trade and EvidencePolicy scope cover this trade.",
+    },
+    SCOPE_MISMATCH: {
+      label: "Wrong scope",
+      tone: "negative",
+      icon: "blocked",
+      sentence:
+        "Enrolled for a different organization, trade or EvidencePolicy revision; its attestations are refused for this trade.",
     },
   },
   slotStatus: {

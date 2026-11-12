@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
 
 /**
  * Confirmation with scope, reversibility, exact identity and consequence. Uses the native
@@ -20,6 +20,8 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  // Unique per dialog: a screen may hold several (one per key row), each needs its own name.
+  const titleId = useId();
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
   useEffect(() => {
@@ -39,13 +41,13 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="confirm-title"
+      aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();
         onCancel();
       }}
     >
-      <h2 id="confirm-title">{title}</h2>
+      <h2 id={titleId}>{title}</h2>
       {children}
       <div className="btn-row">
         <button type="button" className="btn" onClick={onCancel}>

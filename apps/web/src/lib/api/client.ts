@@ -11,18 +11,48 @@ import type {
   HumanChallengePayload,
   HumanChallengePurpose,
   InvitationCreated,
+  KeyVersionView,
   MeResponse,
+  OrganizationDirectory,
+  OwnKeys,
   ReadyResponse,
+  RecoveryStarted,
   RoleGrantView,
+  ServiceCapability,
+  ServiceChallengePayload,
+  ServiceChallengePurpose,
+  ServiceChallengeResponse,
+  ServiceEnrollmentCreated,
   ServiceEnrollmentView,
+  ServiceScope,
+  ServiceVersionCreated,
   SessionGrant,
+  TradeBindingsResponse,
 } from "./types";
 
 /** Signing domains used by the browser (packages/core/src/signing.ts SIGNING_DOMAINS). */
 export const DOMAINS = {
   POP_CHALLENGE: "dockside/pop-challenge",
+  SERVICE_POP_CHALLENGE: "dockside/service-pop-challenge",
   REQUEST_PROOF: "dockside/request-proof",
 } as const;
+
+export interface ServiceChallengeExpectation {
+  readonly purpose: ServiceChallengePurpose;
+  readonly publicKey: string;
+  readonly enrollmentId?: string;
+  readonly keyVersion?: number;
+}
+
+export interface VerifiedServiceChallenge {
+  readonly challenge: ServiceChallengeResponse;
+  readonly payload: ServiceChallengePayload;
+}
+
+export interface Custody {
+  readonly kind: string;
+  readonly reference: string;
+}
 
 export type ApiFailure =
   /** The backend answered that this route does not exist in the running build. */
@@ -240,6 +270,39 @@ export class DocksideClient {
     return { ok: true, value: { challenge: c, payload: p, digest: fromHex(c.digestHex) } };
   }
 
+  /**
+   * The same checks for a service PoP challenge before the administrator hands it to the
+   * service's custody: digest recomputed, origin, purpose, key, enrollment and version as asked.
+   * The browser never signs a service challenge; only the custody holds the service key.
+   */
+  async verifyServiceChallenge(
+    c: ServiceChallengeResponse,
+    expect: ServiceChallengeExpectation,
+  ): Promise<{ ok: true; value: VerifiedServiceChallenge } | { ok: false; reason: string }> {
+    let value: CanonicalValue;
+    try {
+      value = fromTypedJson(c.payload);
+    } catch (e) {
+      return { ok: false, reason: `challenge payload is not canonical: ${(e as Error).message}` };
+    }
+    if (value === null || typeof value !== "object" || Array.isArray(value) || value instanceof Uint8Array)
+      return { ok: false, reason: "challenge payload is not a struct" };
+    const p = value as unknown as ServiceChallengePayload;
+    const digest = await canonicalDigest(DOMAINS.SERVICE_POP_CHALLENGE, 1, value);
+    if (toHex(digest) !== c.digestHex) return { ok: false, reason: "server digest does not match payload" };
+    if (p.challengeId !== c.challengeId) return { ok: false, reason: "challenge id mismatch" };
+    if (p.origin !== this.opts.origin)
+      return { ok: false, reason: `challenge is bound to origin ${p.origin}` };
+    if (p.purpose !== expect.purpose) return { ok: false, reason: `unexpected purpose ${p.purpose}` };
+    if (p.publicKey !== expect.publicKey) return { ok: false, reason: "challenge names a different key" };
+    if (expect.enrollmentId !== undefined && p.enrollmentId !== expect.enrollmentId)
+      return { ok: false, reason: "challenge names a different enrollment" };
+    if (expect.keyVersion !== undefined && p.keyVersion !== expect.keyVersion)
+      return { ok: false, reason: "challenge names a different key version" };
+    if (p.expiresAt <= this.now()) return { ok: false, reason: "challenge already expired" };
+    return { ok: true, value: { challenge: c, payload: p } };
+  }
+
   async signVerified(v: VerifiedChallenge, privateKey: CryptoKey): Promise<string> {
     return signBytes(privateKey, v.digest);
   }
@@ -299,6 +362,102 @@ export class DocksideClient {
   }
   audit(limit = 200): Promise<ApiOutcome<{ events: AuditEvent[] }>> {
     return this.call(ENDPOINTS.audit, { query: { limit: String(limit) } });
+  }
+
+  /* ------------------------- M12 key management ------------------------- */
+
+  myKeys(): Promise<ApiOutcome<OwnKeys>> {
+    return this.call(ENDPOINTS.myKeys);
+  }
+  organizationDirectory(): Promise<ApiOutcome<OrganizationDirectory>> {
+    return this.call(ENDPOINTS.organizationDirectory);
+  }
+  tradeBindings(): Promise<ApiOutcome<TradeBindingsResponse>> {
+    return this.call(ENDPOINTS.organizationTradeBindings);
+  }
+  rotationChallenge(publicKey: string): Promise<ApiOutcome<ChallengeResponse>> {
+    return this.call(ENDPOINTS.rotationChallenge, { body: { publicKey } });
+  }
+  rotationComplete(challengeId: string, signature: string): Promise<ApiOutcome<KeyVersionView>> {
+    return this.call(ENDPOINTS.rotationComplete, {
+      body: { challengeId, proof: { scheme: "dockside-ed25519", signature } },
+    });
+  }
+  revokeKey(keyVersionId: string, reason: string): Promise<ApiOutcome<KeyVersionView>> {
+    return this.call(ENDPOINTS.revokeKey, { params: { id: keyVersionId }, body: { reason } });
+  }
+  startRecovery(principalId: string, publicKey: string): Promise<ApiOutcome<RecoveryStarted>> {
+    return this.call(ENDPOINTS.startRecovery, { body: { principalId, publicKey } });
+  }
+  proveRecovery(
+    challengeId: string,
+    signature: string,
+  ): Promise<ApiOutcome<{ recoveryId: string; status: string }>> {
+    return this.call(ENDPOINTS.proveRecovery, {
+      body: { challengeId, proof: { scheme: "dockside-ed25519", signature } },
+    });
+  }
+  completeRecovery(recoveryId: string): Promise<ApiOutcome<KeyVersionView>> {
+    return this.call(ENDPOINTS.completeRecovery, { params: { id: recoveryId }, body: {} });
+  }
+  recoveryCancelChallenge(recoveryId: string): Promise<ApiOutcome<ChallengeResponse>> {
+    return this.call(ENDPOINTS.recoveryCancelChallenge, { params: { id: recoveryId }, body: {} });
+  }
+  cancelRecovery(
+    challengeId: string,
+    signature: string,
+  ): Promise<ApiOutcome<{ recoveryId: string; status: string }>> {
+    return this.call(ENDPOINTS.cancelRecovery, {
+      body: { challengeId, proof: { scheme: "dockside-ed25519", signature } },
+    });
+  }
+  createServiceEnrollment(input: {
+    serviceId: string;
+    capability: ServiceCapability;
+    publicKey: string;
+    scope: Omit<ServiceScope, "organizationId">;
+    custody: Custody;
+  }): Promise<ApiOutcome<ServiceEnrollmentCreated>> {
+    return this.call(ENDPOINTS.createServiceEnrollment, { body: input });
+  }
+  proveServiceKey(
+    challengeId: string,
+    signature: string,
+  ): Promise<ApiOutcome<{ enrollmentId: string; keyVersion: number }>> {
+    return this.call(ENDPOINTS.proveServiceKey, { body: { challengeId, signature } });
+  }
+  activateServiceKey(enrollmentId: string, keyVersion: number): Promise<ApiOutcome<ServiceEnrollmentView>> {
+    return this.call(ENDPOINTS.activateServiceKey, { params: { id: enrollmentId }, body: { keyVersion } });
+  }
+  rotateServiceKey(
+    enrollmentId: string,
+    publicKey: string,
+    custody: Custody,
+  ): Promise<ApiOutcome<ServiceVersionCreated>> {
+    return this.call(ENDPOINTS.rotateServiceKey, {
+      params: { id: enrollmentId },
+      body: { publicKey, custody },
+    });
+  }
+  recoverServiceKey(
+    enrollmentId: string,
+    publicKey: string,
+    custody: Custody,
+  ): Promise<ApiOutcome<ServiceVersionCreated>> {
+    return this.call(ENDPOINTS.recoverServiceKey, {
+      params: { id: enrollmentId },
+      body: { publicKey, custody },
+    });
+  }
+  revokeServiceKey(
+    enrollmentId: string,
+    keyVersion: number,
+    reason: string,
+  ): Promise<ApiOutcome<KeyVersionView>> {
+    return this.call(ENDPOINTS.revokeServiceKey, {
+      params: { id: enrollmentId },
+      body: { keyVersion, reason },
+    });
   }
 
   /* --------------------- trade routes (typed in ./trade.ts) --------------------- */

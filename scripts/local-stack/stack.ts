@@ -31,12 +31,15 @@ import { createApp, hardenServer } from "@dockside/api";
 import { type AuthContext, AuthorityService, IsolatedSigner } from "@dockside/authority";
 import {
   type Capability,
+  digestHexFor,
+  fromTypedJson,
   generateEd25519KeyPair,
   loadConfig,
   randomIds,
   sha256,
   signFor,
   systemClock,
+  type TypedJson,
   toHex,
   toTypedJson,
 } from "@dockside/core";
@@ -204,6 +207,9 @@ async function main(): Promise<void> {
     DOCKSIDE_ESCROW_CONTRACT_ID: CONTRACT,
     DOCKSIDE_NEAR_RPC_URL: rpcUrl,
     DOCKSIDE_OBJECT_STORE_DIR: join(dir, "objects"),
+    ...(env["DOCKSIDE_RECOVERY_DELAY_MS"] === undefined
+      ? {}
+      : { DOCKSIDE_RECOVERY_DELAY_MS: env["DOCKSIDE_RECOVERY_DELAY_MS"] }),
     // The browser tests shorten the destination-change delay new proposals bind (never below 1 minute).
     ...(env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"]
       ? { DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"] }
@@ -270,6 +276,18 @@ async function main(): Promise<void> {
   const policy = await enroll("DETERMINISTIC_POLICY_SET", "deterministic-policy");
   evidence.registerPolicy(POLICY);
 
+  /*
+   * Service key custody (local stand-in for an HSM/KMS): every service key lives in its own
+   * isolated signer child process and is found only by its public key. Keys made for rotation,
+   * recovery or a new enrollment through the web UI are generated here too; the UI only ever
+   * sees the public key and an opaque locator, and pastes back the PoP signature made here.
+   */
+  const custody = new Map<string, { signer: IsolatedSigner; reference: string }>([
+    [attestor.signer.publicKey, { signer: attestor.signer, reference: "signer://manifest-attestor/v1" }],
+    [policy.signer.publicKey, { signer: policy.signer, reference: "signer://deterministic-policy/v1" }],
+  ]);
+  const custodySigner = (publicKey: string): IsolatedSigner | undefined => custody.get(publicKey)?.signer;
+
   /* Relaying: signs simulated envelopes (no keys) and broadcasts through the production client. */
   const tx = new NearTxClient(rpc());
   let queue: Promise<unknown> = Promise.resolve();
@@ -301,11 +319,13 @@ async function main(): Promise<void> {
         const t = String(r["trade_id"]);
         try {
           const terms = evidence.terms(t);
-          if (terms.manifestAttestor.publicKey !== attestor.signer.publicKey) continue;
+          // The attestor holds whichever enrolled key this revision binds, if that key is in custody.
+          const signer = custodySigner(terms.manifestAttestor.publicKey);
+          if (!signer) continue;
           if (evidence.evaluate(t).status !== "COMPLETE") continue;
           if ((await escrow.getTrade(t)) === null) continue;
           let att = evidence.currentAttestation(t);
-          if (!att) att = await evidence.attest(t, attestor.signer);
+          if (!att) att = await evidence.attest(t, signer);
           const onChain = await escrow.getEvidence(t);
           if (onChain.current?.digest === att.manifestDigest) continue;
           const res = await submit(
@@ -328,11 +348,12 @@ async function main(): Promise<void> {
         const t = String(r["trade_id"]);
         try {
           const terms = evidence.terms(t);
-          if (terms.policySetter.publicKey !== policy.signer.publicKey) continue;
+          const signer = custodySigner(terms.policySetter.publicKey);
+          if (!signer) continue;
           const key = `${evidence.currentInspection(t)?.digest ?? "-"}|${evidence.currentAcceptedManifestDigest(t) ?? "-"}`;
           if (evaluated.get(t) === key) continue;
           evaluated.set(t, key);
-          for (const h of await holds.applyDeterministicPolicy(t, policy.signer)) {
+          for (const h of await holds.applyDeterministicPolicy(t, signer)) {
             const res = await submit(
               WORKER_RELAYER,
               escrow.setHoldCall(t, toTypedJson(h.setPayload), h.setSignature),
@@ -451,6 +472,46 @@ async function main(): Promise<void> {
             authority.grantRole(adminOf(b["org"]).ctx(), { invitationId: String(b["invitationId"]) }),
           );
         }
+        if (req.method === "POST" && url.pathname === "/control/custody/keys") {
+          // The custody operator creates a new isolated service key; only the public key and an
+          // opaque locator leave the signer process.
+          const b = await readBody(req);
+          const serviceId = String(b["serviceId"] ?? "");
+          if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(serviceId))
+            throw Object.assign(new Error("serviceId must be a slug"), { code: "VALIDATION_FAILED" });
+          // The key may sign only its PoP challenge and the one purpose of its service capability.
+          const capability = String(b["capability"] ?? "");
+          const purpose =
+            capability === "MANIFEST_ATTEST"
+              ? "MANIFEST_ATTESTATION"
+              : capability === "DETERMINISTIC_POLICY_SET"
+                ? "HOLD_SET"
+                : null;
+          if (!purpose)
+            throw Object.assign(new Error("capability must be MANIFEST_ATTEST or DETERMINISTIC_POLICY_SET"), {
+              code: "VALIDATION_FAILED",
+            });
+          const signer = await IsolatedSigner.spawn({ allowedPurposes: ["SERVICE_POP_CHALLENGE", purpose] });
+          const reference = `signer://${serviceId}/k${custody.size + 1}`;
+          custody.set(signer.publicKey, { signer, reference });
+          return json(res, 201, {
+            publicKey: signer.publicKey,
+            custody: { kind: "ISOLATED_SIGNER_PROCESS", reference },
+          });
+        }
+        if (req.method === "POST" && url.pathname === "/control/custody/sign") {
+          // The custody operator answers a service PoP challenge with the key it names, after
+          // recomputing the digest from the typed payload (it never signs a digest it was handed).
+          const b = await readBody(req);
+          const ch = b["challenge"] as { payload: TypedJson; digestHex: string };
+          const payload = fromTypedJson(ch.payload) as Record<string, unknown>;
+          if (digestHexFor("SERVICE_POP_CHALLENGE", payload as never) !== ch.digestHex)
+            throw Object.assign(new Error("digest does not match payload"), { code: "DIGEST_MISMATCH" });
+          const signer = custodySigner(String(payload["publicKey"]));
+          if (!signer)
+            throw Object.assign(new Error("no key in custody for this public key"), { code: "NOT_FOUND" });
+          return json(res, 200, { signature: await signer.sign("SERVICE_POP_CHALLENGE", payload as never) });
+        }
         if (req.method === "POST" && url.pathname === "/control/fund") {
           // A funder's wallet sends the deposit itself (predecessor = funder account).
           const b = await readBody(req);
@@ -513,8 +574,7 @@ async function main(): Promise<void> {
     clearInterval(attestorLoop);
     clearInterval(policyLoop);
     void worker.stop().finally(() => {
-      attestor.signer.close();
-      policy.signer.close();
+      for (const k of custody.values()) k.signer.close();
       api.close();
       control.close();
       void chain.stop().finally(() => {
