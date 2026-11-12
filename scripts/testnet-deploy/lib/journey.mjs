@@ -136,7 +136,15 @@ export async function runJourney(o) {
       if (b.method === "execute_release") {
         const to = applied.value.transfer.to;
         const transfer = outcomes.slice(mainIdx + 1).find((x) => x.outcome.executor_id === to);
-        const cb = outcomes.slice(mainIdx + 1).find((x) => x.outcome.executor_id === accounts.escrow);
+        // The settlement callback is the next escrow receipt that returns a value (or fails);
+        // runtime refunds of a failed transfer and of unused gas return nothing.
+        const cb = outcomes
+          .slice(mainIdx + 1)
+          .find(
+            (x) =>
+              x.outcome.executor_id === accounts.escrow &&
+              (isFailure(x.outcome.status) || successValue(x.outcome.status) !== null),
+          );
         if (!transfer || !cb)
           throw new ToolError("SUBMIT_FAILED", "release transfer or settlement receipt missing");
         const cbAt = await rpc.blockTimeMs(cb.block_hash);

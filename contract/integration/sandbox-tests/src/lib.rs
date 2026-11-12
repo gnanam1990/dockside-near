@@ -282,6 +282,11 @@ impl Dock {
             .transact()
             .await?;
         let outcomes = result.receipt_outcomes().to_vec();
+        if std::env::var("DOCKSIDE_DEBUG_OUTCOMES").is_ok() {
+            for o in &outcomes {
+                eprintln!("{method}: {} gas {} {:?}", o.executor_id, o.gas_burnt.as_gas(), o.clone().into_result().map(|_| ()));
+            }
+        }
         let main_i = outcomes
             .iter()
             .position(|o| o.executor_id == *self.escrow.id())
@@ -319,10 +324,13 @@ impl Dock {
                 .skip(main_i + 1)
                 .find(|o| o.executor_id.as_str() == receiver)
                 .ok_or_else(|| anyhow!("{method}: no receipt ran on {receiver}"))?;
+            // The settlement callback is the next receipt the escrow runs that returns a value
+            // (or fails); runtime refunds of a failed transfer and of unused gas also run on the
+            // escrow but return nothing.
             let cb_outcome = outcomes
                 .iter()
                 .skip(main_i + 1)
-                .find(|o| o.executor_id == *self.escrow.id())
+                .find(|o| o.executor_id == *self.escrow.id() && (o.is_failure() || outcome_json(o) != J::Null))
                 .ok_or_else(|| anyhow!("{method}: settlement callback did not run"))?;
             if cb_outcome.is_failure() {
                 bail!("{method}: settlement callback failed: {}", outcome_error(cb_outcome));
