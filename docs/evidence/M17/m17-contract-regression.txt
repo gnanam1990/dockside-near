@@ -1,0 +1,234 @@
+# pnpm run contract:test after merging main d19860d
+
+> dockside@0.1.0 contract:test <worktree>
+> cargo test --manifest-path contract/Cargo.toml --locked --workspace --exclude dockside-escrow
+
+   Compiling dockside-escrow-core v0.1.0 (<worktree>\contract\crates\dockside-escrow-core)
+warning: constant `REQ` is never used
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:101:7
+    |
+101 | const REQ: &str = "dockside/asset-recovery-request";
+    |       ^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `dockside-escrow-core` (test "t051_asset_recovery") generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.66s
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_canonical-7d4b2e9ffa4db05a.exe)
+
+running 4 tests
+test tests::type_tags_separate_numeric_forms ... ok
+test tests::depth_limit ... ok
+test tests::struct_order_is_bytewise_and_duplicates_fail ... ok
+test tests::domains_are_validated ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\vectors.rs (contract\target\debug\deps\vectors-734d4367732d11c0.exe)
+
+running 2 tests
+test reproduces_typescript_vectors ... ok
+test verifies_typescript_signature_over_trade_revision ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (contract\target\debug\deps\dockside_escrow_core-224f0e0a28db8e29.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\holds_and_keys.rs (contract\target\debug\deps\holds_and_keys-772bb686bf9d359f.exe)
+
+running 4 tests
+test expiry_never_clears_a_hold ... ok
+test deterministic_policy_and_risk_may_set_but_no_one_else ... ok
+test revoked_bound_keys_lose_authority_immediately ... ok
+test only_the_bound_risk_resolver_can_resolve ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\refund_rows.rs (contract\target\debug\deps\refund_rows-1d59669942e9b8bf.exe)
+
+running 9 tests
+test refunded_available_value_demotes_remaining_value_to_partial ... ok
+test failed_transfer_restores_the_exact_source_bucket_and_needs_a_new_intent ... ok
+test excess_return_revocation_restores_quarantined_exactly ... ok
+test partial_funding_return_goes_only_to_the_original_funder_after_cooling ... ok
+test trade_expiry_undisputed_executes_to_the_original_funder ... ok
+test mutual_cancel_needs_identical_dual_consent_and_one_hour_revocation_window ... ok
+test key_loss_inspection_fail_and_unknown_rows_never_submit ... ok
+test trade_expiry_requires_expiry_initiator_signature_and_24h_challenge ... ok
+test policy_revision_replay_and_header_mutations_fail ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\t006_key_rebinding.rs (contract\target\debug\deps\t006_key_rebinding-cebdffcd504afbe4.exe)
+
+running 10 tests
+test t006_a_pending_destination_change_excludes_a_rebinding ... ok
+test t006_two_party_rotation_takes_two_revisions_each_anchored_by_the_other_party ... ok
+test t006_rebinding_the_inspector_also_requires_items_it_issued_under_the_new_key ... ok
+test t006_signers_old_party_key_cannot_sign_for_a_new_one_and_non_parties_cannot_sign ... ok
+test t006_successor_may_change_only_key_versions_of_existing_roles ... ok
+test t006_service_and_non_party_rebinding_needs_both_consents_but_no_delay ... ok
+test t006_party_rebinding_waits_the_signed_delay_and_supersedes_every_release_fact ... ok
+test t006_revocation_by_either_party_voids_the_pending_rebinding ... ok
+test t006_revoked_role_is_cleared_only_for_the_rebound_role_and_a_revoked_anchor_blocks ... ok
+test t006_activation_is_refused_while_value_is_unresolved_released_or_refunding ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\t007_t008_funding.rs (contract\target\debug\deps\t007_t008_funding-125c47e4d00c0fd9.exe)
+
+running 7 tests
+test exact_funding_is_accepted_and_recorded_per_original_funder ... ok
+test partial_funding_stays_unavailable_until_complete ... ok
+test funding_rejects_dust_and_expired_trades ... ok
+test excess_is_quarantined_by_original_funder ... ok
+test registration_verifies_both_parties_over_the_recomputed_digest ... ok
+test registration_fails_closed_on_schema_contract_and_network ... ok
+test conservation_property_over_random_deposit_sequences ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\t009_t010_t050_refund_matrix.rs (contract\target\debug\deps\t009_t010_t050_refund_matrix-0be913c045bf5cd8.exe)
+
+running 10 tests
+test t009_mutual_cancel_refund_requires_the_release_intent_to_exit_first ... ok
+test t009_inspection_fail_refunds_each_original_funder_after_appeal_window_and_risk_authorization ... ok
+test t009_permanent_hold_refund_needs_risk_resolution_supplier_consent_and_cooling ... ok
+test t050_inspection_fail_row_mutations ... ok
+test t010_release_and_refund_serialize_on_one_lock_in_either_order ... ok
+test t010_destination_activation_and_cancellation_against_refund_and_release ... ok
+test t009_permanent_hold_wrong_initiator_signer_basis_and_revocation ... ok
+test t009_supplier_appeal_superseding_inspection_and_risk_revocation ... ok
+test t050_authorized_refund_cannot_execute_while_a_release_is_unresolved ... ok
+test t050_every_reason_row_is_rejected_in_every_unresolved_release_state ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests\t015_t019_release_conjunction.rs (contract\target\debug\deps\t015_t019_release_conjunction-d53b55dc3ceaf2e1.exe)
+
+running 9 tests
+test t019_the_exact_complete_conjunction_releases_to_the_bound_supplier ... ok
+test t019_partial_funding_cannot_back_an_intent ... ok
+test t019_wrong_profile_recipient_and_value_fail_at_intent_creation ... ok
+test t015_a_hold_set_before_approval_blocks_approval_and_resolution_then_allows_fresh_approval ... ok
+test t019_wrong_or_stale_approvals_are_rejected ... ok
+test t019_failed_transfer_restores_exact_slices_and_requires_a_new_intent ... ok
+test t015_active_and_expired_unresolved_holds_reject_direct_release ... ok
+test t019_missing_prerequisites_are_enumerated_and_each_one_rejects ... ok
+test t019_expired_approval_and_changed_evidence_after_approval_reject_release ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\t016_hold_resolution.rs (contract\target\debug\deps\t016_hold_resolution-f2908076480e5ca8.exe)
+
+running 3 tests
+test a_revoked_resolver_cannot_clear_an_existing_hold ... ok
+test expired_unresolved_blocks_until_a_valid_risk_resolution ... ok
+test resolution_nonces_are_single_use_across_holds ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\t020_t021_t047_destination.rs (contract\target\debug\deps\t020_t021_t047_destination-8e9feeefa121cd19.exe)
+
+running 9 tests
+test t021_delay_starts_at_the_second_consent_and_is_enforced ... ok
+test t021_revoked_party_key_blocks_activation ... ok
+test t047_a_live_refund_blocks_activation ... ok
+test t020_successor_may_change_only_the_destination_and_must_chain_the_revision ... ok
+test t021_activation_invalidates_manifest_attestation_inspection_holds_view_intent_and_approval ... ok
+test t020_revocation_by_either_party_voids_the_pending_change ... ok
+test t021_old_manifest_revision_cannot_be_reattested_and_unresolved_holds_keep_blocking ... ok
+test t020_no_single_party_or_non_party_path_changes_the_destination ... ok
+test t047_activation_against_every_intent_state ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running tests\t022_t023_value_lock.rs (contract\target\debug\deps\t022_t023_value_lock-73a451036a94226d.exe)
+
+running 6 tests
+test t022_new_deposits_after_the_lock_are_excess_not_a_second_value_source ... ok
+test t022_exact_duplicates_join_and_conflicting_reuse_fails_closed ... ok
+test t022_intent_id_is_caller_random_and_independent_of_revision_quote_and_attempt ... ok
+test t023_late_receipt_resolves_the_original_intent_only ... ok
+test t023_excess_and_partial_refund_rows_also_wait_for_an_unresolved_release ... ok
+test t023_every_unresolved_state_rejects_every_competing_action ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\t041_generated_conservation.rs (contract\target\debug\deps\t041_generated_conservation-5f409c6e1b2b8841.exe)
+
+running 1 test
+test t041_conservation_and_source_buckets_survive_generated_sequences ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.17s
+
+     Running tests\t046_pre_submit_exits.rs (contract\target\debug\deps\t046_pre_submit_exits-9c281ba9ee3b0b70.exe)
+
+running 10 tests
+test nonces_must_be_distinct_and_single_use ... ok
+test a_party_revokes_only_its_own_consent_and_revocation_voids_the_cancel ... ok
+test wrong_value_state_destination_bucket_and_window_are_rejected ... ok
+test one_signature_disagreement_and_unauthorized_roles_change_nothing ... ok
+test abandon_rejects_non_designated_roles_subjective_wrong_policy_replay_and_revoked_keys ... ok
+test revoked_party_keys_and_expired_consents_never_complete_a_cancel ... ok
+test cancel_with_matching_buyer_and_supplier_consents_restores_the_exact_reservation ... ok
+test exit_and_supersession_race_never_exposes_value_twice ... ok
+test abandon_after_the_objective_trigger_and_grace_by_one_designated_party ... ok
+test exit_and_submit_race_has_exactly_one_winner_in_either_order ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\t049_t017_t018_contract_evidence.rs (contract\target\debug\deps\t049_t017_t018_contract_evidence-517e7af6886d18a0.exe)
+
+running 9 tests
+test complete_manifest_signed_by_the_bound_attestor_is_accepted_and_completeness_is_derived ... ok
+test holds_bind_the_current_manifest_once_one_exists ... ok
+test policy_must_match_the_signed_revision_and_be_registered_first ... ok
+test t017_only_the_bound_inspector_attests_the_current_usable_manifest ... ok
+test caller_completeness_flags_and_projection_fields_are_rejected ... ok
+test t018_replacement_supersedes_attestation_inspection_and_predecessor_items ... ok
+test signature_expiry_replay_wrong_attestor_and_revocation ... ok
+test issuer_time_freshness_aggregate_and_duplicates_are_enforced_with_valid_issuer_signatures ... ok
+test every_item_predicate_is_recomputed_by_the_contract ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests\t051_asset_recovery.rs (contract\target\debug\deps\t051_asset_recovery-c2879be3465c866a.exe)
+
+running 8 tests
+test authoritative_transfer_failure_returns_the_asset_to_review_and_needs_a_new_request ... ok
+test full_recovery_reaches_the_proven_sender_after_the_72_hour_challenge ... ok
+test challenge_is_refused_for_strangers_the_recipient_and_after_the_window ... ok
+test request_requires_the_claimed_sender_exact_fields_and_a_safe_adapter ... ok
+test recovery_binds_the_governing_trade_and_never_touches_native_value ... ok
+test revocation_by_sender_or_risk_before_execution_only ... ok
+test approval_is_the_bound_risk_principal_over_the_exact_request_and_capability ... ok
+test challenge_by_party_risk_or_another_claimant_keeps_the_asset_in_review ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\t051_unexpected_assets.rs (contract\target\debug\deps\t051_unexpected_assets-67bc9b9d472923ea.exe)
+
+running 2 tests
+test recorded_asset_is_review_only_with_claimed_sender_and_no_funder ... ok
+test native_refund_entry_points_reject_unexpected_assets ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests dockside_canonical
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests dockside_escrow_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0

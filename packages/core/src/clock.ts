@@ -67,6 +67,10 @@ export const ID_PREFIXES = {
   assetRecoveryObservation: "aob",
   assetRecoverySignature: "ars",
   assetRecoveryValidation: "arv",
+  // Signed audit export keys and NEAR account links (M17).
+  auditExportKey: "aek",
+  nearAccountLink: "nal",
+  nearAccountCheck: "nac",
 } as const;
 export type IdPrefix = (typeof ID_PREFIXES)[keyof typeof ID_PREFIXES];
 

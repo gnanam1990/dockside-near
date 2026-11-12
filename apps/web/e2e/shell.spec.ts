@@ -27,6 +27,10 @@ const ROUTES = [
   "/organization",
   "/organization/keys",
   "/organization/services",
+  "/organization/policies",
+  "/organization/retention",
+  "/organization/integrations",
+  "/organization/near-accounts",
   "/recovery",
   "/no-such-page",
 ];
@@ -51,6 +55,10 @@ test.describe("signed out", () => {
       "/organization",
       "/organization/keys",
       "/organization/services",
+      "/organization/policies",
+      "/organization/retention",
+      "/organization/integrations",
+      "/organization/near-accounts",
       "/payouts",
       "/inspections",
     ]) {

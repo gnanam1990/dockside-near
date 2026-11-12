@@ -47,7 +47,13 @@ export const SIGNING_DOMAINS = {
   // Digest of the read-only adapter validation report a risk/policy approval signs over.
   ASSET_RECOVERY_VALIDATION: { domain: "dockside/asset-recovery-validation", version: 1 },
   ASSET_RECOVERY_EVIDENCE: { domain: "dockside/asset-recovery-evidence", version: 1 },
+  // Signed audit export (M17): the export statement and the export key's enrollment proof. Signed
+  // only by the deployment's dedicated audit-export key in its isolated signer process.
+  AUDIT_EXPORT: { domain: "dockside/audit-export", version: 1 },
+  AUDIT_EXPORT_KEY_ENROLLMENT: { domain: "dockside/audit-export-key-enrollment", version: 1 },
   // Digest-only domains (never signed on their own).
+  ORGANIZATION_SETTINGS: { domain: "dockside/organization-settings", version: 1 },
+  NEAR_ACCOUNT_LINK: { domain: "dockside/near-account-link", version: 1 },
   DESTINATION_SNAPSHOT: { domain: "dockside/destination-snapshot", version: 1 },
   RESERVATION_SOURCE: { domain: "dockside/reservation-source", version: 1 },
   HOLDS_VIEW: { domain: "dockside/holds-view", version: 1 },

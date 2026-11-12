@@ -42,6 +42,11 @@ const schema = z
       .optional(),
     /** Directory for content-addressed evidence objects (M03 LocalObjectStore). */
     DOCKSIDE_OBJECT_STORE_DIR: z.string().min(1).default(".data/objects"),
+    /**
+     * Seed file of the deployment's dedicated audit-export signing key (M17, ADR-0018), created by
+     * `pnpm run export-key generate`. Read only by the isolated signer child process; never by the API.
+     */
+    DOCKSIDE_AUDIT_EXPORT_KEY_FILE: z.string().min(1).optional(),
     DOCKSIDE_CHALLENGE_TTL_MS: z.coerce
       .number()
       .int()

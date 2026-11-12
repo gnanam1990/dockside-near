@@ -6,7 +6,13 @@ import { AuditScreen } from "./screens/Audit";
 import { InspectionsScreen, NotFoundScreen, PayoutsScreen } from "./screens/Operations";
 import { OrganizationScreen } from "./screens/Organization";
 import { OrganizationKeysScreen } from "./screens/org/Keys";
+import { NearAccountsScreen } from "./screens/org/NearAccounts";
 import { OrganizationServicesScreen } from "./screens/org/Services";
+import {
+  OrganizationIntegrationsScreen,
+  OrganizationPoliciesScreen,
+  OrganizationRetentionScreen,
+} from "./screens/org/Settings";
 import { RecoveryScreen } from "./screens/Recovery";
 import { SignInScreen } from "./screens/SignIn";
 import { CountersignScreen, TradeCreateScreen } from "./screens/TradeCreate";
@@ -38,6 +44,14 @@ function titleOf(r: Route): string {
       return "Keys and recovery";
     case "organization-services":
       return "Service identities";
+    case "organization-policies":
+      return "Evidence policies";
+    case "organization-retention":
+      return "Retention";
+    case "organization-integrations":
+      return "Integrations";
+    case "organization-near-accounts":
+      return "NEAR accounts";
     case "recovery":
       return "Recover access";
     case "not-found":
@@ -70,6 +84,14 @@ function Screen({ route }: { route: Route }) {
       return <OrganizationKeysScreen />;
     case "organization-services":
       return <OrganizationServicesScreen />;
+    case "organization-policies":
+      return <OrganizationPoliciesScreen />;
+    case "organization-retention":
+      return <OrganizationRetentionScreen />;
+    case "organization-integrations":
+      return <OrganizationIntegrationsScreen />;
+    case "organization-near-accounts":
+      return <NearAccountsScreen />;
     case "recovery":
       return <RecoveryScreen />;
     case "not-found":
