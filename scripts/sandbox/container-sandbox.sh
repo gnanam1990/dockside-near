@@ -15,7 +15,7 @@
 # from its official GitHub release.
 #
 #   docker run --rm -v <repo>:/repo:ro [-v <repo .git dir>:/gitdir:ro] -v <repro dir>:/repro:ro \
-#     -v <out dir>:/out -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
+#     -v <out dir>:/out \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
 #     node:22-trixie-slim@sha256:<IMAGES.trixie digest> sh /repo/scripts/sandbox/container-sandbox.sh <commit>
 # (`pnpm run contract:sandbox` builds this command.) Writes /out/sandbox-report.json and the

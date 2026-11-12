@@ -62,8 +62,8 @@ describe("vuln-0002: pinned container toolchain bootstrap", () => {
     expect(checkAt).toBeGreaterThan(fetchAt);
     expect(runAt).toBeGreaterThan(checkAt);
     expect(boot.slice(checkAt, runAt)).toMatch(/exit 1/);
-    // A cached rustup is reused only when it is the verified binary, and never self-updates.
-    expect(boot).toContain('echo "$RUSTUP_INIT_SHA256  $RUSTUP_BIN" | sha256sum -c -');
+    // No cached rustup is reused (m29: a cached home is refused), and rustup never self-updates.
+    expect(boot).not.toContain("$RUSTUP_BIN");
     expect(boot).toMatch(/rustup set auto-self-update disable/);
   });
 
