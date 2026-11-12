@@ -524,6 +524,60 @@ export interface DestinationChangeView {
   readonly bindingRequired: boolean;
 }
 
+/** A key-rebinding revision as the escrow contract records it (M14). */
+export interface KeyRebindingRecord {
+  readonly successorDigest: string;
+  readonly successorRevision: number;
+  readonly roles: string[];
+  readonly rebindsParty: boolean;
+  readonly proposedBy: "BUYER" | "SUPPLIER";
+  readonly proposedAt: number;
+  readonly consentDeadline: number;
+  readonly buyerConsentAt: number | null;
+  readonly supplierConsentAt: number | null;
+  readonly delayUntil: number | null;
+  readonly status: "PROPOSED" | "CONSENTED" | "ACTIVATED" | "REVOKED" | "EXPIRED";
+  readonly closedAt: number | null;
+  readonly supersededIntent: string | null;
+  readonly successorIntent: string | null;
+}
+
+/** One role of the authority's rebinding plan: the bound key and the key it would be rebound to. */
+export interface RebindingPlanRole {
+  readonly role: string;
+  readonly issues: string[];
+  readonly from: { keyVersionId: string | null; keyVersion: number | null; publicKey: string };
+  readonly to: { keyVersionId: string; keyVersion: number; publicKey: string } | null;
+  readonly blockedBy: "NO_ACTIVE_KEY" | "CAPABILITY_MISSING" | "SCOPE_MISMATCH" | "ENROLLMENT_REVOKED" | null;
+}
+
+export interface KeyRebindingView {
+  readonly tradeId: string;
+  readonly boundRevision: number;
+  readonly contractRevision: number;
+  readonly delayMs: number;
+  readonly plan: {
+    readonly requiresNewRevision: boolean;
+    readonly roles: RebindingPlanRole[];
+    readonly rebind: string[];
+    readonly deferred: string[];
+    readonly blocked: string[];
+    readonly rebindsParty: boolean;
+  };
+  readonly successor: {
+    readonly revision: number;
+    readonly digest: string;
+    readonly roles: string[];
+    readonly rebindsParty: boolean;
+  } | null;
+  readonly successorError: string | null;
+  readonly pending: KeyRebindingRecord | null;
+  readonly history: KeyRebindingRecord[];
+  readonly destinationChangePending: boolean;
+  readonly bindingRequired: boolean;
+  readonly observedAt: number;
+}
+
 export interface TimelineView {
   readonly tradeId: string;
   readonly events: {
@@ -648,6 +702,9 @@ export class TradeApi {
   }
   destination(tradeId: string) {
     return this.call<DestinationChangeView>("destinationChange", { params: { id: tradeId } });
+  }
+  keyRebinding(tradeId: string) {
+    return this.call<KeyRebindingView>("keyRebinding", { params: { id: tradeId } });
   }
   timeline(tradeId: string) {
     return this.call<TimelineView>("tradeTimeline", { params: { id: tradeId } });

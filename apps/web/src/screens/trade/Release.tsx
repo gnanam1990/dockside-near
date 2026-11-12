@@ -271,8 +271,15 @@ function ExecuteRelease({ intentId, onChange }: { intentId: string; onChange: ()
   const [result, setResult] = useState<string | null>(null);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
   const tr = t.p.trade;
+  // A condition can lapse after approval (for example an evidence slot going stale): the control
+  // stays visible but blocked, naming the conditions; the journal and the contract refuse anyway.
+  const blockers = t.p.release.blockers;
   return (
-    <section aria-labelledby="execute-title" data-testid="execute-release">
+    <section
+      aria-labelledby="execute-title"
+      data-testid="execute-release"
+      data-blocked={blockers.length ? "yes" : "no"}
+    >
       <h3 id="execute-title">Queue the direct testnet release</h3>
       <p>
         The journal re-checks every release condition, holds the value lock and queues one operation; the
@@ -281,11 +288,16 @@ function ExecuteRelease({ intentId, onChange }: { intentId: string; onChange: ()
       <button
         type="button"
         className="btn btn--primary"
-        disabled={!gate.allowed}
+        disabled={!gate.allowed || blockers.length > 0}
         onClick={() => setOpen(true)}
       >
         Execute direct release
       </button>
+      {blockers.length ? (
+        <BlockedAction
+          reason={`Release is blocked until every condition holds again: ${blockers.join(", ")}.`}
+        />
+      ) : null}
       <ConfirmDialog
         open={open}
         title="Execute direct release"

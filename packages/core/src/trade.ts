@@ -307,3 +307,72 @@ export function assertRevisionTransition(accepted: TradeTerms, incoming: TradeTe
   }
   return "SUCCESSOR";
 }
+
+/** Roles whose bound key a key-rebinding revision may change (contract `terms::ROLES`). */
+export const REBINDABLE_ROLES = [
+  "buyer",
+  "supplier",
+  "inspector",
+  "riskResolver",
+  "manifestAttestor",
+  "policySetter",
+] as const;
+export type RebindableRole = (typeof REBINDABLE_ROLES)[number];
+
+/**
+ * The roles a key-rebinding successor rebinds, under the same rule the escrow contract applies
+ * (contract/crates/dockside-escrow-core/src/rebinding.rs): only bound key versions and public keys
+ * of existing roles change, every changed role gets a new key and version (a service key a newer
+ * version), at least one role changes and at most one of buyer and supplier.
+ */
+export function keyRebindingRoles(active: TradeTerms, successor: TradeTerms): RebindableRole[] {
+  if (assertRevisionTransition(active, successor) !== "SUCCESSOR")
+    fail("VERSION_CONFLICT", "a key rebinding is a successor revision");
+  const a = tradeTermsToJson(active) as Record<string, Record<string, unknown>>;
+  const s = tradeTermsToJson(successor) as Record<string, Record<string, unknown>>;
+  const expected: Record<string, unknown> = {
+    ...a,
+    revision: successor.revision,
+    predecessorDigest: successor.predecessorDigest,
+  };
+  for (const role of REBINDABLE_ROLES) {
+    const versionField =
+      role === "manifestAttestor" || role === "policySetter" ? "keyVersion" : "keyVersionId";
+    expected[role] = {
+      ...a[role],
+      [versionField]: s[role]?.[versionField],
+      publicKey: s[role]?.["publicKey"],
+    };
+  }
+  if (tradeRevisionDigest(tradeTermsFromJson(expected)) !== tradeRevisionDigest(successor))
+    fail("IMMUTABLE_FIELD", "a key rebinding may alter only bound key versions and public keys", {
+      fields: changedMaterialFields(tradeTermsFromJson(expected), successor).join(","),
+    });
+  const roles: RebindableRole[] = [];
+  for (const role of REBINDABLE_ROLES) {
+    const service = role === "manifestAttestor" || role === "policySetter";
+    const oldB = active[role] as { publicKey: string; keyVersionId?: string; keyVersion?: number };
+    const newB = successor[role] as { publicKey: string; keyVersionId?: string; keyVersion?: number };
+    const oldV = service ? oldB.keyVersion : oldB.keyVersionId;
+    const newV = service ? newB.keyVersion : newB.keyVersionId;
+    if (oldB.publicKey === newB.publicKey) {
+      if (oldV !== newV) fail("VALIDATION_FAILED", "a key version cannot change without a new public key");
+      continue;
+    }
+    if (service ? Number(newV) <= Number(oldV) : oldV === newV)
+      fail(
+        "VALIDATION_FAILED",
+        service
+          ? "a rebound service key must be a newer key version"
+          : "a new public key needs a new key version",
+      );
+    roles.push(role);
+  }
+  if (!roles.length) fail("VALIDATION_FAILED", "the successor rebinds no key");
+  if (roles.includes("buyer") && roles.includes("supplier"))
+    fail(
+      "SEPARATION_OF_DUTIES",
+      "a key rebinding changes at most one party key; the other party's bound key anchors it",
+    );
+  return roles;
+}

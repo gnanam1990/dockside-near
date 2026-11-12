@@ -15,6 +15,7 @@ pub mod error;
 pub mod evidence;
 pub mod holds;
 pub mod ledger;
+pub mod rebinding;
 pub mod refund;
 pub mod release;
 pub mod terms;

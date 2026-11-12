@@ -284,6 +284,11 @@ export function buildRoutes(d: AppDeps): Route[] {
     r("POST", "/v1/recoveries/prove", false, complete, ({ body }) =>
       a.proveRecovery(body as z.infer<typeof complete>),
     ),
+    // M14: a security administrator re-issues the challenge of a recovery whose challenge expired.
+    r("POST", "/v1/recoveries/:id/challenges", true, empty, ({ ctx, params }) => {
+      const out = a.reissueRecoveryChallenge(must(ctx), { recoveryId: params["id"] as string });
+      return { ...out, challenge: challengeJson(out.challenge) };
+    }),
     r("POST", "/v1/recoveries/:id/complete", true, empty, ({ ctx, params }) =>
       a.completeRecovery(must(ctx), { recoveryId: params["id"] as string }),
     ),

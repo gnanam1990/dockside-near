@@ -43,7 +43,9 @@ export interface Harness {
 
 const harnesses: Harness[] = [];
 
-export function makeHarness(overrides: Partial<{ recoveryDelayMs: number }> = {}): Harness {
+export function makeHarness(
+  overrides: Partial<{ recoveryDelayMs: number; recoveryChallengeTtlMs: number }> = {},
+): Harness {
   const dir = mkdtempSync(join(tmpdir(), "dockside-auth-"));
   const dbPath = join(dir, "authority.sqlite");
   const clock = new ManualClock(T0);
@@ -55,6 +57,7 @@ export function makeHarness(overrides: Partial<{ recoveryDelayMs: number }> = {}
     invitationTtlMs: 3 * 24 * 3600_000,
     recoveryDelayMs: overrides.recoveryDelayMs ?? 48 * 3600_000,
     requestProofSkewMs: 60_000,
+    ...(overrides.recoveryChallengeTtlMs ? { recoveryChallengeTtlMs: overrides.recoveryChallengeTtlMs } : {}),
   };
   const open = () => {
     const db = Database.open(dbPath);
