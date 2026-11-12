@@ -1,0 +1,12 @@
+# M15 red runs (before the implementation), retained as evidence
+
+## R1 NEAR block header with a u64 timestamp (packages/near/test/m02-rpc-client.test.ts)
+Command: npx vitest run packages/near/test/m02-rpc-client.test.ts   (rpc.ts without unsafeIntegers: "decimal-string")
+Exit: 1
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > M15: reads the final block time from header.timestamp_nanosec and refuses a malformed one
+DocksideError: NEAR RPC response is not valid JSON
+      Tests  1 failed | 5 passed (6)
+
+Finding: a real NEAR node sends header.timestamp as a JSON number past 2^53. The strict parser refused the
+whole envelope, so NearTxClient.latestBlock() (used by every worker submit) would fail against a real node.

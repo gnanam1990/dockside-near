@@ -5,7 +5,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { EscrowContract, JsonRpcNearClient } from "../src/index.js";
+import { EscrowContract, JsonRpcNearClient, NearTxClient } from "../src/index.js";
 
 type Handler = (
   body: { id: string; method: string; params: Record<string, unknown> },
@@ -172,6 +172,34 @@ describe("JsonRpcNearClient", () => {
       });
     expect((await client().txStatus(tx, "a.testnet")).kind).toBe("FAILURE");
     expect(await code(client().txStatus("0OIl", "a.testnet"))).toBe("VALIDATION_FAILED");
+  });
+
+  it("M15: reads the final block time from header.timestamp_nanosec and refuses a malformed one", async () => {
+    let header: Record<string, unknown> = {
+      height: 7,
+      hash: "h",
+      timestamp: 1_800_000_000_123_456_789,
+      timestamp_nanosec: "1800000000123456789",
+    };
+    // A real node sends `timestamp` as a JSON number past 2^53; the raw text carries it exactly.
+    handler = (b, res) => {
+      expect(b.method).toBe("block");
+      expect(b.params).toEqual({ finality: "final" });
+      reply(
+        res,
+        JSON.stringify({ jsonrpc: "2.0", id: b.id, result: { header } }).replace(
+          /"timestamp":[0-9]+/,
+          '"timestamp":1800000000123456789',
+        ),
+      );
+    };
+    const tx = new NearTxClient(client());
+    expect(await tx.blockTimeMs()).toBe(1_800_000_000_123);
+    expect(await tx.latestBlock()).toEqual({ height: 7, hash: "h" });
+    for (const bad of [undefined, 12, "-1", "1.5e18", "", "9".repeat(31)]) {
+      header = { height: 7, hash: "h", timestamp_nanosec: bad };
+      expect(await code(tx.blockTimeMs()), String(bad)).toBe("UPSTREAM_INVALID");
+    }
   });
 
   it("EscrowContract rejects views that do not match the contract schema", async () => {
