@@ -569,7 +569,7 @@ export function assetRoutes(d: AppDeps): Route[] {
       if (field(payload, "requestDigest") !== rec.requestDigest)
         fail("VALIDATION_FAILED", "approval names a different request digest");
       const v = latestValidation(d, rid);
-      if (!v || v.verdict !== "SAFE" || field(payload, "validationDigest") !== v.digest)
+      if (v?.verdict !== "SAFE" || field(payload, "validationDigest") !== v.digest)
         fail("VALIDATION_FAILED", "approval must sign the latest SAFE read-only validation of this recovery");
       if (d.clock.now() - v.observedAt > VALIDATION_MAX_AGE_MS)
         fail("EXPIRED", "the validation is older than one hour; validate again");
