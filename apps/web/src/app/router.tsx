@@ -70,6 +70,9 @@ export type Route =
   | { readonly name: "payouts" }
   | { readonly name: "audit" }
   | { readonly name: "organization" }
+  | { readonly name: "organization-keys" }
+  | { readonly name: "organization-services" }
+  | { readonly name: "recovery" }
   | { readonly name: "not-found"; readonly path: string };
 
 export const TRADE_TABS = [
@@ -100,5 +103,8 @@ export function matchRoute(path: string): Route {
   if (p === "/payouts") return { name: "payouts" };
   if (p === "/audit") return { name: "audit" };
   if (p === "/organization") return { name: "organization" };
+  if (p === "/organization/keys") return { name: "organization-keys" };
+  if (p === "/organization/services") return { name: "organization-services" };
+  if (p === "/recovery") return { name: "recovery" };
   return { name: "not-found", path: p };
 }

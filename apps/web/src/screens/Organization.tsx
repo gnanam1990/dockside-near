@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useApp, useMutationGate } from "../app/app-context";
+import { Link } from "../app/router";
 import { PageHeader } from "../components/AppShell";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AddressDisplay, IdentityList, TableScroller } from "../components/Data";
@@ -17,6 +18,7 @@ import {
 } from "../lib/api/types";
 import { capabilityLabel, formatUntil, formatUtc } from "../lib/format";
 import type { DeviceKeyRecord } from "../lib/keys";
+import { OrgNav } from "./org/common";
 
 function InvitePanel() {
   const app = useApp();
@@ -301,6 +303,7 @@ export function OrganizationScreen() {
         title="Organization"
         description="People, keys and service identities for your organization, as reported by the API."
       />
+      <OrgNav />
       <section className="panel" aria-labelledby="me-title" data-testid="me-panel">
         <h2 id="me-title">Your principal and session</h2>
         <IdentityList
@@ -359,9 +362,10 @@ export function OrganizationScreen() {
       <DeviceKeysPanel />
       <Callout tone="neutral" icon="not-run" title="Not yet wired in this build">
         <p>
-          Key rotation, recovery, revocation and service enrollment create/prove/activate are served by the
-          API but their screens arrive with the remaining M08 work. Policy, retention and integration settings
-          depend on M03–M07.
+          Key rotation, recovery, revocation and service enrollment are under{" "}
+          <Link href="/organization/keys">Keys and recovery</Link> and{" "}
+          <Link href="/organization/services">Service identities</Link>. Policy, retention and integration
+          settings are not served by this API build.
         </p>
       </Callout>
     </>
