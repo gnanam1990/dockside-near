@@ -6,6 +6,7 @@ import { AddressDisplay, IdentityList, TableScroller } from "../components/Data"
 import { Callout, FailureState, LoadingState } from "../components/States";
 import { StatusBadge } from "../components/Status";
 import { isApiIdentifier } from "../lib/api/endpoints";
+import { type BrowserExportCheck, verifySignedExportInBrowser } from "../lib/export-verify";
 import { type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
 import { formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
@@ -486,6 +487,104 @@ function ExportPanel() {
   );
 }
 
+/** Signed export (M17, ADR-0018): fetched, then checked in this browser before it is offered. */
+function SignedExportPanel() {
+  const t = useTrade();
+  const [state, setState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    checks: BrowserExportCheck[];
+    keyId: string;
+    publicKey: string;
+    signedAt: number;
+  } | null>(null);
+  const [href, setHref] = useState<{ bundle: string; keys: string } | null>(null);
+  useEffect(
+    () => () => {
+      if (href) {
+        URL.revokeObjectURL(href.bundle);
+        URL.revokeObjectURL(href.keys);
+      }
+    },
+    [href],
+  );
+  const load = async () => {
+    setState("loading");
+    setError(null);
+    const [b, k] = await Promise.all([t.api.signedAuditExport(t.tradeId), t.api.auditExportKeys()]);
+    if (!b.ok || !k.ok) {
+      const f = !b.ok ? b.error : !k.ok ? k.error : null;
+      setError(
+        f?.kind === "http"
+          ? `${f.code}: ${f.message}${f.details["reason"] ? ` (${String(f.details["reason"])})` : ""}`
+          : (f?.kind ?? "unknown"),
+      );
+      return setState("failed");
+    }
+    const v = await verifySignedExportInBrowser(b.data, k.data.keys);
+    const st = (b.data["statement"] ?? {}) as Record<string, unknown>;
+    setResult({
+      ...v,
+      keyId: String(st["keyId"] ?? ""),
+      publicKey: String(st["publicKey"] ?? ""),
+      signedAt: Number(st["signedAt"] ?? 0),
+    });
+    setHref({
+      bundle: URL.createObjectURL(new Blob([JSON.stringify(b.data, null, 2)], { type: "application/json" })),
+      keys: URL.createObjectURL(new Blob([JSON.stringify(k.data, null, 2)], { type: "application/json" })),
+    });
+    setState("ready");
+  };
+  return (
+    <section aria-labelledby="signed-export-title" data-testid="signed-export">
+      <h3 id="signed-export-title">Signed audit export</h3>
+      <p>
+        The same export, signed by the deployment's dedicated audit-export key. This browser re-checks the
+        checksum, the statement and the signature before offering the file; an auditor verifies independently
+        with <code>verify-export</code> and the operator's published key list.
+      </p>
+      <button type="button" className="btn" onClick={() => void load()}>
+        Prepare signed export
+      </button>
+      <p role="status">{state === "loading" ? "Building and signing the export…" : null}</p>
+      {state === "failed" ? (
+        <Callout tone="warning" icon="blocked" title="Signed export not available" headingLevel={3}>
+          <p>{error}</p>
+        </Callout>
+      ) : null}
+      {state === "ready" && result ? (
+        <div data-testid="signed-export-result">
+          <p data-testid="signed-export-verdict">
+            <strong>
+              {result.ok ? "Signature verified in this browser" : "Verification failed in this browser"}
+            </strong>
+            {` — key ${result.keyId} (${result.publicKey}), signed ${formatUtc(result.signedAt)}.`}
+          </p>
+          <ul>
+            {result.checks.map((c) => (
+              <li key={c.id}>
+                {c.ok ? "Holds: " : "Fails: "}
+                {c.label}
+              </li>
+            ))}
+          </ul>
+          {href && result.ok ? (
+            <p>
+              <a className="btn" href={href.bundle} download={`dockside-signed-audit-${t.tradeId}.json`}>
+                Save signed export
+              </a>{" "}
+              <a className="btn" href={href.keys} download="dockside-audit-export-keys.json">
+                Save export key list
+              </a>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function TimelineTab() {
   const t = useTrade();
   const tl = useApiData(() => t.api.timeline(t.tradeId), [t.tradeId, t.tick]);
@@ -525,6 +624,7 @@ function TimelineTab() {
         )}
       </Section>
       <ExportPanel />
+      <SignedExportPanel />
     </>
   );
 }

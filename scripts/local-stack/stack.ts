@@ -26,11 +26,18 @@
  *
  * Run: pnpm run build && pnpm run contract:build && pnpm run stack
  */
-import { mkdtempSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApp, hardenServer } from "@dockside/api";
+import {
+  claimPolicyOwnership,
+  createApp,
+  type ExportKeySigner,
+  enrollExportKey,
+  hardenServer,
+} from "@dockside/api";
 import { type AuthContext, AuthorityService, IsolatedSigner } from "@dockside/authority";
 import {
   type Capability,
@@ -62,6 +69,7 @@ import {
   NearTxClient,
   Nep141Reader,
 } from "@dockside/near";
+import { BlockedOneClickAdapter } from "@dockside/payout";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
 import { WorkerLoop } from "@dockside/worker";
@@ -353,6 +361,35 @@ async function main(): Promise<void> {
   const attestor = await enroll("MANIFEST_ATTEST", "manifest-attestor");
   const policy = await enroll("DETERMINISTIC_POLICY_SET", "deterministic-policy");
   evidence.registerPolicy(POLICY);
+  // The buyer organisation's administrator registered this policy id, so it owns later revisions (M17).
+  claimPolicyOwnership(
+    db,
+    POLICY.policyId,
+    admins.buyer.grant.organizationId,
+    admins.buyer.grant.principalId,
+    Date.now(),
+  );
+
+  /*
+   * Dedicated audit-export key (M17, ADR-0018): the operator's seed file is generated in the stack's
+   * data directory (owner-only) and read only by its isolated signer process, then enrolled with a
+   * proof of possession exactly as services/api/src/main.ts does for DOCKSIDE_AUDIT_EXPORT_KEY_FILE.
+   */
+  const exportSeed = join(dir, "audit-export-key.seed");
+  writeFileSync(exportSeed, `${randomBytes(32).toString("hex")}\n`, { mode: 0o600, flag: "wx" });
+  const exportProc = await IsolatedSigner.spawn({
+    allowedPurposes: ["AUDIT_EXPORT_KEY_ENROLLMENT", "AUDIT_EXPORT"],
+    seedFile: exportSeed,
+  });
+  const exportSigner: ExportKeySigner = {
+    publicKey: exportProc.publicKey,
+    custodyKind: "ISOLATED_SIGNER_PROCESS",
+    sign: (purpose, payload) => exportProc.sign(purpose, payload),
+  };
+  await enrollExportKey(
+    { db, clock: systemClock, ids: randomIds, origin: ORIGIN, network: "near-testnet" },
+    exportSigner,
+  );
 
   /*
    * Service key custody (local stand-in for an HSM/KMS): every service key lives in its own
@@ -486,6 +523,10 @@ async function main(): Promise<void> {
         ids: randomIds,
         log,
         modules: { evidence, holds, release, journal, escrow, assetRecovery, chain: new NearTxClient(rpc()) },
+        // NEAR account ownership checks and the RPC connection test use the same simulated chain (M17).
+        chain: { rpc: rpc(), tx: new NearTxClient(rpc()) },
+        exportSigner,
+        oneClick: new BlockedOneClickAdapter(),
       }),
     ),
   );
@@ -698,6 +739,25 @@ async function main(): Promise<void> {
           if (typeof b["register"] === "string") token.register(b["register"]);
           return json(res, 200, { failTransfers: token.failTransfers, registered: [...token.registered] });
         }
+        if (req.method === "POST" && url.pathname === "/control/access-keys") {
+          // Simulated chain only: stands in for an AddKey / DeleteKey transaction of the account's own
+          // wallet, so a browser test wallet's key can become (or stop being) an access key (M17).
+          const b = await readBody(req);
+          const accountId = String(b["accountId"] ?? "");
+          const publicKey = String(b["publicKey"] ?? "");
+          if (
+            !/^[a-z0-9._-]{2,64}$/.test(accountId) ||
+            !/^ed25519:[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(publicKey)
+          )
+            throw Object.assign(new Error("accountId and an ed25519 publicKey are required"), {
+              code: "VALIDATION_FAILED",
+            });
+          if (b["delete"] === true)
+            return json(res, 200, { deleted: chain.deleteAccessKey(accountId, publicKey) });
+          const permission = b["permission"] === "FunctionCall" ? "FunctionCall" : "FullAccess";
+          chain.addAccessKey(accountId, publicKey, permission);
+          return json(res, 201, { accountId, publicKey, permission, blockHeight: chain.height });
+        }
         if (req.method === "POST" && url.pathname === "/control/chain-time") {
           // Simulated chain only: block time moves forward so a contract timelock can elapse in a
           // test. The API, worker and sessions keep the wall clock; a real chain cannot do this.
@@ -762,6 +822,7 @@ async function main(): Promise<void> {
     clearInterval(policyLoop);
     void worker.stop().finally(() => {
       for (const k of custody.values()) k.signer.close();
+      exportProc.close();
       api.close();
       control.close();
       void chain.stop().finally(() => {

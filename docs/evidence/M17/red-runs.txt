@@ -1,0 +1,205 @@
+# M17 retained red runs (commands in docs/status/M17.md). Paths replaced by <worktree>, <tmp>, <home>.
+
+===== A. M17 API and web tests on the base commit (main 5fbca7f): the modules do not exist yet (m17-red-run.txt) =====
+
+ RUN  v4.1.12 <worktree>
+
+ ❯ apps/web/test/wallet-export.test.ts (0 test)
+ ❯ services/api/test/m17-settings-export-wallet.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/test/wallet-export.test.ts [ apps/web/test/wallet-export.test.ts ]
+Error: Cannot find module '../src/lib/export-verify' imported from <worktree>/apps/web/test/wallet-export.test.ts
+ ❯ apps/web/test/wallet-export.test.ts:17:1
+     15| } from "@dockside/core";
+     16| import { describe, expect, it } from "vitest";
+     17| import { verifySignedExportInBrowser } from "../src/lib/export-verify";
+       | ^
+     18| import { checkWalletAnswer, connectorFromWallet, nep413Bytes, walletSi…
+     19|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  services/api/test/m17-settings-export-wallet.test.ts [ services/api/test/m17-settings-export-wallet.test.ts ]
+Error: Cannot find module '../src/verify-export.js' imported from <worktree>/services/api/test/m17-settings-export-wallet.test.ts
+ ❯ services/api/test/m17-settings-export-wallet.test.ts:35:1
+     33| import { rpcFor } from "../../../packages/journal/test/world.js";
+     34| import { createApp, enrollExportKey, type ExportKeySigner, revokeExpor…
+     35| import { parseTrustedKeys, verifySignedAuditExport } from "../src/veri…
+       | ^
+     36| import { type ApiWorld, apiWorld, lockAndApprove, run } from "./m07-wo…
+     37|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  11:32:05
+   Duration  1.36s (transform 838ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+
+exit=1
+
+===== B. Red probe on the base commit: every M17 route answers 404 no such endpoint (m17-red-probe.txt) =====
+
+ RUN  v4.1.12 <worktree>
+
+ ❯ services/api/test/m17-red-probe.test.ts (8 tests | 8 failed) 657ms
+   × M17 settings read: GET answers 200 20ms
+   × M17 retention CAS write: POST answers 201 9ms
+   × M17 retention preview: GET answers 200 5ms
+   × M17 evidence policies: GET answers 200 16ms
+   × M17 integrations: GET answers 200 16ms
+   × M17 export key list: GET answers 200 16ms
+   × M17 signed audit export: GET answers 200 2ms
+   × M17 NEP-413 link challenge: POST answers 201 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 settings read: GET answers 200
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 retention preview: GET answers 200
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 evidence policies: GET answers 200
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 integrations: GET answers 200
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 export key list: GET answers 200
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 signed audit export: GET answers 200
+AssertionError: {"error":{"code":"NOT_FOUND","message":"no such endpoint","details":{}}}: expected 404 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 404
+
+ ❯ services/api/test/m17-red-probe.test.ts:25:30
+     23|   it(`M17 ${name}: ${method} answers ${status}`, async () => {
+     24|     const r = await a.http(a.actors.buyerAdmin, method, path(), body);
+     25|     expect(r.status, r.text).toBe(status);
+       |                              ^
+     26|   });
+     27|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 retention CAS write: POST answers 201
+ FAIL  services/api/test/m17-red-probe.test.ts > M17 NEP-413 link challenge: POST answers 201
+AssertionError: {"error":{"code":"NOT_FOUND","message":"no such endpoint","details":{}}}: expected 404 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 404
+
+ ❯ services/api/test/m17-red-probe.test.ts:25:30
+     23|   it(`M17 ${name}: ${method} answers ${status}`, async () => {
+     24|     const r = await a.http(a.actors.buyerAdmin, method, path(), body);
+     25|     expect(r.status, r.text).toBe(status);
+       |                              ^
+     26|   });
+     27|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  11:32:48
+   Duration  2.55s (transform 827ms, setup 0ms, import 1.63s, tests 657ms, environment 0ms)
+
+exit=1
+
+===== C. Real-node response shapes before the adapter fix (block timestamp > 2^53; result-level missing key) (m17-red-bigint.txt) =====
+
+ RUN  v4.1.12 <worktree>
+
+ ❯ packages/near/test/m17-rpc-large-integers.test.ts (2 tests | 2 failed) 58ms
+     × latestBlock reads height and hash from a real-node-shaped block response 30ms
+     × the default strict parser still rejects unsafe integers, fractions and negative big integers 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/near/test/m17-rpc-large-integers.test.ts > NEAR RPC responses with u64 numbers beyond 2^53 > latestBlock reads height and hash from a real-node-shaped block response
+DocksideError: NEAR RPC response is not valid JSON
+ ❯ fail packages/core/src/errors.ts:129:9
+    127|   details: Record<string, string | number | boolean | null> = {},
+    128| ): never {
+    129|   throw new DocksideError(code, message, details);
+       |         ^
+    130| }
+    131|
+ ❯ JsonRpcNearClient.request packages/near/src/rpc.ts:135:7
+ ❯ NearTxClient.latestBlock packages/near/src/tx.ts:128:15
+ ❯ packages/near/test/m17-rpc-large-integers.test.ts:38:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/near/test/m17-rpc-large-integers.test.ts > NEAR RPC responses with u64 numbers beyond 2^53 > the default strict parser still rejects unsafe integers, fractions and negative big integers
+DocksideError: integer outside safe range; use a decimal string
+ ❯ fail packages/core/src/errors.ts:129:9
+    127|   details: Record<string, string | number | boolean | null> = {},
+    128| ): never {
+    129|   throw new DocksideError(code, message, details);
+       |         ^
+    130| }
+    131|
+ ❯ Parser.number packages/core/src/json.ts:126:7
+ ❯ Parser.value packages/core/src/json.ts:102:81
+ ❯ Parser.object packages/core/src/json.ts:252:23
+ ❯ Parser.value packages/core/src/json.ts:90:21
+ ❯ parseStrictJson packages/core/src/json.ts:58:19
+ ❯ packages/near/test/m17-rpc-large-integers.test.ts:49:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  11:50:54
+   Duration  1.02s (transform 232ms, setup 0ms, import 726ms, tests 58ms, environment 0ms)
+
+exit=1
+
+===== D. Result-level missing access key before the fix (after the parser change) (m17-red-accesskey.txt) =====
+
+ RUN  v4.1.12 <worktree>
+
+ ❯ packages/near/test/m17-rpc-real-node-shapes.test.ts (3 tests | 1 failed) 76ms
+     × view_access_key: a result-level 'does not exist' error is NOT_FOUND; another result error is UPSTREAM_ERROR 36ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/near/test/m17-rpc-real-node-shapes.test.ts > NEAR RPC responses with u64 numbers beyond 2^53 > view_access_key: a result-level 'does not exist' error is NOT_FOUND; another result error is UPSTREAM_ERROR
+AssertionError: expected DocksideError: access key permission malf… { …(2) } to match object { code: 'NOT_FOUND', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "NOT_FOUND",
+-   "details": {
+-     "cause": "UNKNOWN_ACCESS_KEY",
+-   },
++ DocksideError {
++   "code": "UPSTREAM_INVALID",
++   "details": {},
+  }
+
+ ❯ packages/near/test/m17-rpc-real-node-shapes.test.ts:80:6
+     78|     await expect(
+     79|       rpc.viewAccessKey("dockside-wallet.testnet", "ed25519:8uQhQCHaVB…
+     80|     ).rejects.toMatchObject({ code: "NOT_FOUND", details: { cause: "UN…
+       |      ^
+     81|     await expect(rpc.viewAccessKey("dockside-wallet.testnet", BROKEN))…
+     82|       code: "UPSTREAM_ERROR",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  11:52:31
+   Duration  845ms (transform 184ms, setup 0ms, import 530ms, tests 76ms, environment 0ms)
+
+exit=1

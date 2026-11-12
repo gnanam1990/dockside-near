@@ -1,0 +1,6 @@
+# pnpm run check after merging main d19860d (M14, M15) (summary lines)
+ Test Files  50 passed | 1 skipped (51)
+      Tests  555 passed | 3 skipped (558)
+secret-scan: 433 files clean
+real	1m11.719s
+exit=0
