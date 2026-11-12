@@ -210,12 +210,12 @@ fn nep141_tokens_are_recorded_for_review_and_never_credited() {
     let (mut c, mut m, fx) = funded();
     let t = fx.trade_id();
     let before = c.get_ledger(t.clone());
-    let token = "usdc-fake.testnet";
-    at(token, T0 + 20_000, 0);
+    let ft_contract = "usdc-fake.testnet";
+    at(ft_contract, T0 + 20_000, 0);
     let kept = c.ft_on_transfer(id("token-sender.testnet"), U128(5_000_000), "pay trade".into());
     assert_eq!(kept.0, 0, "the escrow keeps the tokens; nothing is refunded to the token");
     let args = json!({ "sender_id": "token-sender.testnet", "amount": "5000000", "msg": "pay trade" });
-    m.apply("ft_on_transfer", &args, Call::by(token, T0 + 20_000)).unwrap();
+    m.apply("ft_on_transfer", &args, Call::by(ft_contract, T0 + 20_000)).unwrap();
     assert!(get_logs().iter().any(|l| l.starts_with("EVENT_JSON:")), "{:?}", get_logs());
     assert_eq!(c.get_unexpected_asset(0), m.view("get_unexpected_asset", &json!({ "asset_index": 0 }), 0).unwrap());
     assert_eq!(c.get_ledger(t), before, "native ledger unchanged");
