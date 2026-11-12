@@ -71,7 +71,7 @@ export function startProcess(script: string, env: Record<string, string>): Proc 
   };
 }
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Run a process until it blocks at `boundary`, then kill it there. Returns its stdout lines. */
 export async function killAt(
@@ -80,7 +80,7 @@ export async function killAt(
   env: Record<string, string>,
 ): Promise<string[]> {
   const p = startProcess(script, { ...env, DS_PAUSE_AT: boundary });
-  await p.until(new RegExp(`^PAUSED ${escape(boundary)} `));
+  await p.until(new RegExp(`^PAUSED ${escapeRe(boundary)} `));
   p.proc.kill("SIGKILL");
   const e = await p.exit();
   // Killed, not exited: no exit code (signal on POSIX) or a non-zero TerminateProcess code.
