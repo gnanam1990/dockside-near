@@ -204,3 +204,63 @@ export interface BindingStatus {
   readonly requiresNewRevision: boolean;
   readonly issues: { readonly role: string; readonly code: BindingIssueCode }[];
 }
+
+/** A key version with its full lifecycle timestamps (read models only; never key material). */
+export interface KeyVersionDetail extends KeyVersionView {
+  readonly createdAt: number;
+  readonly provenAt: number | null;
+  readonly supersededAt: number | null;
+  readonly suspendedAt: number | null;
+  readonly revokeReason: string | null;
+}
+
+export type RecoveryStatus = "PENDING_PROOF" | "WAITING" | "COMPLETED" | "CANCELLED";
+
+export interface RecoveryView {
+  readonly id: string;
+  readonly organizationId: string;
+  readonly principalId: string;
+  readonly newKeyVersionId: string;
+  readonly newKeyVersion: number;
+  readonly newPublicKey: string;
+  readonly suspendedKeyVersionIds: string[];
+  readonly status: RecoveryStatus;
+  readonly requestedBy: string;
+  readonly requestedAt: number;
+  readonly notBefore: number;
+  readonly completedBy: string | null;
+  readonly completedAt: number | null;
+  readonly cancelledAt: number | null;
+}
+
+export interface DirectoryPrincipal extends PrincipalView {
+  readonly enrolledVia: "BOOTSTRAP" | "INVITATION" | "SERVICE_ENROLLMENT";
+  readonly createdAt: number;
+  readonly capabilities: Capability[];
+  readonly keys: KeyVersionDetail[];
+}
+
+export interface DirectoryService extends Omit<ServiceEnrollmentView, "versions"> {
+  readonly createdAt: number;
+  readonly createdBy: string;
+  readonly versions: KeyVersionDetail[];
+}
+
+/** Security-admin read model of one organization's people, keys, recoveries and services. */
+export interface OrganizationDirectory {
+  readonly organization: { readonly id: string; readonly name: string; readonly status: string };
+  readonly recoveryDelayMs: number;
+  readonly principals: DirectoryPrincipal[];
+  readonly services: DirectoryService[];
+  readonly recoveries: RecoveryView[];
+  readonly observedAt: number;
+}
+
+/** A principal's own key history and any recovery that targets it. */
+export interface OwnKeys {
+  readonly principalId: string;
+  readonly currentKeyVersionId: string;
+  readonly keys: KeyVersionDetail[];
+  readonly recoveries: RecoveryView[];
+  readonly observedAt: number;
+}
