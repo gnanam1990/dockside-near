@@ -267,18 +267,140 @@ export interface PayoutView {
   readonly observedAt: number;
 }
 
-export interface LedgerFunder {
+export interface FunderBuckets {
+  readonly funded: string;
+  readonly partial: string;
+  readonly available: string;
+  readonly reserved: string;
+  readonly released: string;
+  readonly refundLocked: string;
+  readonly refunded: string;
+  readonly quarantined: string;
+  readonly fees: string;
+  readonly excessDetectedAt: number | null;
+}
+
+export interface LedgerView {
+  readonly required: string;
+  readonly committed: string;
+  readonly fullyFunded: boolean;
+  readonly totals: FunderBuckets;
+  readonly funders: Record<string, FunderBuckets>;
+  readonly deposits: {
+    readonly index: number;
+    readonly funder: string;
+    readonly amount: string;
+    readonly accepted: string;
+    readonly quarantined: string;
+    readonly atMs: number;
+  }[];
+  readonly conservation: boolean;
+  readonly [key: string]: unknown;
+}
+
+export type RefundRole = "BUYER" | "SUPPLIER" | "RISK_RESOLVER";
+
+/** Contract refund intent (escrow `get_refunds`), plus whether this API journaled its payload. */
+export interface RefundIntentView {
+  readonly refundIntentId: string;
+  readonly reason: string;
   readonly funder: string;
-  readonly [bucket: string]: unknown;
+  readonly amount: string;
+  readonly sourceBucket: "PARTIAL" | "AVAILABLE" | "QUARANTINED";
+  readonly state: string;
+  readonly requestDigest: string;
+  readonly initiatorRole: string;
+  readonly buyerSigned: boolean;
+  readonly supplierSigned: boolean;
+  readonly clockOrigin: number | null;
+  readonly deadline: number | null;
+  readonly requestedAt: number;
+  readonly dispute: { readonly role: string; readonly at: number; readonly digest: string } | null;
+  readonly history: [string, number][];
+  readonly basis: string | null;
+  readonly riskSigned: boolean;
+  readonly payloadJournaled: boolean;
+  readonly funderWalletRequired: boolean;
+}
+
+export interface RefundPolicyRow {
+  readonly reason: string;
+  readonly submit: boolean;
+  readonly initiator: string;
+  readonly signers: string;
+  readonly clock: string;
+  readonly evidence: string;
+  readonly challenge: string;
+  readonly eligible: string;
+  readonly sourceBucket: string;
+  readonly revocation: string;
+}
+
+export interface RefundCandidate {
+  readonly funder: string;
+  readonly reason: string;
+  readonly sourceBucket: string | null;
+  readonly amountYocto: string | null;
+  readonly blockedBy: string | null;
+  readonly blockedReason: string | null;
 }
 
 export interface RefundView {
   readonly tradeId: string;
-  readonly refunds: Array<Record<string, unknown>>;
-  readonly ledger: Record<string, unknown> & { readonly funders?: LedgerFunder[] };
+  readonly policy: { readonly id: string; readonly revision: number; readonly rows: RefundPolicyRow[] };
+  readonly refunds: RefundIntentView[];
+  readonly ledger: LedgerView;
+  readonly candidates: RefundCandidate[];
+  readonly candidateSource: string;
+  readonly viewerRole: RefundRole | null;
   readonly operations: OperationSummary[];
   readonly source: string;
   readonly observedAt: number;
+}
+
+/** A contract call only the named NEAR account can submit (the contract checks the caller). */
+export interface FunderWalletCall {
+  readonly signerId: string;
+  readonly call: FunctionCall;
+}
+
+export interface PreparedRefund extends Prepared {
+  readonly refundIntentId: string;
+  readonly reason: string;
+  readonly funder: string;
+  readonly amountYocto: string;
+  readonly sourceBucket: string;
+  readonly initiatorRole: string;
+  readonly digest: string;
+  readonly funderWallet?: FunderWalletCall;
+}
+
+export interface DestinationChangeRecord {
+  readonly successorDigest: string;
+  readonly successorRevision: number;
+  readonly fromDestination: string;
+  readonly toDestination: string;
+  readonly proposedBy: "BUYER" | "SUPPLIER";
+  readonly proposedAt: number;
+  readonly consentDeadline: number;
+  readonly buyerConsentAt: number | null;
+  readonly supplierConsentAt: number | null;
+  readonly delayUntil: number | null;
+  readonly status: "PROPOSED" | "CONSENTED" | "ACTIVATED" | "REVOKED" | "EXPIRED";
+  readonly closedAt: number | null;
+  readonly supersededIntent: string | null;
+  readonly successorIntent: string | null;
+}
+
+export interface DestinationChangeView {
+  readonly tradeId: string;
+  readonly boundRevision: number;
+  readonly contractRevision: number;
+  readonly activeDestination: string;
+  readonly delayMs: number;
+  readonly pending: DestinationChangeRecord | null;
+  readonly history: DestinationChangeRecord[];
+  readonly bindingRequired: boolean;
 }
 
 export interface TimelineView {
@@ -399,6 +521,9 @@ export class TradeApi {
   }
   refund(tradeId: string) {
     return this.call<RefundView>("tradeRefund", { params: { id: tradeId } });
+  }
+  destination(tradeId: string) {
+    return this.call<DestinationChangeView>("destinationChange", { params: { id: tradeId } });
   }
   timeline(tradeId: string) {
     return this.call<TimelineView>("tradeTimeline", { params: { id: tradeId } });

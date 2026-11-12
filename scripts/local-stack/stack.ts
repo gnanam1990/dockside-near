@@ -59,6 +59,8 @@ export const CONTRACT = "dockside-escrow.testnet";
 export const BUYER_ACCT = "acme-buyer.testnet";
 export const TREASURY = "treasury-acme.testnet";
 export const SUPPLIER_ACCT = "harbor-supplier.testnet";
+/** A second supplier-owned account, the target of a legitimate destination change. */
+export const SUPPLIER_ALT_ACCT = "harbor-payouts.testnet";
 const WORKER_RELAYER = "relayer.testnet";
 const PARTY_RELAYER = "party-relayer.testnet";
 const NEAR = 10n ** 24n;
@@ -171,12 +173,15 @@ async function main(): Promise<void> {
   const dir = env["DOCKSIDE_STACK_DATA_DIR"] ?? mkdtempSync(join(tmpdir(), "dockside-stack-"));
 
   // Simulated chain: compiled escrow wasm on the M02 host, served over JSON-RPC.
-  const sim = new NearSim(CONTRACT, Date.now());
-  for (const a of [BUYER_ACCT, TREASURY, SUPPLIER_ACCT, WORKER_RELAYER, PARTY_RELAYER])
+  // Simulated chain time = wall clock + an offset that only moves forward (see /control/chain-time).
+  let chainOffsetMs = 0;
+  const chainNow = () => Date.now() + chainOffsetMs;
+  const sim = new NearSim(CONTRACT, chainNow());
+  for (const a of [BUYER_ACCT, TREASURY, SUPPLIER_ACCT, SUPPLIER_ALT_ACCT, WORKER_RELAYER, PARTY_RELAYER])
     sim.credit(a, 1000n * NEAR);
   if (!sim.call("new", { network: "near-testnet", min_deposit_yocto: null }, { predecessor: CONTRACT }).ok)
     throw new Error("escrow init failed");
-  const chain = new SimChainServer(sim, () => Date.now(), { validityBlocks: 100 });
+  const chain = new SimChainServer(sim, chainNow, { validityBlocks: 100 });
   const rpcUrl = await chain.start();
   const blocks = setInterval(() => chain.advanceBlocks(1), 1000);
   // Fault switch for whole-chain receipt hiding (a pruned/private node); off by default.
@@ -199,6 +204,10 @@ async function main(): Promise<void> {
     DOCKSIDE_ESCROW_CONTRACT_ID: CONTRACT,
     DOCKSIDE_NEAR_RPC_URL: rpcUrl,
     DOCKSIDE_OBJECT_STORE_DIR: join(dir, "objects"),
+    // The browser tests shorten the destination-change delay new proposals bind (never below 1 minute).
+    ...(env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"]
+      ? { DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"] }
+      : {}),
   });
   const db = Database.open(config.DOCKSIDE_DB_PATH);
   db.migrate();
@@ -410,7 +419,14 @@ async function main(): Promise<void> {
         if (req.method === "GET" && url.pathname === "/control/info")
           return json(res, 200, {
             contractId: CONTRACT,
-            accounts: { buyer: BUYER_ACCT, treasury: TREASURY, supplier: SUPPLIER_ACCT },
+            accounts: {
+              buyer: BUYER_ACCT,
+              treasury: TREASURY,
+              supplier: SUPPLIER_ACCT,
+              supplierAlt: SUPPLIER_ALT_ACCT,
+            },
+            destinationChangeDelayMs: config.DOCKSIDE_DESTINATION_CHANGE_DELAY_MS,
+            chainOffsetMs,
             organizations: Object.fromEntries(
               Object.entries(admins).map(([k, a]) => [
                 k,
@@ -441,6 +457,31 @@ async function main(): Promise<void> {
           const from = String(b["from"] ?? BUYER_ACCT);
           const call = escrow.fundCall(String(b["tradeId"]), BigInt(String(b["amountYocto"])));
           return json(res, 200, await submit(from, call));
+        }
+        if (req.method === "POST" && url.pathname === "/control/funder-call") {
+          // The original funder's simulated wallet submits a refund call the API prepared for it
+          // (request_refund / revoke_refund for PARTIAL_ or EXCESS_FUNDING_RETURN). The contract
+          // checks that the transaction signer is the recorded funder.
+          const b = await readBody(req);
+          const call = b["call"] as FunctionCall;
+          if (!["request_refund", "revoke_refund"].includes(String(call?.methodName)))
+            throw Object.assign(new Error("only refund calls go through a funder wallet"), {
+              code: "VALIDATION_FAILED",
+            });
+          return json(res, 200, await submit(String(b["from"]), call));
+        }
+        if (req.method === "POST" && url.pathname === "/control/chain-time") {
+          // Simulated chain only: block time moves forward so a contract timelock can elapse in a
+          // test. The API, worker and sessions keep the wall clock; a real chain cannot do this.
+          const b = await readBody(req);
+          const ms = Number(b["advanceMs"]);
+          if (!Number.isInteger(ms) || ms <= 0 || ms > 7 * DAY)
+            throw Object.assign(new Error("advanceMs must be a positive integer up to 7 days"), {
+              code: "VALIDATION_FAILED",
+            });
+          chainOffsetMs += ms;
+          log({ event: "chain.time_advanced", advanceMs: ms, chainOffsetMs });
+          return json(res, 200, { chainOffsetMs, chainNowMs: chainNow() });
         }
         if (req.method === "POST" && url.pathname === "/control/faults") {
           const b = await readBody(req);

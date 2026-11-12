@@ -9,7 +9,8 @@ import { defineConfig } from "@playwright/test";
  * policy signers) over a SIMULATED NEAR chain (compiled escrow wasm on the M02 host), and the
  * production web build served by `vite preview`, which proxies /v1, /healthz, /readyz and
  * /relay so the page origin equals DOCKSIDE_ORIGIN. The tests reach the stack's control port
- * only for administrator invitations/grants, funder deposits and chain fault switches.
+ * only for administrator invitations/grants, funder wallets, chain fault switches and simulated
+ * chain time.
  * Prerequisites: `pnpm run build` and `pnpm run contract:build` at the repo root, and
  * `vite build` here (the `e2e` script does the latter).
  */
@@ -64,6 +65,9 @@ export default defineConfig({
         DOCKSIDE_ORIGIN: WEB,
         DOCKSIDE_STACK_API_PORT: String(API_PORT),
         DOCKSIDE_STACK_CONTROL_PORT: String(CONTROL_PORT),
+        // New proposals bind a one-minute destination-change delay (the configurable minimum), so
+        // the browser test waits out a real delay that the API and the contract both enforce.
+        DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: "60000",
       },
     },
     {
