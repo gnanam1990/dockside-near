@@ -192,19 +192,66 @@ function decodeNames(s: string): string[] {
   return out;
 }
 
-function pdfStrings(content: string): string[] {
+const LINE_TERMINATOR = new Set(["\n", "\r", " ", " "]);
+const SHOW_TEXT = /\s*T[jJ]/y;
+
+/** Fails LIMIT_EXCEEDED as soon as the slot's parse deadline has passed, not after parsing. */
+function checkDeadline(deadline: number): void {
+  if (performance.now() > deadline) limit("parse time over limit");
+}
+
+/**
+ * Strings shown by `(...) Tj` / `(...) TJ`, with the same matches as the rule
+ * /\(((?:\\.|[^\\)])*)\)\s*T[jJ]/g but in one forward pass: every '(' still open when the
+ * scan reaches an unescaped ')' (or a backslash before a line end) shares that outcome, so
+ * no position is rescanned.
+ */
+function pdfStrings(content: string, deadline: number): string[] {
   const out: string[] = [];
-  for (const m of content.matchAll(/\(((?:\\.|[^\\)])*)\)\s*T[jJ]/g)) {
-    out.push(
-      (m[1] as string).replace(/\\([nrtbf()\\])/g, (_x, c: string) =>
-        c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : c === "b" || c === "f" ? "" : c,
-      ),
-    );
+  const n = content.length;
+  let open = -1; // earliest '(' whose candidate string is still being scanned
+  let i = 0;
+  while (i < n) {
+    if ((i & 0xffff) === 0) checkDeadline(deadline);
+    const c = content[i] as string;
+    if (open < 0) {
+      if (c === "(") open = i;
+      i++;
+      continue;
+    }
+    if (c === "\\") {
+      // `\\.`: an escape pairs with any next character except a line end; otherwise no match.
+      if (i + 1 >= n || LINE_TERMINATOR.has(content[i + 1] as string)) {
+        open = -1;
+        i++;
+        continue;
+      }
+      i += 2;
+      continue;
+    }
+    if (c !== ")") {
+      i++;
+      continue;
+    }
+    SHOW_TEXT.lastIndex = i + 1;
+    if (SHOW_TEXT.test(content)) {
+      out.push(
+        content
+          .slice(open + 1, i)
+          .replace(/\\([nrtbf()\\])/g, (_x, e: string) =>
+            e === "n" ? "\n" : e === "r" ? "\r" : e === "t" ? "\t" : e === "b" || e === "f" ? "" : e,
+          ),
+      );
+      i = SHOW_TEXT.lastIndex;
+    } else {
+      i++;
+    }
+    open = -1;
   }
   return out;
 }
 
-function sniffPdf(b: Uint8Array, lim: ResourceLimits) {
+function sniffPdf(b: Uint8Array, lim: ResourceLimits, deadline: number) {
   const s = latin1.decode(b);
   if (!/%%EOF\s*$/.test(s)) fail("UNSUPPORTED_CONTENT", "PDF has no trailer");
   if (s.lastIndexOf("%%EOF") < s.length - 1024)
@@ -237,7 +284,9 @@ function sniffPdf(b: Uint8Array, lim: ResourceLimits) {
     outside += decodeNames(text)
       .map((n) => `/${n} `)
       .join("");
-    texts.push(...pdfStrings(text));
+    checkDeadline(deadline);
+    texts.push(...pdfStrings(text, deadline));
+    checkDeadline(deadline);
     last = end + "endstream".length;
     re.lastIndex = last;
   }
@@ -282,7 +331,8 @@ export function classify(bytes: Uint8Array, lim: ResourceLimits): Classified {
     | ReturnType<typeof sniffText>;
   if (startsWith(bytes, PNG_SIG)) r = sniffPng(bytes, lim);
   else if (startsWith(bytes, [0xff, 0xd8, 0xff])) r = sniffJpeg(bytes, lim);
-  else if (startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d])) r = sniffPdf(bytes, lim);
+  else if (startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]))
+    r = sniffPdf(bytes, lim, t0 + lim.maxParseTimeMs);
   else if (
     startsWith(bytes, [0x4d, 0x5a]) ||
     startsWith(bytes, [0x7f, 0x45, 0x4c, 0x46]) ||
