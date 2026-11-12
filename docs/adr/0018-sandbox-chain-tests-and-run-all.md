@@ -24,8 +24,9 @@ command for everything after account creation.
    validation) and `dockside-test-token` (NEP-141). It has its own `Cargo.lock`, so the contract
    workspace's lockfile and the deployable wasm's digest do not change when test dependencies do
    (near-workspaces 0.24.0, near-sandbox 0.4.0, near-sdk 5.30.1 `unit-testing`, tokio 1.54.1; the
-   fixtures need ed25519-dalek 2.2.0, which near-crypto requires). The wasm digest after M16 is the
-   M13 digest `65b3a00d…`.
+   fixtures need ed25519-dalek 2.2.0, which near-crypto requires). M16 changed no contract source and
+   no contract lockfile entry: before main's M14 merge the wasm was still the M13 digest `65b3a00d…`;
+   the merged build's digest `497b15ab…` comes from M14's key-rebinding entry points.
 2. **The sandbox suite runs in `node:22-trixie-slim`; the deployable wasm stays the bookworm build.**
    The official near-sandbox 2.14.0 binary needs glibc 2.38 or newer, which bookworm (2.36) lacks.
    `scripts/sandbox/container-sandbox.sh` takes the wasm and manifest that
