@@ -392,6 +392,108 @@ export interface PreparedRefund extends Prepared {
   readonly funderWallet?: FunderWalletCall;
 }
 
+/* ----------------------- unexpected-asset recovery (M11) ----------------------- */
+
+export interface AssetOperationView {
+  readonly operationId: string;
+  readonly state: string;
+  readonly reason: string | null;
+  readonly txHash: string | null;
+  readonly signerId: string | null;
+  readonly amount: string;
+  readonly recipient: string;
+  readonly tokenBalanceBefore: string | null;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}
+
+export interface AssetValidationView {
+  readonly report: Record<string, unknown> & {
+    readonly verdict?: string;
+    readonly escrowTokenBalance?: string;
+    readonly outstandingObservedTotal?: string;
+    readonly checks?: Record<string, boolean>;
+  };
+  readonly digest: string;
+  readonly verdict: string;
+  readonly observedAt: number;
+}
+
+/** A recovery governed by this trade (full record) or by another trade (state only). */
+export interface AssetRecoveryRecord {
+  readonly recoveryId: string;
+  readonly governedHere: boolean;
+  readonly state: string;
+  readonly displayState: string;
+  readonly deadline: number | null;
+  readonly tradeId?: string;
+  readonly recipient?: string;
+  readonly amount?: string;
+  readonly recoveryCapability?: string;
+  readonly requestDigest?: string;
+  readonly evidenceDigest?: string;
+  readonly requestedAt?: number;
+  readonly requestExpiresAt?: number;
+  readonly approvalDigest?: string | null;
+  readonly validationDigest?: string | null;
+  readonly approvedAt?: number | null;
+  readonly challenge?: {
+    readonly role: string;
+    readonly account: string | null;
+    readonly reasonCode: string;
+    readonly evidenceDigest: string;
+    readonly at: number;
+  } | null;
+  readonly revokedBy?: string | null;
+  readonly executor?: string | null;
+  readonly history?: [string, number][];
+  readonly payloadJournaled?: boolean;
+  readonly evidence?: Record<string, unknown> | null;
+  readonly validation?: AssetValidationView | null;
+  readonly operations?: AssetOperationView[];
+}
+
+export interface UnexpectedAssetRecord {
+  readonly index: number;
+  readonly standard: string;
+  readonly assetContract: string;
+  readonly tokenId: string | null;
+  readonly observedAmount: string;
+  readonly claimedSender: string;
+  readonly msgDigest: string;
+  readonly observedAt: number;
+  readonly state: string;
+  readonly originalFunder: null;
+  readonly withdrawable: false;
+  readonly recoveryCapability: string | null;
+  readonly liveRecoveryId: string | null;
+  readonly recoveries: AssetRecoveryRecord[];
+}
+
+export interface AssetRecoveryListView {
+  readonly tradeId: string;
+  readonly escrowContractId: string;
+  readonly policy: { readonly id: string; readonly revision: number; readonly row: Record<string, string> };
+  readonly adapters: { standard: string; capability: string | null; safe: boolean; method: string }[];
+  readonly challengeWindowMs: number;
+  readonly assets: UnexpectedAssetRecord[];
+  readonly viewerRole: RefundRole | null;
+  readonly source: string;
+  readonly note: string;
+  readonly observedAt: number;
+}
+
+export interface PreparedAssetRequest extends Prepared {
+  readonly recoveryId: string;
+  readonly assetIndex: number;
+  readonly recipient: string;
+  readonly amount: string;
+  readonly digest: string;
+  readonly evidence: Record<string, unknown>;
+  readonly evidenceDigest: string;
+  readonly senderWallet: FunderWalletCall;
+}
+
 export interface DestinationChangeRecord {
   readonly successorDigest: string;
   readonly successorRevision: number;
@@ -538,6 +640,9 @@ export class TradeApi {
   }
   refund(tradeId: string) {
     return this.call<RefundView>("tradeRefund", { params: { id: tradeId } });
+  }
+  assetRecoveries(tradeId: string) {
+    return this.call<AssetRecoveryListView>("assetRecoveries", { params: { id: tradeId } });
   }
   destination(tradeId: string) {
     return this.call<DestinationChangeView>("destinationChange", { params: { id: tradeId } });

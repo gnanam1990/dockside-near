@@ -10,7 +10,10 @@
  *   child processes, and organisation administrators who act through the authority service.
  * - Simulated: the chain. The compiled escrow wasm runs on the M02 host behind the M05 JSON-RPC
  *   server (packages/journal/test/sim-chain.ts). The "relayer" and the "funding wallet" below sign
- *   simulated transaction envelopes with no keys, exactly as the M05 tests do.
+ *   simulated transaction envelopes with no keys, exactly as the M05 tests do. A simulated NEP-141
+ *   token (`sim-usd.testnet`, packages/near/test/sim/sim-token.ts) and the wallets of a token
+ *   sender and another claimant exist only so the unexpected-asset recovery flow (M11) can be
+ *   driven end to end; they are not real tokens or accounts.
  *
  * Human trade roles (buyer approver, supplier signer, inspector, risk/policy resolver) are NOT
  * created here: each is invited by its organisation's administrator and accepts in its own
@@ -44,13 +47,27 @@ import {
   toTypedJson,
 } from "@dockside/core";
 import { EvidenceService, HoldService, LocalObjectStore } from "@dockside/evidence";
-import { Journal, JournalService, OutboxWorker, Reconciler } from "@dockside/journal";
-import { EscrowContract, type FunctionCall, JsonRpcNearClient, NearTxClient } from "@dockside/near";
+import {
+  AssetRecoveryEngine,
+  AssetRecoveryJournal,
+  Journal,
+  JournalService,
+  OutboxWorker,
+  Reconciler,
+} from "@dockside/journal";
+import {
+  EscrowContract,
+  type FunctionCall,
+  JsonRpcNearClient,
+  NearTxClient,
+  Nep141Reader,
+} from "@dockside/near";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
 import { WorkerLoop } from "@dockside/worker";
 import { SimChainServer, SimTxSigner } from "../../packages/journal/test/sim-chain.js";
 import { NearSim } from "../../packages/near/test/sim/near-sim.js";
+import { SimFungibleToken } from "../../packages/near/test/sim/sim-token.js";
 
 const env = process.env;
 const API_PORT = Number(env["DOCKSIDE_STACK_API_PORT"] ?? 8791);
@@ -64,6 +81,11 @@ export const TREASURY = "treasury-acme.testnet";
 export const SUPPLIER_ACCT = "harbor-supplier.testnet";
 /** A second supplier-owned account, the target of a legitimate destination change. */
 export const SUPPLIER_ALT_ACCT = "harbor-payouts.testnet";
+/** Simulated NEP-141 token and the wallets that send it to the escrow by mistake (M11). */
+export const TOKEN = "sim-usd.testnet";
+export const TOKEN_SENDER = "token-sender.testnet";
+export const CLAIMANT = "other-claimant.testnet";
+const NFT_CONTRACT = "sim-nft.testnet";
 const WORKER_RELAYER = "relayer.testnet";
 const PARTY_RELAYER = "party-relayer.testnet";
 const NEAR = 10n ** 24n;
@@ -180,8 +202,23 @@ async function main(): Promise<void> {
   let chainOffsetMs = 0;
   const chainNow = () => Date.now() + chainOffsetMs;
   const sim = new NearSim(CONTRACT, chainNow());
-  for (const a of [BUYER_ACCT, TREASURY, SUPPLIER_ACCT, SUPPLIER_ALT_ACCT, WORKER_RELAYER, PARTY_RELAYER])
+  for (const a of [
+    BUYER_ACCT,
+    TREASURY,
+    SUPPLIER_ACCT,
+    SUPPLIER_ALT_ACCT,
+    WORKER_RELAYER,
+    PARTY_RELAYER,
+    TOKEN_SENDER,
+    CLAIMANT,
+    NFT_CONTRACT,
+  ])
     sim.credit(a, 1000n * NEAR);
+  const token = new SimFungibleToken(TOKEN);
+  token.mint(TOKEN_SENDER, 1_000_000_000_000n);
+  token.register(CLAIMANT);
+  token.register(CONTRACT);
+  sim.externals.set(TOKEN, token);
   if (!sim.call("new", { network: "near-testnet", min_deposit_yocto: null }, { predecessor: CONTRACT }).ok)
     throw new Error("escrow init failed");
   const chain = new SimChainServer(sim, chainNow, { validityBlocks: 100 });
@@ -248,6 +285,11 @@ async function main(): Promise<void> {
   const holds = new HoldService({ ...deps, evidence });
   const release = new ReleaseService({ ...deps, evidence, holds, escrow });
   const journal = new JournalService({ db, clock: systemClock, ids: randomIds, escrow, release });
+  const assetRecovery = {
+    journal: new AssetRecoveryJournal(db, systemClock, randomIds),
+    token: (contract: string) => new Nep141Reader(rpc(), contract),
+    tx: new NearTxClient(rpc()),
+  };
 
   /* Organisations, services and policy (administrator actions through the authority service). */
   const admins = {
@@ -291,9 +333,9 @@ async function main(): Promise<void> {
   /* Relaying: signs simulated envelopes (no keys) and broadcasts through the production client. */
   const tx = new NearTxClient(rpc());
   let queue: Promise<unknown> = Promise.resolve();
-  const submit = (signerId: string, call: FunctionCall) => {
+  const submit = (signerId: string, call: FunctionCall, receivers: readonly string[] = [CONTRACT]) => {
     const run = async () => {
-      if (call.receiverId !== CONTRACT)
+      if (!receivers.includes(call.receiverId))
         throw Object.assign(new Error("receiver"), { code: "WRONG_RECEIVER" });
       const signer = new SimTxSigner(signerId);
       const block = await tx.latestBlock();
@@ -382,9 +424,16 @@ async function main(): Promise<void> {
   };
   const wj = new Journal(db, systemClock, randomIds);
   const reconciler = new Reconciler(wj, ports, engineCfg);
+  const assetEngine = new AssetRecoveryEngine(
+    new AssetRecoveryJournal(db, systemClock, randomIds),
+    { ...ports, token: (c: string) => new Nep141Reader(rpc(), c) },
+    new SimTxSigner(WORKER_RELAYER),
+    { holder: "stack-worker", leaseTtlMs: 30_000, baseBackoffMs: 500, maxBackoffMs: 2_000 },
+  );
   const worker = new WorkerLoop({
     worker: new OutboxWorker(wj, ports, new SimTxSigner(WORKER_RELAYER), reconciler, engineCfg),
     reconciler,
+    engines: [assetEngine],
     intervalMs: 500,
     log,
   });
@@ -400,7 +449,7 @@ async function main(): Promise<void> {
         clock: systemClock,
         ids: randomIds,
         log,
-        modules: { evidence, holds, release, journal, escrow },
+        modules: { evidence, holds, release, journal, escrow, assetRecovery },
       }),
     ),
   );
@@ -445,6 +494,9 @@ async function main(): Promise<void> {
               treasury: TREASURY,
               supplier: SUPPLIER_ACCT,
               supplierAlt: SUPPLIER_ALT_ACCT,
+              tokenSender: TOKEN_SENDER,
+              claimant: CLAIMANT,
+              token: TOKEN,
             },
             destinationChangeDelayMs: config.DOCKSIDE_DESTINATION_CHANGE_DELAY_MS,
             chainOffsetMs,
@@ -530,6 +582,77 @@ async function main(): Promise<void> {
               code: "VALIDATION_FAILED",
             });
           return json(res, 200, await submit(String(b["from"]), call));
+        }
+        if (req.method === "POST" && url.pathname === "/control/token-transfer") {
+          // The token sender's simulated wallet calls ft_transfer_call on the simulated token; the
+          // token delivers ft_on_transfer to the escrow, which records the asset for review only.
+          const b = await readBody(req);
+          const amount = String(b["amount"] ?? "");
+          if (!/^[1-9][0-9]{0,30}$/.test(amount))
+            throw Object.assign(new Error("amount must be a positive integer"), {
+              code: "VALIDATION_FAILED",
+            });
+          const from = String(b["from"] ?? TOKEN_SENDER);
+          const call: FunctionCall = {
+            receiverId: TOKEN,
+            methodName: "ft_transfer_call",
+            args: { receiver_id: CONTRACT, amount, msg: String(b["msg"] ?? "") },
+            gas: "100000000000000",
+            depositYocto: "1",
+          };
+          return json(res, 200, await submit(from, call, [TOKEN]));
+        }
+        if (req.method === "POST" && url.pathname === "/control/nft-transfer") {
+          // A simulated NFT contract delivers nft_on_transfer (there is no NFT recovery adapter).
+          const b = await readBody(req);
+          const call: FunctionCall = {
+            receiverId: CONTRACT,
+            methodName: "nft_on_transfer",
+            args: {
+              sender_id: String(b["from"] ?? TOKEN_SENDER),
+              previous_owner_id: String(b["from"] ?? TOKEN_SENDER),
+              token_id: String(b["tokenId"] ?? "token-1"),
+              msg: "",
+            },
+            gas: "30000000000000",
+            depositYocto: "0",
+          };
+          return json(res, 200, await submit(NFT_CONTRACT, call));
+        }
+        if (req.method === "POST" && url.pathname === "/control/sender-call") {
+          // The token sender's (or another claimant's) own simulated wallet submits the asset-recovery
+          // call the API prepared for it. The contract checks that the signer is that account.
+          const b = await readBody(req);
+          const call = b["call"] as FunctionCall;
+          const from = String(b["from"]);
+          if (![TOKEN_SENDER, CLAIMANT].includes(from))
+            throw Object.assign(new Error("only the simulated sender or claimant wallet"), {
+              code: "VALIDATION_FAILED",
+            });
+          if (
+            !["request_asset_recovery", "revoke_asset_recovery", "challenge_asset_recovery"].includes(
+              String(call?.methodName),
+            )
+          )
+            throw Object.assign(new Error("only asset-recovery calls go through these wallets"), {
+              code: "VALIDATION_FAILED",
+            });
+          return json(res, 200, await submit(from, call));
+        }
+        if (req.method === "GET" && url.pathname === "/control/token") {
+          return json(res, 200, {
+            token: TOKEN,
+            balances: Object.fromEntries([...token.balances.entries()].map(([k, v]) => [k, v.toString(10)])),
+            registered: [...token.registered],
+          });
+        }
+        if (req.method === "POST" && url.pathname === "/control/token-faults") {
+          // Simulated token only: refuse the next N ft_transfer calls, or (un)register an account.
+          const b = await readBody(req);
+          if (typeof b["failTransfers"] === "number") token.failTransfers = b["failTransfers"];
+          if (typeof b["unregister"] === "string") token.unregister(b["unregister"]);
+          if (typeof b["register"] === "string") token.register(b["register"]);
+          return json(res, 200, { failTransfers: token.failTransfers, registered: [...token.registered] });
         }
         if (req.method === "POST" && url.pathname === "/control/chain-time") {
           // Simulated chain only: block time moves forward so a contract timelock can elapse in a
