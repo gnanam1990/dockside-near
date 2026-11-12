@@ -358,3 +358,62 @@ describe("M15 PERMANENT_HOLD above the contract", () => {
     await executeOnce(a, id, BUYER_ACCT, 6n * NEAR);
   });
 });
+
+describe("M15 T-010 both orders of the release/refund race over HTTP", () => {
+  /** Prepare and sign the buyer's release intent and a supplier MUTUAL_CANCEL request; relay neither. */
+  async function prepared(a: ApiWorld) {
+    const buyer = who(a, "buyer");
+    const supplier = who(a, "supplier");
+    const t = a.w.c.t;
+    const ri = await a.http(buyer, "POST", `/v1/trades/${t}/release-intents`, {
+      idempotencyKey: "m15-race-1",
+    });
+    expect(ri.status, ri.text).toBe(201);
+    const lock = await a.http(buyer, "POST", `/v1/release-intents/${ri.json.releaseIntentId}/signature`, {
+      signature: a.sign(buyer, "RELEASE_INTENT", ri.json.payload),
+    });
+    const ch = await a.http(supplier, "POST", path(a, "/refund-challenges"), {
+      reason: "MUTUAL_CANCEL",
+      funder: BUYER_ACCT,
+    });
+    expect(ch.status, ch.text).toBe(201);
+    const refund = await a.http(
+      supplier,
+      "POST",
+      path(a, `/refunds/${ch.json.refundIntentId}/request-signature`),
+      {
+        signature: a.sign(supplier, "REFUND_REQUEST", ch.json.payload),
+      },
+    );
+    return { lock, refund, rid: ch.json.refundIntentId as string };
+  }
+
+  it("refund first: the release intent cannot lock; release first: the refund request is VALUE_LOCKED", async () => {
+    const a1 = await apiWorld();
+    try {
+      const p = await prepared(a1);
+      a1.relay(p.refund);
+      expect((await refundOf(a1, p.rid))?.state).toBe("REQUESTED");
+      expect(a1.relayExpectFail(p.lock)).toMatch(/NOTHING_ELIGIBLE|NOT_FULLY_FUNDED|VALUE_LOCKED/);
+      const l = await a1.w.c.escrow.getLedger(a1.w.c.t);
+      expect(l.totals.reserved).toBe(0n);
+      expect(l.funders[BUYER_ACCT]).toMatchObject({ refundLocked: 6n * NEAR, reserved: 0n });
+      await conserved(a1);
+    } finally {
+      await a1.close();
+    }
+    const a2 = await apiWorld();
+    try {
+      const p = await prepared(a2);
+      a2.relay(p.lock);
+      expect(a2.relayExpectFail(p.refund)).toContain("VALUE_LOCKED");
+      expect(await refundOf(a2, p.rid)).toBeUndefined();
+      const l = await a2.w.c.escrow.getLedger(a2.w.c.t);
+      expect(l.totals.reserved).toBe(10n * NEAR);
+      expect(l.funders[BUYER_ACCT]?.refundLocked).toBe(0n);
+      await conserved(a2);
+    } finally {
+      await a2.close();
+    }
+  });
+});
