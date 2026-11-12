@@ -622,6 +622,7 @@ pub fn policy_args(rec: &TradeRecord) -> J {
     json!({ "trade_id": rec.terms.trade_id, "policy": policy() })
 }
 
-pub fn fund_args(trade_id: &str) -> J {
-    json!({ "trade_id": trade_id })
+/// A deposit names the trade revision digest the funder agreed to.
+pub fn fund_args(trade_id: &str, terms_digest: &str) -> J {
+    json!({ "trade_id": trade_id, "terms_digest": terms_digest })
 }

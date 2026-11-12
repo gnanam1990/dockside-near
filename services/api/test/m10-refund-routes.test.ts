@@ -7,7 +7,13 @@
  * ledger, verifies the bound signer and relays; the contract recomputes the eligible slice, checks
  * the caller, clocks and signatures, and holds the value lock. Simulated: the chain, not testnet.
  */
-import { fromTypedJson, generateEd25519KeyPair, loadConfig, signFor } from "@dockside/core";
+import {
+  fromTypedJson,
+  generateEd25519KeyPair,
+  loadConfig,
+  signFor,
+  tradeRevisionDigest,
+} from "@dockside/core";
 import type { FunctionCall } from "@dockside/near";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Actor, enrollHuman } from "../../../packages/authority/test/helpers.js";
@@ -40,7 +46,10 @@ describe("M10 refund routes: authority and funder returns", () => {
   beforeAll(async () => {
     a = await apiWorld();
     // The treasury sends 2 NEAR beyond the 10 NEAR trade amount: the contract quarantines it.
-    a.w.c.ok(a.w.c.escrow.fundCall(a.w.c.t, 2n * NEAR), TREASURY);
+    a.w.c.ok(
+      a.w.c.escrow.fundCall(a.w.c.t, tradeRevisionDigest(a.w.c.w.evidence.terms(a.w.c.t)), 2n * NEAR),
+      TREASURY,
+    );
   });
   afterAll(async () => {
     await a.close();
@@ -360,7 +369,7 @@ describe("M10 refund routes: buckets and the release lock", () => {
 
   it("PARTIAL_FUNDING_RETURN locks the PARTIAL slice; the funder's revocation restores PARTIAL exactly", async () => {
     const c = a.w.c;
-    c.ok(c.escrow.fundCall(c.t, 4n * NEAR), BUYER_ACCT);
+    c.ok(c.escrow.fundCall(c.t, tradeRevisionDigest(c.w.evidence.terms(c.t)), 4n * NEAR), BUYER_ACCT);
     const supplier = actorOf(a, "supplier");
     const ch = await a.http(supplier, "POST", path(a, "/refund-challenges"), {
       reason: "PARTIAL_FUNDING_RETURN",
@@ -379,7 +388,7 @@ describe("M10 refund routes: buckets and the release lock", () => {
 
   it("a live release intent blocks party refunds (VALUE_LOCKED) but not the funder's quarantined excess", async () => {
     const c = a.w.c;
-    c.ok(c.escrow.fundCall(c.t, 8n * NEAR), TREASURY);
+    c.ok(c.escrow.fundCall(c.t, tradeRevisionDigest(c.w.evidence.terms(c.t)), 8n * NEAR), TREASURY);
     const { evidenceReady } = await import("../../../packages/release/test/chain.js");
     await evidenceReady(c);
     await lockAndApprove(a, "m10-refund-intent-1");

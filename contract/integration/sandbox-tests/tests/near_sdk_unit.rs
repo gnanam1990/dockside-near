@@ -77,8 +77,8 @@ fn funded() -> (Escrow, Mirror, Fixture) {
     m.apply("register_evidence_policy", &p, Call::by(RELAYER, T0)).unwrap();
     for (who, amount, at_ms) in [(BUYER, 3 * NEAR, T0 + 1_000), (TREASURY, 3 * NEAR, T0 + 2_000)] {
         at(who, at_ms, amount);
-        let out = c.fund(t.clone());
-        assert_eq!(out, m.apply("fund", &fund_args(&t), Call::by(who, at_ms).with_deposit(amount)).unwrap());
+        let out = c.fund(t.clone(), digest.clone());
+        assert_eq!(out, m.apply("fund", &fund_args(&t, &digest), Call::by(who, at_ms).with_deposit(amount)).unwrap());
     }
     assert_eq!(c.get_ledger(t.clone()), m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
     (c, m, fx)
@@ -112,9 +112,9 @@ fn funding_records_each_funder_and_quarantines_the_excess() {
 #[test]
 #[should_panic(expected = "DOCKSIDE:INVALID_AMOUNT")]
 fn a_deposit_below_the_minimum_is_refused() {
-    let (mut c, _m, fx) = funded();
+    let (mut c, m, fx) = funded();
     at(BUYER, T0 + 3_000, 1);
-    c.fund(fx.trade_id());
+    c.fund(fx.trade_id(), m.trade(&fx.trade_id()).terms_digest.clone());
 }
 
 /// Attested, inspected, intent locked and approved; returns the release intent id.

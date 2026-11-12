@@ -157,10 +157,13 @@ fn revoked_bound_keys_lose_authority_immediately() {
     // A party cannot revoke the other party.
     let bad = revocation(&rec, "supplier", "BUYER", "r0", w.now);
     assert_eq!(code(rec.revoke_key(&w.ctx(), &bad, &sign("buyer", "dockside/bound-key-revocation", &bad))), "FORBIDDEN");
-    // Buyer revokes the risk resolver key; the risk resolver can then neither SET nor RESOLVE.
-    let r = revocation(&rec, "riskResolver", "BUYER", "r1", w.now);
+    // A party alone cannot revoke the risk resolver (the only hold RESOLVE authority).
+    let r = revocation(&rec, "riskResolver", "BUYER", "r0b", w.now);
+    assert_eq!(code(rec.revoke_key(&w.ctx(), &r, &sign("buyer", "dockside/bound-key-revocation", &r))), "FORBIDDEN");
+    // The risk resolver key revokes itself; it can then neither SET nor RESOLVE.
+    let r = revocation(&rec, "riskResolver", "SELF", "r1", w.now);
     assert_eq!(code(rec.revoke_key(&w.ctx(), &r, &sign("supplier", "dockside/bound-key-revocation", &r))), "SIGNATURE_INVALID");
-    rec.revoke_key(&w.ctx(), &r, &sign("buyer", "dockside/bound-key-revocation", &r)).unwrap();
+    rec.revoke_key(&w.ctx(), &r, &sign("risk", "dockside/bound-key-revocation", &r)).unwrap();
     let p = hold_set(&rec, "h9", "RISK_RESOLVER", None, w.now, HOUR);
     assert_eq!(code(rec.set_hold(&w.ctx(), &p, &sign("risk", "dockside/hold-set", &p))), "KEY_REVOKED");
     // Self-revocation of the policy setter.

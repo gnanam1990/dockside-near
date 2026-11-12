@@ -34,6 +34,15 @@ use refund::RefundState;
 pub const DEFAULT_MIN_DEPOSIT_YOCTO: u128 = 1_000_000_000_000_000_000_000; // 0.001 NEAR
 
 impl TradeRecord {
+    /// `fund` for the exact revision the funder agreed to: a deposit names the trade revision
+    /// digest, so a record registered first under the same trade id with other terms (a squatted
+    /// trade id) or a superseded revision refuses it and the attached deposit is returned.
+    pub fn fund_exact(&mut self, ctx: &Ctx<'_>, terms_digest: &str, amount: u128, min_deposit: u128) -> Res<DepositOutcome> {
+        ensure(typed::is_hex64(terms_digest), "VALIDATION_FAILED", "termsDigest must be 64 lowercase hex characters")?;
+        ensure(terms_digest == self.terms_digest, "STALE_REVISION", "deposit names another trade revision digest")?;
+        self.fund(ctx, amount, min_deposit)
+    }
+
     /// Accept native NEAR from `ctx.predecessor` (the original funder of this deposit).
     pub fn fund(&mut self, ctx: &Ctx<'_>, amount: u128, min_deposit: u128) -> Res<DepositOutcome> {
         ensure(amount >= min_deposit, "INVALID_AMOUNT", "deposit below the minimum")?;

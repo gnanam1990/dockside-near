@@ -12,6 +12,7 @@ import {
   signFor,
   type TradeTerms,
   tradeTermsCanonical,
+  tradeRevisionDigest,
   tradeTermsFromJson,
 } from "@dockside/core";
 import { expect } from "vitest";
@@ -173,7 +174,7 @@ export function world(): World {
     RELAYER,
   );
   expect(reg.ok, reg.error ?? "").toBe(true);
-  expect(exec(escrow.fundCall(t.tradeId, 12n * NEAR), BUYER).ok).toBe(true);
+  expect(exec(escrow.fundCall(t.tradeId, tradeRevisionDigest(t), 12n * NEAR), BUYER).ok).toBe(true);
   return { sim, token, keys, terms: t, escrow, exec };
 }
 
