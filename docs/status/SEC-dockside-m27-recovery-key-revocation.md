@@ -70,10 +70,9 @@ pnpm run contract:test    exit 0 — 103 passed, 0 failed
 
 Web e2e and sandbox suites were not run because no web, API route or contract code changed.
 
-## After merging main (`9d0a680`, includes m28)
+## After merging main
 
-```
-pnpm run check            exit 0 — Test Files 57 passed | 1 skipped (58), Tests 591 passed | 3 skipped (594),
-                                   secret-scan clean
-pnpm run contract:test    exit 0 — 103 passed, 0 failed
-```
+Main moved several times while siblings merged (m25, m26, m28, m30 and others). Each time main was merged again
+and the full suite was rerun. The last run is recorded in the merge commit of this branch: `pnpm run check` exit 0
+and `pnpm run contract:test` exit 0 (103 passed, 0 failed). On main `45d1e78` it showed Test Files 61 passed | 1
+skipped (62) and Tests 602 passed | 3 skipped (605), with secret-scan clean.
