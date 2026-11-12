@@ -1,0 +1,24 @@
+# Real-chain test workspace, kept apart from the contract workspace so the deployable wasm's
+# Cargo.lock (and digest) never changes when test dependencies do. Built and run inside the Linux
+# container (scripts/sandbox/container-sandbox.sh): near-workspaces needs the near-sandbox node
+# binary and near-sdk `unit-testing` needs a C toolchain, neither of which the Windows host has.
+[workspace]
+resolver = "2"
+members = ["fixtures", "sandbox-tests", "test-token"]
+
+[workspace.package]
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+
+# Same release profile as the contract workspace (used by the NEP-141 test token wasm).
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+[profile.dev.package."*"]
+opt-level = 2
