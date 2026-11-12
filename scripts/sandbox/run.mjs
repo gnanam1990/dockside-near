@@ -1,4 +1,5 @@
-// `pnpm run contract:sandbox`: run scripts/sandbox/container-sandbox.sh in node:22-trixie-slim.
+// `pnpm run contract:sandbox`: run scripts/sandbox/container-sandbox.sh in node:22-trixie-slim
+// (pinned by digest, IMAGES in scripts/lib/docker.mjs).
 //
 // Needs Docker and the deployable wasm with its manifest from `pnpm run contract:reproduce` in
 // .data/repro (USER-NEXT-STEPS §1). Writes .data/sandbox/sandbox-report.json and the test logs.
@@ -11,7 +12,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dockerCommand, gitCommonDir, hostPath as enginePath } from "../lib/docker.mjs";
+import { dockerCommand, gitCommonDir, hostPath as enginePath, IMAGES } from "../lib/docker.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const args = process.argv.slice(2);
@@ -61,7 +62,7 @@ const run = [
   "CARGO_HOME=/root/.cargo",
   "-e",
   "RUSTUP_HOME=/root/.rustup",
-  "node:22-trixie-slim",
+  IMAGES.trixie,
   "sh",
   "/repo/scripts/sandbox/container-sandbox.sh",
   ref,
