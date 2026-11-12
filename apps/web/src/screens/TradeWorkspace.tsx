@@ -12,6 +12,7 @@ import { describeStatus } from "../lib/status";
 import { AuthorityRevisionCallout } from "./trade/Authority";
 import { BlockerList, Near, Section, TradeContext, type TradeCtx, useTrade } from "./trade/common";
 import { DestinationChange } from "./trade/Destination";
+import { KeyRebinding } from "./trade/KeyRebinding";
 import { EvidenceTab } from "./trade/Evidence";
 import { OperationDetail } from "./trade/Operation";
 import { RefundTab } from "./trade/Refund";
@@ -329,6 +330,7 @@ function AgreementTab() {
           </section>
         )}
       </Section>
+      <KeyRebinding />
       <DestinationChange />
     </>
   );
@@ -652,7 +654,7 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
                 <p>Value is held; every economic action is refused until risk review closes the incident.</p>
               </Callout>
             ) : null}
-            <AuthorityRevisionCallout />
+            <AuthorityRevisionCallout onAgreementTab={tb === "agreement"} />
             <TabBody tab={tb} />
           </TradeContext.Provider>
         ) : null}

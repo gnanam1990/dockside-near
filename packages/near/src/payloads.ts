@@ -400,6 +400,14 @@ export function destinationChangeRevokePayload(
   return { ...header(b), ...r };
 }
 
+/** Withdrawal of a pending key-rebinding revision (`dockside/key-rebinding-revoke`, M14). */
+export function keyRebindingRevokePayload(
+  b: TradeBinding,
+  r: { successorDigest: string; signerRole: "BUYER" | "SUPPLIER" } & Window,
+): CanonicalValue {
+  return { ...header(b), ...r };
+}
+
 export function refundAuthorizePayload(
   b: TradeBinding,
   r: { refundIntentId: string; requestDigest: string } & Window,

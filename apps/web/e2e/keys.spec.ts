@@ -551,3 +551,94 @@ test("M12 a principal vetoes a recovery with its existing key; the administrator
   const html = await a.content();
   expect(html).not.toMatch(/signer:\/\/|privateKey|ed25519:[1-9A-HJ-NP-Za-km-z]{87,88}"/);
 });
+
+test("M14 an expired recovery challenge is re-issued by the administrator and the new package proves", async ({
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  const eve = await inviteViaUi(browser, "AUDITOR", "Eve Expiry");
+  extra.push(eve);
+  const ctx = await browser.newContext();
+  const device = await ctx.newPage();
+  extra.push({ ctx, page: device, principalId: eve.principalId });
+  await device.goto("/recovery");
+  await waitForScreen(device);
+  await device.getByRole("button", { name: "Generate recovery key" }).click();
+  const k = (
+    await device.getByTestId("recovery-public-key").locator("code.address__value").innerText()
+  ).trim();
+
+  const a = adminCtxPage;
+  await a.goto("/organization/keys");
+  await waitForScreen(a);
+  const person = a.getByTestId(`principal-${eve.principalId}`);
+  await person.getByRole("button", { name: "Start recovery for Eve Expiry" }).click();
+  await person.getByLabel("New public key for Eve Expiry").fill(k);
+  await person.getByRole("button", { name: "Review recovery" }).click();
+  await a
+    .getByRole("dialog", { name: "Start recovery for Eve Expiry" })
+    .getByRole("button", { name: "Start recovery" })
+    .click();
+  const firstPanel = a.getByTestId("recovery-package");
+  await expect(firstPanel).toBeVisible();
+  const first = (await firstPanel.locator("code.address__value").innerText()).trim();
+  const { recoveryId, challenge } = JSON.parse(first) as {
+    recoveryId: string;
+    challenge: { expiresAt: number };
+  };
+
+  // While the challenge is open the server refuses a re-issue.
+  await a.reload();
+  await waitForScreen(a);
+  const row = a.locator(`tr[data-recovery="${recoveryId}"]`);
+  await expect(row).toHaveAttribute("data-status", "PENDING_PROOF");
+  await expect(row.getByTestId(`recovery-challenge-${recoveryId}`)).toContainText("open until");
+  await row.getByRole("button", { name: "Re-issue recovery challenge" }).click();
+  const dialog = a.getByRole("dialog", { name: "Re-issue recovery challenge" });
+  await expect(dialog).toContainText("(unchanged)");
+  await expectAccessible(a, "re-issue confirmation");
+  await dialog.getByRole("button", { name: "Re-issue challenge" }).click();
+  await expect(row).toContainText("has not expired");
+
+  // The challenge lifetime of this stack passes; the principal can no longer use the package.
+  await a.waitForTimeout(Math.max(0, challenge.expiresAt - Date.now() + 1500));
+  await device.getByLabel("Recovery package from your administrator").fill(first);
+  await device.getByRole("button", { name: "Review recovery proof" }).click();
+  await expect(device.getByTestId("state-refused")).toContainText("challenge already expired");
+  await expect(device.getByTestId("state-refused")).toContainText("re-issue the recovery challenge");
+  await expect(device.getByTestId("recovery-review")).toHaveCount(0);
+
+  // The administrator re-issues: same recovery, same new key version, same not-before.
+  await a.reload();
+  await waitForScreen(a);
+  await expect(row.getByTestId(`recovery-challenge-${recoveryId}`)).toContainText("expired");
+  await row.getByRole("button", { name: "Re-issue recovery challenge" }).click();
+  await a
+    .getByRole("dialog", { name: "Re-issue recovery challenge" })
+    .getByRole("button", { name: "Re-issue challenge" })
+    .click();
+  const panel = a.getByTestId("recovery-package");
+  await expect(panel).toContainText("Recovery challenge issued");
+  const second = (await panel.locator("code.address__value").innerText()).trim();
+  const p2 = JSON.parse(second) as {
+    recoveryId: string;
+    notBefore: number;
+    challenge: { challengeId: string; expiresAt: number };
+  };
+  const p1 = JSON.parse(first) as { notBefore: number; challenge: { challengeId: string } };
+  expect(p2.recoveryId).toBe(recoveryId);
+  expect(p2.notBefore).toBe(p1.notBefore);
+  expect(p2.challenge.challengeId).not.toBe(p1.challenge.challengeId);
+  await checkViewports(a, "keys after re-issue");
+
+  await device.getByLabel("Recovery package from your administrator").fill(second);
+  await device.getByRole("button", { name: "Review recovery proof" }).click();
+  const review = device.getByTestId("recovery-review");
+  await expect(review).toContainText("RECOVERY_KEY");
+  await review.getByRole("button", { name: "Sign recovery proof" }).click();
+  await expect(device.getByTestId("recovery-done")).toContainText("WAITING");
+  await checkViewports(device, "recovery proof after re-issue");
+  await a.reload();
+  await waitForScreen(a);
+  await expect(row).toHaveAttribute("data-status", "WAITING");
+});

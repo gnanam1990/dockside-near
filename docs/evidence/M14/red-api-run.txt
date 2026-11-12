@@ -1,0 +1,10 @@
+     × needs no rebinding: the plan says so and no successor is offered 15ms
+     × is rebound by a dual-signed revision that changes only that key version, with no delay 58ms
+     × non-parties and unbound sessions get no challenge, consent, revocation, activation or binding 664ms
+     × both bound parties consent, activation needs no delay, binding supersedes every release fact 16ms
+     × the buyer rotates in its own session; the revision now requires a party rebinding 77ms
+     × the new key signs for the buyer, the old key and strangers cannot, and either party can revoke 15ms
+     × dual consent, the signed delay, activation and binding; renewed authority pays the bound supplier 16ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
