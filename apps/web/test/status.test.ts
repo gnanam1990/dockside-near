@@ -202,3 +202,48 @@ describe("backend vocabularies served since M04/M05 (release journal, operation 
       for (const s of ["CURRENT", "PASS", "FILLED"]) expect(describeStatus(d, s).tone).not.toBe("positive");
   });
 });
+
+describe("refund and destination-change vocabularies (M10)", () => {
+  const REFUND_STATES = [
+    "REQUESTED",
+    "TIMELOCKED",
+    "AUTHORIZED",
+    "EXECUTING",
+    "PROCESSING",
+    "UNKNOWN",
+    "REVIEW",
+    "RECONCILING",
+    "ADJUDICATION",
+    "REFUNDED",
+    "FAILED",
+    "REVOKED",
+  ];
+  it("covers every contract refund state with a distinct label; none is positive or looks paid", () => {
+    const paid = describeStatus("payoutState", "PAID");
+    const labels = REFUND_STATES.map((s) => describeStatus("refundState", s).label);
+    expect(new Set(labels).size).toBe(REFUND_STATES.length);
+    for (const s of REFUND_STATES) {
+      const m = describeStatus("refundState", s);
+      expect(m.label, s).not.toMatch(/^Unrecognized/);
+      expect(m.tone, s).not.toBe("positive");
+      expect(m.icon, s).not.toBe(paid.icon);
+    }
+  });
+  it("live refund states keep the slice locked; only REFUNDED, FAILED and REVOKED are terminal", () => {
+    for (const s of REFUND_STATES) {
+      const m = describeStatus("refundState", s);
+      const terminal = ["REFUNDED", "FAILED", "REVOKED"].includes(s);
+      expect(Boolean(m.terminal), s).toBe(terminal);
+      expect(Boolean(m.locked), s).toBe(!terminal);
+    }
+    expect(describeStatus("refundState", "FAILED").sentence).toMatch(/new refund intent/);
+    expect(describeStatus("refundState", "REVOKED").sentence).toMatch(/source bucket/);
+  });
+  it("destination-change states are distinct and say a single consent never activates", () => {
+    const states = ["PROPOSED", "CONSENTED", "ACTIVATED", "REVOKED", "EXPIRED"];
+    const labels = states.map((s) => describeStatus("destinationChange", s).label);
+    expect(new Set(labels).size).toBe(states.length);
+    expect(describeStatus("destinationChange", "PROPOSED").sentence).toMatch(/never activate/);
+    expect(describeStatus("destinationChange", "ACTIVATED").sentence).toMatch(/renewed/);
+  });
+});

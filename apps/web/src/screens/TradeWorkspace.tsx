@@ -6,12 +6,15 @@ import { AddressDisplay, IdentityList, TableScroller } from "../components/Data"
 import { Callout, FailureState, LoadingState } from "../components/States";
 import { StatusBadge } from "../components/Status";
 import { isApiIdentifier } from "../lib/api/endpoints";
-import { type OperationView, type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
+import { type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
 import { formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
-import { BlockerList, Near, Section, TradeContext, type TradeCtx, useTrade } from "./trade/common";
 import { AuthorityRevisionCallout } from "./trade/Authority";
+import { BlockerList, Near, Section, TradeContext, type TradeCtx, useTrade } from "./trade/common";
+import { DestinationChange } from "./trade/Destination";
 import { EvidenceTab } from "./trade/Evidence";
+import { OperationDetail } from "./trade/Operation";
+import { RefundTab } from "./trade/Refund";
 import { ReleaseTab } from "./trade/Release";
 
 const TAB_LABEL: Record<TradeTab, string> = {
@@ -32,7 +35,8 @@ const TAB_PROMISE: Record<TradeTab, string> = {
   release: "Release intent and value lock, policy checklist, buyer approval, execution and pre-submit exits.",
   payout:
     "Direct testnet release, independent dry compatibility, funded authorization, execution, destination receipt and reconciliation.",
-  refund: "Original-funder deposits, refund eligibility, conflicts and outcome.",
+  refund:
+    "Original-funder deposits, the signed refund policy, refund and cancellation eligibility, timelocks, conflicts and outcome.",
   timeline: "Append-only event history as a table, and the checksummed audit export.",
 };
 
@@ -165,32 +169,27 @@ function Funding() {
       <h3 id="fund-title">Funding and release ledger</h3>
       <Section what="escrow ledger" state={ref.state} outcome={ref.outcome} reload={ref.reload}>
         {(r) => {
-          const l = r.ledger as Record<string, unknown>;
-          const totals = (l["totals"] ?? {}) as Record<string, string>;
+          const l = r.ledger;
+          const totals = l.totals;
           return (
             <>
               <IdentityList
                 items={[
-                  ["Required", <Near key="q" yocto={String(l["required"] ?? "0")} network={tr.network} />],
-                  ["Committed", <Near key="c" yocto={String(l["committed"] ?? "0")} network={tr.network} />],
-                  [
-                    "Fully funded",
-                    l["fullyFunded"] === true ? "Yes (contract ledger)" : "No (contract ledger)",
-                  ],
-                  ["Available", <Near key="a" yocto={totals["available"] ?? "0"} network={tr.network} />],
-                  ["Reserved", <Near key="r" yocto={totals["reserved"] ?? "0"} network={tr.network} />],
-                  ["Released", <Near key="l" yocto={totals["released"] ?? "0"} network={tr.network} />],
-                  ["Quarantined", <Near key="x" yocto={totals["quarantined"] ?? "0"} network={tr.network} />],
+                  ["Required", <Near key="q" yocto={l.required} network={tr.network} />],
+                  ["Committed", <Near key="c" yocto={l.committed} network={tr.network} />],
+                  ["Fully funded", l.fullyFunded ? "Yes (contract ledger)" : "No (contract ledger)"],
+                  ["Available", <Near key="a" yocto={totals.available} network={tr.network} />],
+                  ["Reserved", <Near key="r" yocto={totals.reserved} network={tr.network} />],
+                  ["Released", <Near key="l" yocto={totals.released} network={tr.network} />],
+                  ["Quarantined", <Near key="x" yocto={totals.quarantined} network={tr.network} />],
                   [
                     "Conservation",
-                    l["conservation"] === true
-                      ? "Holds (contract recomputation)"
-                      : "VIOLATED — see incidents",
+                    l.conservation ? "Holds (contract recomputation)" : "VIOLATED — see incidents",
                   ],
                   ["Source", `${r.source}, ${formatUtc(r.observedAt)}`],
                 ]}
               />
-              {l["fullyFunded"] !== true ? (
+              {!l.fullyFunded ? (
                 <Callout tone="neutral" icon="pending" title="How funding happens" headingLevel={3}>
                   <p>
                     A funder sends a <code>fund</code> call with an attached deposit to{" "}
@@ -305,7 +304,7 @@ function AgreementTab() {
       <Section what="revisions" state={rel.state} outcome={rel.outcome} reload={rel.reload}>
         {(r) => (
           <section aria-labelledby="rev-title">
-            <h3 id="rev-title">Revisions and destination change</h3>
+            <h3 id="rev-title">Activated revisions</h3>
             <TableScroller label="Trade revisions">
               <table>
                 <caption>Activated revisions (escrow contract view)</caption>
@@ -327,201 +326,15 @@ function AgreementTab() {
                 </tbody>
               </table>
             </TableScroller>
-            <p>
-              {r.contract.pendingDestinationChange
-                ? "A destination change is pending on the contract."
-                : "No destination change is pending. A change is a successor revision that both parties sign; there is no quick edit."}{" "}
-              Destination revision routes are not served by this API build, so{" "}
-              <strong>Start destination revision</strong> is not offered.
-            </p>
           </section>
         )}
       </Section>
+      <DestinationChange />
     </>
   );
 }
 
 /* ---------------------------------- payout ---------------------------------- */
-
-const LOCKED_OPS = [
-  "SUBMITTING",
-  "EXECUTING",
-  "PROCESSING",
-  "UNKNOWN",
-  "REVIEW",
-  "RECONCILING",
-  "ADJUDICATION",
-];
-
-function OperationDetail({ operationId }: { operationId: string }) {
-  const t = useTrade();
-  const op = useApiData(() => t.api.operation(operationId), [operationId, t.tick]);
-  const [msg, setMsg] = useState<string | null>(null);
-  const isRisk = t.has("RISK_RESOLVER");
-  return (
-    <Section what="operation" state={op.state} outcome={op.outcome} reload={op.reload}>
-      {(o: OperationView) => {
-        const locked = LOCKED_OPS.includes(o.state);
-        return (
-          <article
-            className="operation"
-            data-testid="operation"
-            data-state={o.state}
-            aria-labelledby={`op-${o.operationId}`}
-          >
-            <h4 id={`op-${o.operationId}`}>
-              Operation <code>{o.operationId}</code>
-            </h4>
-            <StatusBadge
-              dimension="operationState"
-              value={o.state}
-              source="economic-operation journal"
-              observedAt={t.receivedAt}
-            />
-            <IdentityList
-              items={[
-                ["Kind", o.kind],
-                ["Value lock", o.lockHeld ? "Held: the reservation stays in place" : "Released"],
-                ["Submissions", String(o.submitCount)],
-                [
-                  "Source transaction",
-                  o.txHash ? (
-                    <code key="h" className="wrap">
-                      {o.txHash}
-                    </code>
-                  ) : (
-                    "Not broadcast"
-                  ),
-                ],
-                [
-                  "Disposition",
-                  o.disposition ? (
-                    <code key="d" className="wrap small">
-                      {JSON.stringify(o.disposition)}
-                    </code>
-                  ) : (
-                    "None yet (no terminal evidence)"
-                  ),
-                ],
-              ]}
-            />
-            {locked ? (
-              <Callout
-                tone="unknown"
-                icon="locked"
-                title="Locked until reconciled"
-                headingLevel={3}
-                testId="op-locked"
-              >
-                <p>
-                  Prohibited while {o.state}: retrying payment, cancelling, abandoning, refunding and any
-                  terminal override. The reconciler reads the contract, the original transaction and its
-                  receipts next.
-                </p>
-                {isRisk && (o.state === "REVIEW" || o.state === "ADJUDICATION") ? (
-                  <div className="btn-row">
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() =>
-                        void t.api
-                          .call<{ state: string }>("requestReconciliation", {
-                            params: { id: o.operationId },
-                            body: {},
-                          })
-                          .then((r) => {
-                            setMsg(
-                              r.ok
-                                ? `Reconciliation requested; operation is ${r.data.state}.`
-                                : `Request refused: ${r.error.kind === "http" ? r.error.message : r.error.kind}.`,
-                            );
-                            t.refresh();
-                          })
-                      }
-                    >
-                      Request reconciliation
-                    </button>
-                    {o.state === "REVIEW" ? (
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() =>
-                          void t.api
-                            .call<{ state: string }>("requestAdjudication", {
-                              params: { id: o.operationId },
-                              body: { note: "Opened from the payout workspace" },
-                            })
-                            .then((r) => {
-                              setMsg(
-                                r.ok
-                                  ? `Adjudication opened; operation is ${r.data.state}.`
-                                  : `Request refused: ${r.error.kind === "http" ? r.error.message : r.error.kind}.`,
-                              );
-                              t.refresh();
-                            })
-                        }
-                      >
-                        Open adjudication
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-                {isRisk && o.state !== "REVIEW" && o.state !== "ADJUDICATION" ? (
-                  <p className="small" data-testid="op-own-schedule">
-                    While {o.state}, the reconciler keeps reading the chain on its own schedule; operator
-                    requests open only from REVIEW or ADJUDICATION.
-                  </p>
-                ) : null}
-                {!isRisk ? (
-                  <p className="small">
-                    Only the trade's risk/policy resolver may request reconciliation or adjudication.
-                  </p>
-                ) : null}
-                <p role="status">{msg}</p>
-              </Callout>
-            ) : null}
-            <h5>Observations ({o.observations.length})</h5>
-            <TableScroller label="Observations">
-              <table>
-                <caption>Facts the reconciler observed, with provenance</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Source</th>
-                    <th scope="col">Subject</th>
-                    <th scope="col">Confidence</th>
-                    <th scope="col">Observed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {o.observations.map((x, i) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: append-only observations
-                    <tr key={i}>
-                      <td>{x.source}</td>
-                      <td className="mono wrap">{x.subject}</td>
-                      <td>{x.confidence}</td>
-                      <td className="mono">{formatUtc(x.observedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableScroller>
-            {o.incidents.length ? (
-              <Callout
-                tone="negative"
-                icon="blocked"
-                title="Frozen-value incident"
-                headingLevel={3}
-                role="alert"
-              >
-                <p>{o.incidents.length} incident(s) froze this trade; value is held until risk review.</p>
-              </Callout>
-            ) : null}
-          </article>
-        );
-      }}
-    </Section>
-  );
-}
 
 function PayoutTab() {
   const t = useTrade();
@@ -588,87 +401,6 @@ function PayoutTab() {
           </section>
         </>
       )}
-    </Section>
-  );
-}
-
-/* ---------------------------------- refund ---------------------------------- */
-
-function RefundTab() {
-  const t = useTrade();
-  const ref = useApiData(() => t.api.refund(t.tradeId), [t.tradeId, t.tick]);
-  const net = t.p.trade.network;
-  const unresolved = t.p.operations.some((o) => o.lockHeld) || t.p.release.liveIntent !== null;
-  return (
-    <Section what="refund" state={ref.state} outcome={ref.outcome} reload={ref.reload}>
-      {(r) => {
-        const funders = (r.ledger["funders"] ?? {}) as Record<string, Record<string, string>>;
-        const deposits = (r.ledger["deposits"] ?? []) as Array<Record<string, string | number>>;
-        return (
-          <>
-            <section aria-labelledby="dep-title" data-testid="deposits">
-              <h3 id="dep-title">Accepted deposits by original funder</h3>
-              <TableScroller label="Funder buckets">
-                <table>
-                  <caption>Per-funder buckets (escrow contract view, {formatUtc(r.observedAt)})</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Funder</th>
-                      <th scope="col">Available</th>
-                      <th scope="col">Reserved</th>
-                      <th scope="col">Released</th>
-                      <th scope="col">Refunded</th>
-                      <th scope="col">Quarantined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(funders).map(([f, b]) => (
-                      <tr key={f}>
-                        <td className="mono wrap">{f}</td>
-                        {(["available", "reserved", "released", "refunded", "quarantined"] as const).map(
-                          (k) => (
-                            <td key={k}>
-                              <Near yocto={b[k] ?? "0"} network={net} />
-                            </td>
-                          ),
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScroller>
-              <p className="small">
-                {deposits.length} deposit(s) recorded. Excess above the required amount is QUARANTINED, never
-                refundable as release value.
-              </p>
-            </section>
-            <section aria-labelledby="refunds-title" data-testid="refund-rows">
-              <h3 id="refunds-title">Refund intents</h3>
-              {r.refunds.length === 0 ? <p>No refund intent exists (escrow contract view).</p> : null}
-              {r.refunds.map((x) => (
-                <IdentityList
-                  key={String(x["refundIntentId"])}
-                  items={Object.entries(x).map(
-                    ([k, v]) => [k, typeof v === "object" ? JSON.stringify(v) : String(v)] as const,
-                  )}
-                />
-              ))}
-              <p>
-                {unresolved
-                  ? "Refund cannot be offered while release value is held by a release intent or an unresolved operation."
-                  : "Refund requests are signed payloads relayed to the contract; this API build serves no refund request route, so no refund control is offered."}
-              </p>
-            </section>
-            <section aria-labelledby="assets-title">
-              <h3 id="assets-title">Asset recovery review</h3>
-              <p>
-                Unexpected assets are reviewed separately and never appear as refundable native NEAR. None are
-                served by this API build.
-              </p>
-            </section>
-          </>
-        );
-      }}
     </Section>
   );
 }
