@@ -9,7 +9,7 @@
     key-rebinding consents can be replayed to restore a CONSENTED change.
 - Verdict: **both confirmed, fixed** (contract change, new wasm and code hash, no state layout change).
 - Branch: `feat/dockside-m31-rebinding-consent-integrity`, base main `49fbaf7`, main merged in three times
-  (last at `66cfce9`). Decision record: [ADR-0022](../adr/0022-rebinding-veto-and-withdrawn-consents.md).
+  (last at `66cfce9`). Decision record: [ADR-0023](../adr/0023-rebinding-veto-and-withdrawn-consents.md).
 - Spec: TDD §4 ("never silently replaces a supplier, inspector, destination, or approver inside an active
   trade") and TDD §7 step 10 ("a conflicting proposal, revoked consent, expired signature, or changed digest
   fails closed"). The sealed spec under `docs/spec/` was not edited.
@@ -98,7 +98,7 @@ Later commits on this branch change only documentation, so the wasm is unchanged
 
 **Owner action required.** The testnet escrow `gnanam1990-dock-escrow.testnet` still runs the old code hash
 `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` and has both issues until the owner redeploys it. The state
-layout did not change (ADR-0022 decision 5), so an in-place redeploy of the new wasm to the same account works
+layout did not change (ADR-0023 decision 5), so an in-place redeploy of the new wasm to the same account works
 without a migration. No testnet or mainnet transaction was made here. If sibling security fixes that change the
 layout merge before the redeploy, follow their ADRs for the redeploy target.
 

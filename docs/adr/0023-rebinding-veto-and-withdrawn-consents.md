@@ -1,4 +1,4 @@
-# ADR-0022 — Old-key veto of a party rebinding and durable withdrawal of successor consents
+# ADR-0023 — Old-key veto of a party rebinding and durable withdrawal of successor consents
 
 - Decision status: accepted (security fix, dockside m31-rebinding-consent-integrity)
 - Date: 2026-11-12, Dockside platform team
