@@ -202,6 +202,8 @@ export function buildRoutes(d: AppDeps): Route[] {
             : { capability: b.capability, expiresInMs: b.expiresInMs },
         );
       },
+      // The invitation secret is returned once and stored only as SHA-256 (ADR-0003).
+      { oneTimeFields: ["secret"] },
     ),
     r(
       "POST",
@@ -539,8 +541,15 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
         };
         const idemKey = req.headers["idempotency-key"];
         if (method === "POST" && ctx && idemKey !== undefined) {
-          const out = await idempotent(d.db, d.clock, ctx, url.pathname, String(idemKey), raw, () =>
-            route.handler(input),
+          const out = await idempotent(
+            d.db,
+            d.clock,
+            ctx,
+            url.pathname,
+            String(idemKey),
+            raw,
+            () => route.handler(input),
+            route.oneTimeFields ?? [],
           );
           if (out.replayed) res.setHeader("Idempotent-Replay", "true");
           send(201, out.result);
@@ -570,7 +579,9 @@ type IdemRow = { request_digest: string; response_json: string } & Record<string
  * exact path, and bound to the SHA-256 of the exact body. The key is reserved before the handler
  * runs, so concurrent duplicates cannot both execute; an exact repeat replays the stored response;
  * a different body under the same key fails closed. A failed request releases its reservation and
- * stores nothing, so a replay can never turn a denied request into a stored success.
+ * stores nothing, so a replay can never turn a denied request into a stored success. One-time
+ * secret fields of the result (Route.oneTimeFields) reach this caller only and are never stored,
+ * so a replay omits them.
  */
 async function idempotent(
   db: Database,
@@ -580,6 +591,7 @@ async function idempotent(
   key: string,
   raw: Uint8Array,
   run: () => unknown,
+  oneTimeFields: readonly string[],
 ): Promise<{ replayed: boolean; result: unknown }> {
   if (!IDEMPOTENCY_KEY.test(key)) fail("VALIDATION_FAILED", "Idempotency-Key malformed");
   const scope = `api:${ctx.principal.id}:POST ${path}`;
@@ -626,6 +638,18 @@ async function idempotent(
     throw e;
   }
   const json = JSON.stringify(result, (_k, v) => (typeof v === "bigint" ? v.toString(10) : v));
-  db.run("UPDATE idempotency_keys SET response_json = ? WHERE scope = ? AND idem_key = ?", json, scope, key);
-  return { replayed: false, result: JSON.parse(json) as unknown };
+  const full = JSON.parse(json) as unknown;
+  let stored = json;
+  if (oneTimeFields.length > 0 && full && typeof full === "object" && !Array.isArray(full)) {
+    const kept = { ...(full as Record<string, unknown>) };
+    for (const f of oneTimeFields) delete kept[f];
+    stored = JSON.stringify(kept);
+  }
+  db.run(
+    "UPDATE idempotency_keys SET response_json = ? WHERE scope = ? AND idem_key = ?",
+    stored,
+    scope,
+    key,
+  );
+  return { replayed: false, result: full };
 }
