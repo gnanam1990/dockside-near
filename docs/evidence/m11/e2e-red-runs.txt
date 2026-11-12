@@ -1,1 +1,0 @@
-e2e red run 1: approval review shows the purpose name ASSET_RECOVERY_APPROVAL, not the domain string; assertion corrected
