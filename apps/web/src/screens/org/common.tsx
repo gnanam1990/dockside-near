@@ -16,6 +16,10 @@ export function OrgNav() {
     ["/organization", "Overview and invitations"],
     ["/organization/keys", "Keys and recovery"],
     ["/organization/services", "Service identities"],
+    ["/organization/policies", "Evidence policies"],
+    ["/organization/retention", "Retention"],
+    ["/organization/integrations", "Integrations"],
+    ["/organization/near-accounts", "NEAR accounts"],
   ] as const;
   return (
     <nav aria-label="Organization sections" className="tabnav">

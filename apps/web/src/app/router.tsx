@@ -72,6 +72,10 @@ export type Route =
   | { readonly name: "organization" }
   | { readonly name: "organization-keys" }
   | { readonly name: "organization-services" }
+  | { readonly name: "organization-policies" }
+  | { readonly name: "organization-retention" }
+  | { readonly name: "organization-integrations" }
+  | { readonly name: "organization-near-accounts" }
   | { readonly name: "recovery" }
   | { readonly name: "not-found"; readonly path: string };
 
@@ -105,6 +109,10 @@ export function matchRoute(path: string): Route {
   if (p === "/organization") return { name: "organization" };
   if (p === "/organization/keys") return { name: "organization-keys" };
   if (p === "/organization/services") return { name: "organization-services" };
+  if (p === "/organization/policies") return { name: "organization-policies" };
+  if (p === "/organization/retention") return { name: "organization-retention" };
+  if (p === "/organization/integrations") return { name: "organization-integrations" };
+  if (p === "/organization/near-accounts") return { name: "organization-near-accounts" };
   if (p === "/recovery") return { name: "recovery" };
   return { name: "not-found", path: p };
 }
