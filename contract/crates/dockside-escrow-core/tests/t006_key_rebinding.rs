@@ -294,8 +294,9 @@ fn t006_revocation_by_either_party_voids_the_pending_rebinding() {
         let p = mk(&rec, revoker, revoker);
         assert_eq!(code(rec.revoke_key_rebinding(&w.ctx(), &p, &sign(signer, "dockside/destination-change-revoke", &p))), "SIGNATURE_INVALID");
         if revoker == "BUYER" {
-            // The rebound buyer revokes with its new key, not its old one.
-            assert_eq!(code(rec.revoke_key_rebinding(&w.ctx(), &p, &sign("buyer", "dockside/key-rebinding-revoke", &p))), "SIGNATURE_INVALID");
+            // The rebound buyer revokes with its new key (its live old key may veto too, see
+            // sec_m31_rebinding_consent_integrity); a key bound to no buyer cannot.
+            assert_eq!(code(rec.revoke_key_rebinding(&w.ctx(), &p, &sign("buyer-3", "dockside/key-rebinding-revoke", &p))), "SIGNATURE_INVALID");
         }
         rec.revoke_key_rebinding(&w.ctx(), &p, &sign(signer, "dockside/key-rebinding-revoke", &p)).unwrap();
         assert_eq!(code(rec.revoke_key_rebinding(&w.ctx(), &p, &sign(signer, "dockside/key-rebinding-revoke", &p))), "NOT_FOUND");

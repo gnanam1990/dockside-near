@@ -15,6 +15,10 @@
 //!   buyer approval are required for the new revision); unresolved holds keep blocking;
 //! * supersedes a pre-submit intent and transfers its reservation to one successor intent.
 //!
+//! A party that revokes a change it had consented to withdraws that consent for good: its
+//! signature over the same successor digest is refused afterwards (`NONCE_REPLAYED`, TDD §7
+//! step 10). Rejecting a proposal the party never signed leaves it free to consent later.
+//!
 //! There is no single-party, administrator, executor or database path to the destination.
 
 use crate::domains;
@@ -127,6 +131,7 @@ impl TradeRecord {
         ensure(ctx.now_ms < self.terms.expires_at, "EXPIRED", "trade has expired")?;
         let key = party_key(proposer_role)?;
         let (hex, d) = digest_hex(domains::TRADE_REVISION, &v)?;
+        self.ensure_consent_live(&hex, key)?;
         self.verify_role(ctx, key, &d, signature)?;
         if self.destination.pending.is_some() {
             self.close_pending(ChangeStatus::Expired, ctx.now_ms);
@@ -168,6 +173,7 @@ impl TradeRecord {
         ensure(ctx.now_ms < p.consent_deadline, "EXPIRED", "the consent window has closed")?;
         let already = if key == "buyer" { p.buyer_consent_at.is_some() } else { p.supplier_consent_at.is_some() };
         ensure(!already, "INVALID_STATE", "this party has already consented")?;
+        self.ensure_consent_live(&p.successor_digest, key)?;
         let d = p.successor_digest_bytes;
         self.verify_role(ctx, key, &d, signature)?;
         let delay = self.terms.destination_change_delay_ms;
@@ -196,11 +202,17 @@ impl TradeRecord {
         let p = self.destination.pending.as_ref().ok_or_else(|| Error { code: "NOT_FOUND", message: "no pending destination change".into() })?;
         o.expect_str("successorDigest", &p.successor_digest, "DIGEST_MISMATCH")?;
         let key = party_key(&o.str("signerRole")?)?;
+        let consented = if key == "buyer" { p.buyer_consent_at.is_some() } else { p.supplier_consent_at.is_some() };
+        let digest = p.successor_digest.clone();
         let nonce = o.str("nonce")?;
         ensure(!self.nonce_used(domains::DESTINATION_CHANGE_REVOKE, &nonce), "NONCE_REPLAYED", "nonce already consumed")?;
         let (_, d) = digest_hex(domains::DESTINATION_CHANGE_REVOKE, &v)?;
         self.verify_role(ctx, key, &d, signature)?;
         self.consume_nonce(domains::DESTINATION_CHANGE_REVOKE, &nonce)?;
+        // A revoking party that had consented withdraws that consent for good.
+        if consented {
+            self.withdraw_consent(&digest, key);
+        }
         self.close_pending(ChangeStatus::Revoked, ctx.now_ms);
         Ok(())
     }

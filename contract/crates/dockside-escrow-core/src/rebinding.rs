@@ -12,6 +12,13 @@
 //!   The party whose key is unchanged signs with its bound, non-revoked key; the party whose key
 //!   changes signs with its new key (it accepts the new revision with the key it now holds).
 //!   Both parties rotated means two rebinding revisions, each anchored by the other party.
+//! * The new key of a rebound party comes from successor terms the counterparty may have written,
+//!   so the rebound party's **old** bound key keeps a veto: while it is not revoked on chain it
+//!   may revoke the pending rebinding (ADR-0022). Retiring that key on chain (a SELF revocation)
+//!   gives up the veto; a trade whose signed delay is zero leaves no veto window, so there a
+//!   party key is rebound only after its old key was revoked on chain.
+//! * A party that revokes a successor it had consented to withdraws that consent for good: its
+//!   signature over the same successor digest is refused afterwards (`NONCE_REPLAYED`).
 //! * When a party key changes, the trade's signed `destinationChangeDelayMs` must pass after the
 //!   second consent before activation (time to revoke a rebinding nobody intended). A rebinding
 //!   of non-party roles only is activatable as soon as both parties consented.
@@ -206,6 +213,7 @@ impl TradeRecord {
         ensure(ctx.now_ms < self.terms.expires_at, "EXPIRED", "trade has expired")?;
         let key = party_key(proposer_role)?;
         let (hex, d) = digest_hex(domains::TRADE_REVISION, &v)?;
+        self.ensure_consent_live(&hex, key)?;
         verify(ctx.verifier, &self.rebinding_signer(&t, &roles, key)?, &d, signature)?;
         if self.rebinding.pending.is_some() {
             self.close_rebinding(ChangeStatus::Expired, ctx.now_ms);
@@ -247,6 +255,7 @@ impl TradeRecord {
         ensure(ctx.now_ms < p.consent_deadline, "EXPIRED", "the consent window has closed")?;
         let already = if key == "buyer" { p.buyer_consent_at.is_some() } else { p.supplier_consent_at.is_some() };
         ensure(!already, "INVALID_STATE", "this party has already consented")?;
+        self.ensure_consent_live(&p.successor_digest, key)?;
         let signer = self.rebinding_signer(&p.terms, &p.roles, key)?;
         verify(ctx.verifier, &signer, &p.successor_digest_bytes, signature)?;
         let delay = if p.rebinds_party() { self.terms.destination_change_delay_ms } else { 0 };
@@ -276,12 +285,25 @@ impl TradeRecord {
         ensure(matches!(p.status, ChangeStatus::Proposed | ChangeStatus::Consented), "INVALID_STATE", "the rebinding is closed")?;
         o.expect_str("successorDigest", &p.successor_digest, "DIGEST_MISMATCH")?;
         let key = party_key(&o.str("signerRole")?)?;
+        let consented = if key == "buyer" { p.buyer_consent_at.is_some() } else { p.supplier_consent_at.is_some() };
+        let digest = p.successor_digest.clone();
         let nonce = o.str("nonce")?;
         ensure(!self.nonce_used(domains::KEY_REBINDING_REVOKE, &nonce), "NONCE_REPLAYED", "nonce already consumed")?;
         let (_, d) = digest_hex(domains::KEY_REBINDING_REVOKE, &v)?;
         let signer = self.rebinding_signer(&p.terms, &p.roles, key)?;
-        verify(ctx.verifier, &signer, &d, signature)?;
+        let by_new_key = verify(ctx.verifier, &signer, &d, signature);
+        if by_new_key.is_err() && p.roles.iter().any(|r| r == key) {
+            // The rebound party's old bound key (still live on chain) vetoes a rebinding of its
+            // own role: the new key comes from successor terms the counterparty may have written.
+            self.verify_role(ctx, key, &d, signature)?;
+        } else {
+            by_new_key?;
+        }
         self.consume_nonce(domains::KEY_REBINDING_REVOKE, &nonce)?;
+        // A revoking party that had consented withdraws that consent for good.
+        if consented {
+            self.withdraw_consent(&digest, key);
+        }
         self.close_rebinding(ChangeStatus::Revoked, ctx.now_ms);
         Ok(())
     }
@@ -296,6 +318,15 @@ impl TradeRecord {
         for role in ["buyer", "supplier"] {
             if !p.roles.iter().any(|r| r == role) {
                 ensure(!self.revoked_roles.contains(role), "KEY_REVOKED", "the anchoring party key was revoked before activation")?;
+            } else if self.terms.destination_change_delay_ms == 0 {
+                // A zero signed delay leaves the rebound party's old key no window to veto, so
+                // the counterparty alone would choose the party's new key: that old key must be
+                // retired on chain first.
+                ensure(
+                    self.revoked_roles.contains(role),
+                    "INVALID_STATE",
+                    "with a zero signed delay a party key is rebound only after its old bound key is revoked on chain",
+                )?;
             }
         }
         ensure(!self.released(), "INVALID_STATE", "the trade value has already been released")?;
