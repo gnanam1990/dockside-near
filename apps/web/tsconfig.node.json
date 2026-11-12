@@ -15,5 +15,5 @@
       "@dockside/api": ["../../services/api/src/app.ts"]
     }
   },
-  "include": ["test", "e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["test", "e2e", "vite.config.ts", "playwright.config.ts", "playwright.assets.config.ts", "playwright.reasons.config.ts"]
 }

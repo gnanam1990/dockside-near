@@ -1,0 +1,59 @@
+# M15 red runs (before the implementation), retained as evidence
+
+## R1 NEAR block header with a u64 timestamp (packages/near/test/m02-rpc-client.test.ts)
+Command: npx vitest run packages/near/test/m02-rpc-client.test.ts   (rpc.ts without unsafeIntegers: "decimal-string")
+Exit: 1
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  packages/near/test/m02-rpc-client.test.ts > JsonRpcNearClient > M15: reads the final block time from header.timestamp_nanosec and refuses a malformed one
+DocksideError: NEAR RPC response is not valid JSON
+      Tests  1 failed | 5 passed (6)
+
+Finding: a real NEAR node sends header.timestamp as a JSON number past 2^53. The strict parser refused the
+whole envelope, so NearTxClient.latestBlock() (used by every worker submit) would fail against a real node.
+
+## R2 INSPECTION_FAIL request whose FAIL inspection expires inside the 48-hour appeal window (services/api/test/m15-refund-reasons.test.ts)
+Command: npx vitest run services/api/test/m15-refund-reasons.test.ts   (refunds.ts before the appeal-window check)
+Exit: 1
+     × is refused up front when the FAIL inspection would expire inside its 48-hour appeal window 395ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'code')
+ ❯ services/api/test/m15-refund-reasons.test.ts:269:27
+      Tests  1 failed | 3 passed (4)
+
+Finding: under the default 24-hour attestation lifetime the inspection route bounds the FAIL inspection to
+the attestation, so the contract can never authorize the refund after the 48-hour window; the API used to
+lock the slice anyway. TRADE_EXPIRY and PERMANENT_HOLD passed on the first run (routes from M10 were complete).
+
+## R3 asset-recovery engine process kills (packages/journal/test/m15-asset-process-kill.test.ts)
+Command: npx vitest run packages/journal/test/m15-asset-process-kill.test.ts   (engine without the asset.claimed,
+asset.reconcile.observed and asset.transition.<STATE> boundaries)
+Exit: 1
+     × kill after claiming the operation, before any signing: the restart submits once 376ms
+     × kill after observing the chain, before deciding: the restart decides from fresh observations 336ms
+     × a lost broadcast response persisted as UNKNOWN, killed there: no second transaction, RECOVERED 416ms
+     × killed in PROCESSING (callback pending) and again at REVIEW: REVIEW survives every restart and is never left 20197ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  4 failed | 3 passed (7)
+
+The engine could not be stopped at those points, so the process ran past them (or to its timeout) before the
+kill. After the boundaries were added: 7 passed.
+
+## R4 two journal-worker processes race a refund and an asset recovery (services/worker/test/m15-worker-process-kill.test.ts)
+Command: npx vitest run services/worker/test/m15-worker-process-kill.test.ts -t race   (run 3 times, before relayer sequencing)
+Exit: 1 each run (both worker processes exit 3: TIMEOUT)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 7 skipped (8)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 7 skipped (8)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 7 skipped (8)
+Observed journal state (parent, after both processes timed out):
+ - refund op UNKNOWN submitCount 1 transitions ['ENQUEUED', 'SUBMIT_PERSISTED', 'RESPONSE_LOST'] send counts [1, 1] executions [['execute_asset_recovery', 1]]
+ - refund op UNKNOWN submitCount 1 transitions ['ENQUEUED', 'SUBMIT_PERSISTED', 'RESPONSE_LOST'] send counts [1, 1] executions [['execute_asset_recovery', 1]]
+ - refund op REFUNDED submitCount 1 transitions ['ENQUEUED', 'SUBMIT_PERSISTED', 'RECONCILED:AUTHORITATIVE_RECEIPT_AND_LEDGER'] send counts [1, 203] executions [['execute_refund', 1]]
+
+Finding: both processes sign with the same relayer access key and read the same chain nonce, so one of the
+two transactions (refund or asset recovery) carries a nonce the chain has already consumed and is rejected
+(INVALID_TRANSACTION). The refund journal records RESPONSE_LOST and waits in UNKNOWN; the asset engine re-sends
+its identical rejected bytes on every tick (hundreds of sends) and never executes. No value moved twice, but one
+return stalls until its validity window lapses.

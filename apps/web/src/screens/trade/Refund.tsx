@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useApiData, useApp, useMutationGate } from "../../app/app-context";
+import { useApiData, useMutationGate } from "../../app/app-context";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { AddressDisplay, IdentityList, TableScroller } from "../../components/Data";
 import { Field } from "../../components/Forms";
@@ -364,7 +364,8 @@ function Candidates({ v, onChange }: { v: RefundView; onChange: () => void }) {
     <section aria-labelledby="cand-title" data-testid="refund-candidates">
       <h3 id="cand-title">Refund and cancellation eligibility</h3>
       <p className="small">
-        {v.candidateSource}. Observed {formatUtc(v.observedAt)}.
+        {v.candidateSource}. Observed {formatUtc(v.observedAt)}; contract clock{" "}
+        <span data-testid="contract-clock">{formatUtc(v.chainTimeMs)}</span>.
       </p>
       <TableScroller label="Refund eligibility">
         <table data-testid="candidate-table">
@@ -637,9 +638,18 @@ function Dispute({ r, id, onChange }: { r: RefundIntentView; id: string; onChang
   );
 }
 
-function Authorize({ r, id, onChange }: { r: RefundIntentView; id: string; onChange: () => void }) {
+function Authorize({
+  r,
+  id,
+  chainNow,
+  onChange,
+}: {
+  r: RefundIntentView;
+  id: string;
+  chainNow: number;
+  onChange: () => void;
+}) {
   const t = useTrade();
-  const app = useApp();
   const gate = useMutationGate();
   const [call, setCall] = useState<FunctionCall | null>(null);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
@@ -649,8 +659,10 @@ function Authorize({ r, id, onChange }: { r: RefundIntentView; id: string; onCha
       <h3 id={`${id}-title`}>Authorize after the deadline</h3>
       <p>
         Authorization is a relay anyone may send; the contract checks its own clock against the deadline
-        {r.deadline !== null ? ` ${formatUtc(r.deadline)} (${formatUntil(r.deadline, app.now)})` : ""},
-        disputes, holds and the release lock. Before the deadline it refuses.
+        {r.deadline !== null
+          ? ` ${formatUtc(r.deadline)} (${formatUntil(r.deadline, chainNow)} on the contract clock)`
+          : ""}
+        , disputes, holds and the release lock. Before the deadline it refuses.
       </p>
       <button
         type="button"
@@ -793,7 +805,6 @@ function Execute({ r, id, onChange }: { r: RefundIntentView; id: string; onChang
 
 function IntentCard({ r, v, onChange }: { r: RefundIntentView; v: RefundView; onChange: () => void }) {
   const t = useTrade();
-  const app = useApp();
   const role = v.viewerRole;
   const key = slug(r.refundIntentId);
   const pin = (k: string) => t.pinned(`${k}-${key}`);
@@ -848,7 +859,7 @@ function IntentCard({ r, v, onChange }: { r: RefundIntentView; v: RefundView; on
               "Not started"
             ) : (
               <span key="d" data-testid="refund-deadline">
-                {formatUtc(r.deadline)} ({formatUntil(r.deadline, app.now)})
+                {formatUtc(r.deadline)} ({formatUntil(r.deadline, v.chainTimeMs)} on the contract clock)
               </span>
             ),
           ],
@@ -911,7 +922,7 @@ function IntentCard({ r, v, onChange }: { r: RefundIntentView; v: RefundView; on
       {canDispute || pin("dispute") ? <Dispute r={r} id={`dispute-${key}`} onChange={onChange} /> : null}
       {(r.state === "TIMELOCKED" && !r.dispute && r.reason !== "INSPECTION_FAIL" && role !== null) ||
       pin("authorize") ? (
-        <Authorize r={r} id={`authorize-${key}`} onChange={onChange} />
+        <Authorize r={r} id={`authorize-${key}`} chainNow={v.chainTimeMs} onChange={onChange} />
       ) : null}
       {(r.state === "TIMELOCKED" && r.reason === "INSPECTION_FAIL" && role === "RISK_RESOLVER") ||
       pin("sauthorize") ? (
