@@ -1,5 +1,5 @@
 // `pnpm run contract:reproduce`: run scripts/container-reproduce.sh in node:22-bookworm-slim
-// (ADR-0015). It clones this repository at <ref> inside the container, runs the clean-checkout
+// (ADR-0015; pinned by digest, IMAGES in scripts/lib/docker.mjs). It clones this repository at <ref> inside the container, runs the clean-checkout
 // reproduction (frozen install, full check, contract host tests, `pnpm audit --prod`, build
 // manifest; with --e2e also the browser suites) and exports the deployable wasm.
 //
@@ -11,7 +11,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dockerCommand, gitCommonDir, hostPath } from "./lib/docker.mjs";
+import { dockerCommand, gitCommonDir, hostPath, IMAGES } from "./lib/docker.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = process.argv.slice(2);
@@ -48,7 +48,7 @@ const run = [
   "CARGO_HOME=/root/.cargo",
   "-e",
   "RUSTUP_HOME=/root/.rustup",
-  "node:22-bookworm-slim",
+  IMAGES.bookworm,
   "sh",
   "/repo/scripts/container-reproduce.sh",
   ref,
