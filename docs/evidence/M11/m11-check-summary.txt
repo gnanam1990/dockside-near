@@ -1,0 +1,28 @@
+pnpm run check (merge candidate, worktree feat/dockside-m11-unexpected-asset-recovery) exit 0
+> dockside@0.1.0 check <home>\Documents\Codex\Projects\wt\dockside-m11
+> pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run security
+> dockside@0.1.0 format:check <home>\Documents\Codex\Projects\wt\dockside-m11
+> biome format .
+Checked 177 files in 59ms. No fixes applied.
+> dockside@0.1.0 lint <home>\Documents\Codex\Projects\wt\dockside-m11
+> biome lint .
+Checked 178 files in 86ms. No fixes applied.
+> dockside@0.1.0 typecheck <home>\Documents\Codex\Projects\wt\dockside-m11
+> tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json && pnpm --filter @dockside/web run typecheck
+> @dockside/web@0.1.0 typecheck <home>\Documents\Codex\Projects\wt\dockside-m11\apps\web
+> tsc -p tsconfig.json && tsc -p tsconfig.node.json
+> dockside@0.1.0 pretest <home>\Documents\Codex\Projects\wt\dockside-m11
+> pnpm run build && pnpm run contract:build
+> dockside@0.1.0 build <home>\Documents\Codex\Projects\wt\dockside-m11
+> tsc -b tsconfig.build.json
+> dockside@0.1.0 contract:build <home>\Documents\Codex\Projects\wt\dockside-m11
+> node scripts/build-contract.mjs
+dockside_escrow.wasm 769847 bytes sha256 c4dd8115a42fe340408f388be88d2fadbb9b57fe7558233a76b35aca99ad601a
+> dockside@0.1.0 test <home>\Documents\Codex\Projects\wt\dockside-m11
+> vitest run
+ Test Files  41 passed (41)
+      Tests  468 passed (468)
+> dockside@0.1.0 security <home>\Documents\Codex\Projects\wt\dockside-m11
+> node scripts/secret-scan.mjs
+secret-scan: 353 files clean
+
