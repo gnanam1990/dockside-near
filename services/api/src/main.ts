@@ -1,12 +1,13 @@
 import { createServer } from "node:http";
-import { AuthorityService } from "@dockside/authority";
+import { AuthorityService, IsolatedSigner } from "@dockside/authority";
 import { type DocksideConfig, loadConfig, randomIds, redactConfig, systemClock } from "@dockside/core";
 import { EvidenceService, HoldService, LocalObjectStore } from "@dockside/evidence";
 import { AssetRecoveryJournal, JournalService } from "@dockside/journal";
 import { EscrowContract, JsonRpcNearClient, NearTxClient, Nep141Reader } from "@dockside/near";
+import { BlockedOneClickAdapter } from "@dockside/payout";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
-import { createApp, hardenServer } from "./app.js";
+import { createApp, type ExportKeySigner, enrollExportKey, hardenServer } from "./app.js";
 import type { TradeModules } from "./trades.js";
 
 /**
@@ -46,8 +47,50 @@ function tradeModules(
   return { evidence, holds, release, journal, escrow, assetRecovery };
 }
 
+/** Chain adapter for NEAR account ownership checks and the RPC connection test (M17). */
+function chainAdapter(config: DocksideConfig) {
+  const endpoint = config.DOCKSIDE_NEAR_RPC_URL;
+  if (endpoint === undefined) return undefined;
+  const rpc = new JsonRpcNearClient({
+    endpoint,
+    allowedHosts: [new URL(endpoint).hostname],
+    timeoutMs: 10_000,
+    maxResponseBytes: 1024 * 1024,
+  });
+  return { rpc, tx: new NearTxClient(rpc) };
+}
+
+/**
+ * The dedicated audit-export key (ADR-0016): read only by an isolated signer child process that may
+ * sign the enrollment proof and export statements, nothing else. Enrolled (or confirmed) at startup.
+ */
+async function exportSigner(config: DocksideConfig, db: Database): Promise<ExportKeySigner | undefined> {
+  const file = config.DOCKSIDE_AUDIT_EXPORT_KEY_FILE;
+  if (file === undefined) return undefined;
+  const signer = await IsolatedSigner.spawn({
+    allowedPurposes: ["AUDIT_EXPORT_KEY_ENROLLMENT", "AUDIT_EXPORT"],
+    seedFile: file,
+  });
+  const s: ExportKeySigner = {
+    publicKey: signer.publicKey,
+    custodyKind: "ISOLATED_SIGNER_PROCESS",
+    sign: (purpose, payload) => signer.sign(purpose, payload),
+  };
+  await enrollExportKey(
+    {
+      db,
+      clock: systemClock,
+      ids: randomIds,
+      origin: config.DOCKSIDE_ORIGIN,
+      network: config.DOCKSIDE_NETWORK,
+    },
+    s,
+  );
+  return s;
+}
+
 /** Local entry point. Configuration comes only from DOCKSIDE_* environment variables. */
-function main(): void {
+async function main(): Promise<void> {
   const config = loadConfig(process.env);
   const db = Database.open(config.DOCKSIDE_DB_PATH);
   const migrated = db.migrate();
@@ -66,6 +109,8 @@ function main(): void {
     },
   });
   const modules = tradeModules(config, db, authority);
+  const chain = chainAdapter(config);
+  const signer = await exportSigner(config, db);
   const log = (line: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(line)}\n`);
   const server = hardenServer(
     createServer(
@@ -77,6 +122,9 @@ function main(): void {
         ids: randomIds,
         log,
         ...(modules ? { modules } : {}),
+        ...(chain ? { chain } : {}),
+        ...(signer ? { exportSigner: signer } : {}),
+        oneClick: new BlockedOneClickAdapter(),
       }),
     ),
   );
@@ -87,6 +135,7 @@ function main(): void {
       address: addr,
       migrationsApplied: migrated.applied,
       tradeModules: modules ? "CONFIGURED" : "NOT_CONFIGURED",
+      auditExportKey: signer ? signer.publicKey : "NOT_CONFIGURED",
       config: redactConfig(config),
     });
   });
@@ -100,4 +149,9 @@ function main(): void {
   process.on("SIGTERM", stop);
 }
 
-main();
+main().catch((e: unknown) => {
+  process.stderr.write(
+    `api failed to start: ${(e as { code?: string }).code ?? "INTERNAL"}: ${(e as Error).message}\n`,
+  );
+  process.exit(1);
+});

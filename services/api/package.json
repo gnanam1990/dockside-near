@@ -10,12 +10,17 @@
       "default": "./dist/app.js"
     }
   },
+  "bin": {
+    "dockside-export-key": "./dist/cli/export-key.js",
+    "dockside-verify-export": "./dist/cli/verify-export.js"
+  },
   "dependencies": {
     "@dockside/authority": "workspace:*",
     "@dockside/core": "workspace:*",
     "@dockside/evidence": "workspace:*",
     "@dockside/journal": "workspace:*",
     "@dockside/near": "workspace:*",
+    "@dockside/payout": "workspace:*",
     "@dockside/release": "workspace:*",
     "@dockside/store": "workspace:*",
     "zod": "4.6.7"

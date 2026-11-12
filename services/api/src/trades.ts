@@ -41,7 +41,9 @@ import { AuditLog } from "@dockside/store";
 import { z } from "zod";
 import type { AppDeps } from "./app.js";
 import type { AssetRecoveryModule } from "./assets.js";
-import { buildAuditExport } from "./export.js";
+import { type AuditExport, buildAuditExport } from "./export.js";
+import { signAuditExport } from "./export-signing.js";
+import { registerOwnedPolicy } from "./settings.js";
 import { type Route, route } from "./routing.js";
 
 /**
@@ -329,6 +331,43 @@ function intentJson(m: TradeModules, intentId: string) {
   };
 }
 
+/** Authority checks, then one fresh contract observation and the checksummed export (ADR-0009 §8). */
+async function buildExportFor(
+  d: AppDeps,
+  c: AuthContext,
+  tradeId: string,
+  query: URLSearchParams,
+): Promise<{ export: AuditExport; terms: TradeTerms }> {
+  act(c, "EXPORT_AUDIT");
+  const m = mods(d);
+  const t = loadTrade(m, c, tradeId);
+  const want = query.get("destinations") ?? "masked";
+  if (want !== "masked" && want !== "full") fail("VALIDATION_FAILED", "destinations must be masked or full");
+  // Full account ids only for the trade's own parties and their organisations' security admins.
+  const rel = relationsOf(c, t);
+  const party =
+    rel.includes("BUYER") ||
+    rel.includes("SUPPLIER") ||
+    (c.capabilities.includes("ORG_SECURITY_ADMIN") &&
+      (rel.includes("BUYER_ORG") || rel.includes("SUPPLIER_ORG")));
+  if (want === "full" && !party) fail("FORBIDDEN", "full destinations are limited to the trade's parties");
+  const observedChain = {
+    source: "escrow-contract-view",
+    contractId: t.escrowContractId,
+    trade: await m.escrow.getTrade(t.tradeId),
+    ledger: await m.escrow.getLedger(t.tradeId),
+    refunds: await m.escrow.getRefunds(t.tradeId),
+    holds: await m.escrow.getHolds(t.tradeId),
+    evidence: await m.escrow.getEvidence(t.tradeId),
+    release: await m.escrow.getRelease(t.tradeId),
+  };
+  const out = buildAuditExport(d, m, t, c, {
+    observedChain,
+    destinations: want === "full" ? "FULL" : "MASKED",
+  });
+  return { export: out, terms: t };
+}
+
 /* --------------------------------- routes ---------------------------------- */
 
 export function tradeRoutes(d: AppDeps): Route[] {
@@ -373,12 +412,16 @@ export function tradeRoutes(d: AppDeps): Route[] {
         const c = must(ctx);
         act(c, "ENROLL_SERVICE_KEY");
         const m = mods(d);
-        const out = m.evidence.registerPolicy((body as { policy: never }).policy);
+        // The first registration claims the policy id for this organisation; later revisions must
+        // come from it and be exactly the next revision (M17).
+        const out = registerOwnedPolicy(
+          d,
+          c,
+          (p) => m.evidence.registerPolicy(p as never),
+          (body as { policy: unknown }).policy,
+        );
         log(c, "EVIDENCE_POLICY_REGISTERED", "evidence_policy", `${out.policyId}@${out.revision}`);
-        return {
-          ...out,
-          relayTyped: toTypedJson(policyCanonical(parseEvidencePolicy((body as { policy: unknown }).policy))),
-        };
+        return out;
       },
     ),
     r(
@@ -1099,38 +1142,47 @@ export function tradeRoutes(d: AppDeps): Route[] {
 
     /* ------------------------------ audit export ------------------------------ */
     r("GET", "/v1/trades/:id/audit-export", true, undefined, async ({ ctx, params, query }) => {
+      const { export: out, terms } = await buildExportFor(d, must(ctx), params["id"] as string, query);
+      log(must(ctx), "AUDIT_EXPORTED", "trade", terms.tradeId);
+      return out;
+    }),
+    /** The same export, signed by the deployment's dedicated audit-export key (ADR-0016). */
+    r("GET", "/v1/trades/:id/signed-audit-export", true, undefined, async ({ ctx, params, query }) => {
       const c = must(ctx);
       act(c, "EXPORT_AUDIT");
-      const m = mods(d);
-      const t = loadTrade(m, c, params["id"] as string);
-      const want = query.get("destinations") ?? "masked";
-      if (want !== "masked" && want !== "full")
-        fail("VALIDATION_FAILED", "destinations must be masked or full");
-      // Full account ids only for the trade's own parties and their organisations' security admins.
-      const rel = relationsOf(c, t);
-      const party =
-        rel.includes("BUYER") ||
-        rel.includes("SUPPLIER") ||
-        (c.capabilities.includes("ORG_SECURITY_ADMIN") &&
-          (rel.includes("BUYER_ORG") || rel.includes("SUPPLIER_ORG")));
-      if (want === "full" && !party)
-        fail("FORBIDDEN", "full destinations are limited to the trade's parties");
-      const observedChain = {
-        source: "escrow-contract-view",
-        contractId: t.escrowContractId,
-        trade: await m.escrow.getTrade(t.tradeId),
-        ledger: await m.escrow.getLedger(t.tradeId),
-        refunds: await m.escrow.getRefunds(t.tradeId),
-        holds: await m.escrow.getHolds(t.tradeId),
-        evidence: await m.escrow.getEvidence(t.tradeId),
-        release: await m.escrow.getRelease(t.tradeId),
-      };
-      const out = buildAuditExport(d, m, t, c, {
-        observedChain,
-        destinations: want === "full" ? "FULL" : "MASKED",
+      if (!d.exportSigner)
+        fail("INVALID_STATE", "no audit export key is enrolled in this process", {
+          reason: "EXPORT_KEY_NOT_CONFIGURED",
+        });
+      const { export: out, terms } = await buildExportFor(d, c, params["id"] as string, query);
+      const signed = await signAuditExport(
+        {
+          db: d.db,
+          clock: d.clock,
+          ids: d.ids,
+          origin: d.config.DOCKSIDE_ORIGIN,
+          network: d.config.DOCKSIDE_NETWORK,
+        },
+        d.exportSigner,
+        out,
+      );
+      new AuditLog(d.db, d.clock, d.ids).append({
+        eventType: "AUDIT_EXPORT_SIGNED",
+        organizationId: c.organizationId,
+        actorPrincipalId: c.principal.id,
+        actorKeyVersionId: c.keyVersion.id,
+        sessionId: c.session.id,
+        subjectType: "trade",
+        subjectId: terms.tradeId,
+        correlationId: c.correlationId,
+        source: SOURCE,
+        payload: {
+          keyId: signed.statement.keyId,
+          exportChecksum: signed.statement.exportChecksum,
+          statementDigest: signed.statementDigest,
+        },
       });
-      log(c, "AUDIT_EXPORTED", "trade", t.tradeId);
-      return out;
+      return signed;
     }),
 
     /* ------------------------ operations (journal M05) ------------------------ */
