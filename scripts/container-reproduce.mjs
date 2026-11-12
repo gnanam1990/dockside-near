@@ -40,10 +40,7 @@ const run = [
   `${hostPath(gitCommonDir(ROOT), docker)}:/gitdir:ro`,
   "-v",
   `${hostPath(out, docker)}:/out`,
-  "-v",
-  "dockside-cargo:/root/.cargo",
-  "-v",
-  "dockside-rustup:/root/.rustup",
+  // No cargo/rustup volume: the toolchain is installed fresh in this --rm container (m29).
   "-e",
   "CARGO_HOME=/root/.cargo",
   "-e",
