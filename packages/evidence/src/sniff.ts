@@ -219,7 +219,9 @@ function sniffPdf(b: Uint8Array, lim: ResourceLimits) {
     const start = m.index + m[0].length;
     const end = s.indexOf("endstream", start);
     if (end < 0) fail("UNSUPPORTED_CONTENT", "unterminated PDF stream");
-    const dict = s.slice(Math.max(last, s.lastIndexOf("<<", m.index)), m.index);
+    // The whole region since the previous stream: a nested dictionary (e.g. /DecodeParms << >>) must not
+    // hide this stream's /Filter. A /Filter in an earlier stream-less object fails closed.
+    const dict = s.slice(last, m.index);
     outside += s.slice(last, m.index);
     const body = b.subarray(start, end);
     rawStreams += body.length;
