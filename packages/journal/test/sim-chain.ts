@@ -112,8 +112,8 @@ export class SimChainServer {
   /**
    * Access keys added to simulated accounts (M17), as `account -> publicKey -> permission`. Stands in
    * for AddKey/DeleteKey transactions. `view_access_key` answers from this registry, and otherwise
-   * only for an account's own keyless relayer key (`SimTxSigner`); any other key is
-   * UNKNOWN_ACCESS_KEY, exactly as a NEAR node answers for a key the account does not have.
+   * only for an account's own keyless relayer key (`SimTxSigner`); any other key gets the answer a
+   * nearcore 2.13 node gives for a key the account does not have ("... does not exist while viewing").
    */
   readonly accessKeys = new Map<string, Map<string, "FullAccess" | "FunctionCall">>();
   readonly faults: Faults = {
@@ -262,7 +262,8 @@ export class SimChainServer {
       const added = this.accessKeys.get(account)?.get(pk);
       const relayer = new SimTxSigner(account).publicKey === pk;
       if (!added && !relayer) {
-        error("UNKNOWN_ACCESS_KEY");
+        // nearcore 2.13 answers a missing key with a result carrying an error string (M17 sandbox run).
+        reply({ result: { ...base, error: `access key ${pk} does not exist while viewing`, logs: [] } });
         return;
       }
       const permission =

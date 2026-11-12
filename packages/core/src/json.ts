@@ -18,6 +18,12 @@ export interface JsonLimits {
   readonly maxStringLength: number;
   readonly maxArrayLength: number;
   readonly maxObjectKeys: number;
+  /**
+   * Integers outside the safe range: rejected (default), or kept exactly as their decimal digits in a
+   * string. Only for upstream responses that carry u64 counters as JSON numbers (a NEAR node's block
+   * timestamp in nanoseconds); never for request bodies.
+   */
+  readonly unsafeIntegers?: "reject" | "decimal-string";
 }
 
 export const DEFAULT_JSON_LIMITS: JsonLimits = Object.freeze({
@@ -112,8 +118,8 @@ class Parser {
     return this.err("invalid literal");
   }
 
-  number(): number {
-    const m = /^-?(0|[1-9][0-9]*)([.eE])?/.exec(this.s.slice(this.i, this.i + 32));
+  number(): number | string {
+    const m = /^-?(0|[1-9][0-9]*)([.eE])?/.exec(this.s.slice(this.i, this.i + 40));
     if (!m) return this.err("invalid number");
     if (m[2] !== undefined) {
       fail("VALIDATION_FAILED", "fractional or exponent numbers are not accepted; use decimal strings", {
@@ -123,6 +129,10 @@ class Parser {
     const raw = m[0];
     const n = Number(raw);
     if (!Number.isSafeInteger(n)) {
+      if (this.limits.unsafeIntegers === "decimal-string" && raw.length <= 39 && !raw.startsWith("-")) {
+        this.i += raw.length;
+        return raw;
+      }
       fail("VALIDATION_FAILED", "integer outside safe range; use a decimal string", { offset: this.i });
     }
     if (raw === "-0") fail("VALIDATION_FAILED", "negative zero is not accepted", { offset: this.i });

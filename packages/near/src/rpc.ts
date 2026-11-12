@@ -130,6 +130,9 @@ export class JsonRpcNearClient implements NearRpc {
         maxStringLength: this.cfg.maxResponseBytes,
         maxArrayLength: 1_000_000,
         maxObjectKeys: 1024,
+        // A real node sends u64 counters such as the block timestamp (nanoseconds) as JSON numbers
+        // beyond 2^53; they are kept as exact decimal strings instead of failing the whole response.
+        unsafeIntegers: "decimal-string",
       });
     } catch {
       fail("UPSTREAM_INVALID", "NEAR RPC response is not valid JSON");
@@ -236,6 +239,12 @@ export class JsonRpcNearClient implements NearRpc {
       public_key: publicKey,
     });
     if (!isObj(r)) fail("UPSTREAM_INVALID", "view_access_key result malformed");
+    // nearcore answers a missing key with a result that carries an error string, not a JSON-RPC error.
+    if (typeof r["error"] === "string") {
+      if (/does not exist while viewing/.test(r["error"]))
+        fail("NOT_FOUND", "NEAR RPC: not found", { cause: "UNKNOWN_ACCESS_KEY" });
+      fail("UPSTREAM_ERROR", "NEAR RPC error", { cause: "QUERY_ERROR" });
+    }
     const p = r["permission"];
     const permission =
       p === "FullAccess" ? "FullAccess" : isObj(p) && "FunctionCall" in p ? "FunctionCall" : null;
