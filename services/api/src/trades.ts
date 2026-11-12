@@ -62,7 +62,7 @@ export interface TradeModules {
 /** Upload bodies carry base64 content; their limit is set per route (still bounded). */
 export const MAX_UPLOAD_BODY_BYTES = 1024 * 1024;
 
-type Relation = "BUYER" | "SUPPLIER" | "INSPECTOR" | "RISK_RESOLVER" | "BUYER_ORG" | "SUPPLIER_ORG";
+export type Relation = "BUYER" | "SUPPLIER" | "INSPECTOR" | "RISK_RESOLVER" | "BUYER_ORG" | "SUPPLIER_ORG";
 
 const SOURCE = "dockside-api";
 
@@ -75,7 +75,7 @@ const empty = z.object({}).strict();
 const code = z.string().regex(/^[A-Z0-9_]{1,64}$/);
 const hex64 = z.string().regex(/^[0-9a-f]{64}$/);
 
-function canonical(t: unknown): CanonicalValue {
+export function canonical(t: unknown): CanonicalValue {
   try {
     return fromTypedJson(t as TypedJson);
   } catch (e) {
@@ -90,12 +90,12 @@ function call(c: FunctionCall) {
 
 /* --------------------------------- access ---------------------------------- */
 
-function mods(d: AppDeps): TradeModules {
+export function mods(d: AppDeps): TradeModules {
   if (!d.modules) fail("NOT_FOUND", "no such endpoint", { reason: "TRADE_MODULES_NOT_CONFIGURED" });
   return d.modules;
 }
 
-function must(ctx: AuthContext | null): AuthContext {
+export function must(ctx: AuthContext | null): AuthContext {
   if (!ctx) fail("UNAUTHENTICATED", "authentication required");
   return ctx;
 }
@@ -113,7 +113,7 @@ export function relationsOf(ctx: AuthContext, t: TradeTerms): Relation[] {
 }
 
 /** Same answer for "no such trade" and "not yours": the existence of a trade is not disclosed. */
-function loadTrade(m: TradeModules, ctx: AuthContext, tradeId: string): TradeTerms {
+export function loadTrade(m: TradeModules, ctx: AuthContext, tradeId: string): TradeTerms {
   let terms: TradeTerms;
   try {
     terms = m.evidence.terms(tradeId);
@@ -132,12 +132,12 @@ function riskOperator(ctx: AuthContext): void {
     fail("FORBIDDEN", "reconciliation and adjudication requests need the risk/policy capability");
 }
 
-function act(ctx: AuthContext, action: AuthorityAction): void {
+export function act(ctx: AuthContext, action: AuthorityAction): void {
   if (!capabilityAllows(action, ctx.capabilities)) fail("FORBIDDEN", `capability required for ${action}`);
 }
 
 /** The bound human for a trade role: capability, principal and exact key version. */
-function requireBound(
+export function requireBound(
   ctx: AuthContext,
   binding: { principalId: string; keyVersionId: string },
   capability: Capability,
@@ -246,7 +246,7 @@ function termsSummary(t: TradeTerms) {
   };
 }
 
-function operationSummary(m: TradeModules, tradeId: string) {
+export function operationSummary(m: TradeModules, tradeId: string) {
   return m.journal.journal.opsForTrade(tradeId).map((o) => ({
     operationId: o.operationId,
     kind: o.kind,
@@ -981,7 +981,9 @@ export function tradeRoutes(d: AppDeps): Route[] {
       const payload = canonical(b.payload);
       if ((payload as Record<string, CanonicalValue>)["tradeId"] !== t.tradeId)
         fail("VALIDATION_FAILED", "revocation names a different trade");
-      return call(m.release.recordDestinationRevocation(c, { payload, signature: b.signature }));
+      const relay = m.release.recordDestinationRevocation(c, { payload, signature: b.signature });
+      log(c, "DESTINATION_REVOCATION_RECORDED", "trade", t.tradeId);
+      return call(relay);
     }),
     r("POST", "/v1/trades/:id/destination-activation", true, empty, async ({ ctx, params }) => {
       const c = must(ctx);
@@ -989,7 +991,9 @@ export function tradeRoutes(d: AppDeps): Route[] {
       const m = mods(d);
       const t = loadTrade(m, c, params["id"] as string);
       requireExitParty(c, t);
-      return call(await m.release.prepareActivation(t.tradeId));
+      const relay = await m.release.prepareActivation(t.tradeId);
+      log(c, "DESTINATION_ACTIVATION_PREPARED", "trade", t.tradeId);
+      return call(relay);
     }),
     r("POST", "/v1/trades/:id/destination-binding", true, empty, async ({ ctx, params }) => {
       const c = must(ctx);
@@ -1018,21 +1022,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
         observedAt: d.clock.now(),
       };
     }),
-    r("GET", "/v1/trades/:id/refund", true, undefined, async ({ ctx, params }) => {
-      const c = must(ctx);
-      const m = mods(d);
-      const t = loadTrade(m, c, params["id"] as string);
-      const refunds = await m.escrow.getRefunds(t.tradeId);
-      const ledger = await m.escrow.getLedger(t.tradeId);
-      return {
-        tradeId: t.tradeId,
-        refunds,
-        ledger,
-        operations: operationSummary(m, t.tradeId).filter((o) => o.kind === "REFUND"),
-        source: "escrow-contract-view",
-        observedAt: d.clock.now(),
-      };
-    }),
+    // GET /v1/trades/:id/refund and the refund request routes live in refunds.ts (M10).
     r("GET", "/v1/trades/:id/timeline", true, undefined, ({ ctx, params }) => {
       const c = must(ctx);
       const m = mods(d);
@@ -1405,7 +1395,7 @@ function proposalRoutes(d: AppDeps): Route[] {
           },
           payout: { network, recipientType: "NEAR_ACCOUNT", destination: b.payoutDestination },
           refundPolicy: { id: "dockside-refund-v1", revision: 1 },
-          delayPolicy: { destinationChangeDelayMs: DAY_MS },
+          delayPolicy: { destinationChangeDelayMs: d.config.DOCKSIDE_DESTINATION_CHANGE_DELAY_MS },
           expiresAt: d.clock.now() + b.expiresInDays * DAY_MS,
         };
         return proposalJson(d, tradeTermsFromJson(json, { addressMode: "input" }));

@@ -66,6 +66,17 @@ const schema = z
       .min(0)
       .max(30 * MS_DAY)
       .default(2 * MS_DAY),
+    /**
+     * Destination-change delay that new trade proposals bind into `delayPolicy` (TDD: "a configurable
+     * minimum delay begins only after both valid consents"). The contract enforces the value the
+     * parties signed; this setting only chooses what a new proposal carries. Never below one minute.
+     */
+    DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: z.coerce
+      .number()
+      .int()
+      .min(60_000)
+      .max(30 * MS_DAY)
+      .default(MS_DAY),
     DOCKSIDE_REQUEST_PROOF_SKEW_MS: z.coerce.number().int().min(1_000).max(300_000).default(60_000),
     DOCKSIDE_FUNDED_PAYOUTS: z.enum(["BLOCKED"]).default("BLOCKED"),
     /** Requests per minute per client address on unauthenticated routes (challenges, logins, invitations). */
