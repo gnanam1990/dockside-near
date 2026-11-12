@@ -37,3 +37,23 @@ Exit: 1
 
 The engine could not be stopped at those points, so the process ran past them (or to its timeout) before the
 kill. After the boundaries were added: 7 passed.
+
+## R4 two journal-worker processes race a refund and an asset recovery (services/worker/test/m15-worker-process-kill.test.ts)
+Command: npx vitest run services/worker/test/m15-worker-process-kill.test.ts -t race   (run 3 times, before relayer sequencing)
+Exit: 1 each run (both worker processes exit 3: TIMEOUT)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 7 skipped (8)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 7 skipped (8)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 7 skipped (8)
+Observed journal state (parent, after both processes timed out):
+ - refund op UNKNOWN submitCount 1 transitions ['ENQUEUED', 'SUBMIT_PERSISTED', 'RESPONSE_LOST'] send counts [1, 1] executions [['execute_asset_recovery', 1]]
+ - refund op UNKNOWN submitCount 1 transitions ['ENQUEUED', 'SUBMIT_PERSISTED', 'RESPONSE_LOST'] send counts [1, 1] executions [['execute_asset_recovery', 1]]
+ - refund op REFUNDED submitCount 1 transitions ['ENQUEUED', 'SUBMIT_PERSISTED', 'RECONCILED:AUTHORITATIVE_RECEIPT_AND_LEDGER'] send counts [1, 203] executions [['execute_refund', 1]]
+
+Finding: both processes sign with the same relayer access key and read the same chain nonce, so one of the
+two transactions (refund or asset recovery) carries a nonce the chain has already consumed and is rejected
+(INVALID_TRANSACTION). The refund journal records RESPONSE_LOST and waits in UNKNOWN; the asset engine re-sends
+its identical rejected bytes on every tick (hundreds of sends) and never executes. No value moved twice, but one
+return stalls until its validity window lapses.
