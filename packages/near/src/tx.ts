@@ -132,6 +132,22 @@ export class NearTxClient {
     return { height: h["height"], hash: h["hash"] };
   }
 
+  /**
+   * Time of the latest final block in milliseconds (`header.timestamp_nanosec`). This is the clock
+   * the escrow contract checks windows, deadlines and expiry against; callers that prepare
+   * contract-checked payloads or pre-check contract time use it instead of their own wall clock.
+   */
+  async blockTimeMs(): Promise<number> {
+    const r = await this.rpc.request("block", { finality: "final" });
+    const h = isObj(r) && isObj(r["header"]) ? r["header"] : null;
+    const ns = h ? h["timestamp_nanosec"] : undefined;
+    if (typeof ns !== "string" || !/^[0-9]{1,30}$/.test(ns))
+      fail("UPSTREAM_INVALID", "block timestamp malformed");
+    const ms = BigInt(ns) / 1_000_000n;
+    if (ms > BigInt(Number.MAX_SAFE_INTEGER)) fail("UPSTREAM_INVALID", "block timestamp out of range");
+    return Number(ms);
+  }
+
   async accessKeyNonce(accountId: string, publicKey: string): Promise<bigint> {
     return (await this.rpc.viewAccessKey(accountId, publicKey)).nonce;
   }
