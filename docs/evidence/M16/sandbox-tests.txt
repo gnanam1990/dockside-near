@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 33s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 30s
      Running unittests src/lib.rs (target/debug/deps/dockside_fixtures-b6256ae74d93fd61)
 
 running 0 tests
@@ -20,8 +20,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/near_sdk_unit.rs (target/debug/deps/near_sdk_unit-de71761e5c55f77d)
 
 running 7 tests
-test new_sets_the_testnet_corridor_and_minimum_deposit ... ok
 test new_refuses_mainnet - should panic ... ok
+test new_sets_the_testnet_corridor_and_minimum_deposit ... ok
 test funding_records_each_funder_and_quarantines_the_excess ... ok
 test nep141_tokens_are_recorded_for_review_and_never_credited ... ok
 test a_deposit_below_the_minimum_is_refused - should panic ... ok
@@ -47,7 +47,7 @@ test t008_t009_refunds_return_exact_value_to_the_original_funder_only ... ok
 test t007_t019_t022_funding_and_direct_release_of_the_exact_value_to_the_bound_supplier ... ok
 test t020_t021_t042_dual_consent_delayed_destination_change_redirects_the_release ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.61s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.29s
 
      Running unittests src/lib.rs (target/debug/deps/dockside_test_token-36a841033426b33e)
 
@@ -71,5 +71,5 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 

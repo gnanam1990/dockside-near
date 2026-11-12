@@ -1,9 +1,9 @@
 {
   "schema": "dockside/clean-checkout@1",
-  "ref": "2cfca20",
-  "commit": "2cfca20aae2ab200cc21ddce582c6292cd694553",
-  "startedAt": "2026-11-12T06:46:38.599Z",
-  "finishedAt": "2026-11-12T06:58:30.142Z",
+  "ref": "a3c0099",
+  "commit": "a3c0099f3c2402f43bdd8a7d41b4571931961c7b",
+  "startedAt": "2026-11-12T07:05:27.168Z",
+  "finishedAt": "2026-11-12T07:17:19.236Z",
   "result": "PASS",
   "wasm": {
     "fresh": "497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774",
@@ -15,15 +15,15 @@
       "name": "clone",
       "command": "git clone --quiet --no-local \"<source>\" \"<tmp>/dockside\"",
       "exitCode": 0,
-      "ms": 158,
+      "ms": 149,
       "summary": [],
       "cargoTestsPassed": 0
     },
     {
       "name": "checkout",
-      "command": "git -c advice.detachedHead=false checkout --quiet 2cfca20aae2ab200cc21ddce582c6292cd694553",
+      "command": "git -c advice.detachedHead=false checkout --quiet a3c0099f3c2402f43bdd8a7d41b4571931961c7b",
       "exitCode": 0,
-      "ms": 30,
+      "ms": 32,
       "summary": [],
       "cargoTestsPassed": 0
     },
@@ -31,7 +31,7 @@
       "name": "versions",
       "command": "node --version && pnpm --version && rustc --version && cargo --version",
       "exitCode": 0,
-      "ms": 300,
+      "ms": 293,
       "summary": [],
       "cargoTestsPassed": 0
     },
@@ -39,7 +39,7 @@
       "name": "install",
       "command": "pnpm install --frozen-lockfile",
       "exitCode": 0,
-      "ms": 874,
+      "ms": 866,
       "summary": [],
       "cargoTestsPassed": 0
     },
@@ -47,7 +47,7 @@
       "name": "wasm target",
       "command": "rustup target list --installed",
       "exitCode": 0,
-      "ms": 27,
+      "ms": 23,
       "summary": [],
       "cargoTestsPassed": 0
     },
@@ -55,14 +55,14 @@
       "name": "check",
       "command": "pnpm run check",
       "exitCode": 0,
-      "ms": 63118,
+      "ms": 58470,
       "summary": [
-        "Checked 198 files in 42ms. No fixes applied.",
-        "Checked 199 files in 81ms. No fixes applied.",
+        "Checked 216 files in 36ms. No fixes applied.",
+        "Checked 217 files in 65ms. No fixes applied.",
         "dockside_escrow.wasm 809036 bytes sha256 497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774",
-        "\ Test Files \ \\48 passed\\\ (48)\",
-        "\      Tests \ \\519 passed\\\ (519)\",
-        "secret-scan: 439 files clean"
+        "\ Test Files \ \\51 passed\\\ | \\1 skipped\\ (52)\",
+        "\      Tests \ \\560 passed\\\ | \\3 skipped\\ (563)\",
+        "secret-scan: 465 files clean"
       ],
       "cargoTestsPassed": 0
     },
@@ -70,14 +70,14 @@
       "name": "contract host tests",
       "command": "pnpm run contract:test",
       "exitCode": 0,
-      "ms": 24980,
+      "ms": 28010,
       "summary": [
         "test t019_failed_transfer_restores_exact_slices_and_requires_a_new_intent ... ok",
         "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
         "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
-        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
-        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.26s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.14s",
         "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
         "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s",
         "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
@@ -91,7 +91,7 @@
       "name": "audit",
       "command": "pnpm audit --prod",
       "exitCode": 0,
-      "ms": 597,
+      "ms": 654,
       "summary": [],
       "cargoTestsPassed": 0
     },
@@ -99,9 +99,9 @@
       "name": "build manifest",
       "command": "node scripts/build-manifest.mjs --out \"<tmp>/build-manifest.json\"",
       "exitCode": 0,
-      "ms": 343,
+      "ms": 352,
       "summary": [
-        "build manifest written: commit 2cfca20aae2ab200cc21ddce582c6292cd694553 wasm 497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774 dist c5f15b09fcf18a9aeb3c0ee6a2531be85d1af8834be621e4953d99b454a220d6"
+        "build manifest written: commit a3c0099f3c2402f43bdd8a7d41b4571931961c7b wasm 497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774 dist fcdec68fa4550024bf1612524d96239fc9feb4df8975a46828312b70263bbabe"
       ],
       "cargoTestsPassed": 0
     },
@@ -109,12 +109,12 @@
       "name": "browser suite",
       "command": "pnpm run web:e2e",
       "exitCode": 0,
-      "ms": 621107,
+      "ms": 623212,
       "summary": [
-        "41 passed (8.4m)",
-        "3 passed (18.7s)",
+        "51 passed (8.4m)",
+        "3 passed (18.3s)",
         "8 passed (1.3m)",
-        "3 passed (15.7s)"
+        "3 passed (15.0s)"
       ],
       "cargoTestsPassed": 0
     }
