@@ -61,6 +61,8 @@ type RefundRow = Awaited<ReturnType<EscrowContract["getRefunds"]>>[number];
 const HOUR = 3600_000;
 /** Request window; the contract allows at most seven days. Cosigning must happen inside it. */
 const REQUEST_LIFETIME_MS = 24 * HOUR;
+/** INSPECTION_FAIL appeal window (REFUND-POLICY.md; the contract's `CHALLENGE_48H_MS`). */
+const APPEAL_WINDOW_MS = 48 * HOUR;
 const SOURCE = "dockside-api";
 
 const FUNDER_RETURNS: readonly RefundReason[] = ["PARTIAL_FUNDING_RETURN", "EXCESS_FUNDING_RETURN"];
@@ -266,17 +268,37 @@ interface Slice {
 }
 
 /**
+ * INSPECTION_FAIL rests on the current inspector FAIL attestation, which the contract re-checks
+ * when the separate risk/policy principal authorizes after the 48-hour appeal window. An
+ * inspection that expires before that window closes can never be authorized, so no slice is
+ * locked for it (the policy's attestation lifetime bounds every inspection).
+ */
+async function inspectionFailBasis(m: TradeModules, t: TradeTerms, chainNow: number): Promise<void> {
+  if (m.evidence.currentInspection(t.tradeId)?.decision !== "FAIL")
+    fail("NOT_ELIGIBLE", "the current inspection is not FAIL");
+  const i = (await m.escrow.getEvidence(t.tradeId)).inspection;
+  if (!i || i.invalidated || i.decision !== "FAIL" || chainNow >= i.expiresAt)
+    fail("NOT_ELIGIBLE", "the contract holds no current FAIL inspection");
+  const closes = i.recordedAt + APPEAL_WINDOW_MS;
+  if (i.expiresAt <= closes)
+    fail(
+      "NOT_ELIGIBLE",
+      `the FAIL inspection expires at ${new Date(i.expiresAt).toISOString()}, before its 48-hour appeal window closes at ${new Date(closes).toISOString()}; the contract could never authorize this refund`,
+    );
+}
+
+/**
  * The slice the contract would compute for `reason` and `funder`, refused early with the code the
  * contract uses. Never authoritative: the contract recomputes it and refuses a stale view.
  */
 async function eligibleSlice(
-  d: AppDeps,
   m: TradeModules,
   t: TradeTerms,
   reason: RefundReason,
   funder: string,
   ledger: Ledger,
   refunds: readonly RefundRow[],
+  chainNow: number,
 ): Promise<Slice> {
   if (RECOVERY_FIRST.includes(reason))
     fail("NO_REFUND_SUBMIT", "key-loss rows are recovery-first and authorize no refund");
@@ -298,10 +320,10 @@ async function eligibleSlice(
       slice = { sourceBucket: "QUARANTINED", amountYocto: f.quarantined };
       break;
     default: {
-      if (reason === "TRADE_EXPIRY" && d.clock.now() < t.expiresAt)
-        fail("NOT_ELIGIBLE", "trade has not expired");
-      if (reason === "INSPECTION_FAIL" && m.evidence.currentInspection(t.tradeId)?.decision !== "FAIL")
-        fail("NOT_ELIGIBLE", "the current inspection is not FAIL");
+      // The contract compares the signed tradeExpiresAt with its own clock, not this process's.
+      if (reason === "TRADE_EXPIRY" && chainNow < t.expiresAt)
+        fail("NOT_ELIGIBLE", "trade has not expired on the contract clock");
+      if (reason === "INSPECTION_FAIL") await inspectionFailBasis(m, t, chainNow);
       if (reason === "PERMANENT_HOLD") {
         const resolved = m.holds
           .list(t.tradeId)
@@ -521,11 +543,12 @@ export function refundRoutes(d: AppDeps): Route[] {
       const t = loadTrade(m, c, params["id"] as string);
       const refunds = await m.escrow.getRefunds(t.tradeId);
       const ledger = await m.escrow.getLedger(t.tradeId);
+      const chainNow = await m.chain.blockTimeMs();
       const candidates = [];
       for (const funder of Object.keys(ledger.funders))
         for (const reason of SUBMITTABLE) {
           try {
-            const s = await eligibleSlice(d, m, t, reason, funder, ledger, refunds);
+            const s = await eligibleSlice(m, t, reason, funder, ledger, refunds, chainNow);
             candidates.push({ funder, reason, ...s, blockedBy: null, blockedReason: null });
           } catch (e) {
             if (!(e instanceof DocksideError)) throw e;
@@ -564,6 +587,8 @@ export function refundRoutes(d: AppDeps): Route[] {
         operations: operationSummary(m, t.tradeId).filter((o) => o.kind === "REFUND"),
         source: "escrow-contract-view",
         observedAt: d.clock.now(),
+        // The clock deadlines and windows are judged by on the contract (latest final block).
+        chainTimeMs: chainNow,
       };
     }),
 
@@ -601,9 +626,11 @@ export function refundRoutes(d: AppDeps): Route[] {
         }
         const ledger = await m.escrow.getLedger(t.tradeId);
         const refunds = await m.escrow.getRefunds(t.tradeId);
-        const slice = await eligibleSlice(d, m, t, reason, b.funder, ledger, refunds);
+        const chainNow = await m.chain.blockTimeMs();
+        const slice = await eligibleSlice(m, t, reason, b.funder, ledger, refunds, chainNow);
         const refundIntentId = d.ids.next("rfd");
-        const now = d.clock.now();
+        // The contract checks this window against its own clock, so it is anchored there.
+        const now = chainNow;
         const payload = refundRequestPayload(tradeBinding(t), {
           refundIntentId,
           reason,
@@ -632,7 +659,7 @@ export function refundRoutes(d: AppDeps): Route[] {
           JSON.stringify(tj),
           digest,
           c.principal.id,
-          now,
+          d.clock.now(),
           now + REQUEST_LIFETIME_MS,
         );
         log(c, "REFUND_REQUEST_PREPARED", t, refundIntentId, { reason, sourceBucket: slice.sourceBucket });
@@ -663,15 +690,15 @@ export function refundRoutes(d: AppDeps): Route[] {
       `${base}/request-signature`,
       true,
       z.object({ signature: sig }).strict(),
-      ({ ctx, params, body }) => {
+      async ({ ctx, params, body }) => {
         const { c, m, t, role, rid } = entry(ctx, params);
         const s = stored(d, t.tradeId, rid);
         if (!s) return fail("NOT_FOUND", "no refund request was prepared with this id for this trade");
         if (s.initiatorRole === "FUNDER")
           fail("FORBIDDEN", "a funder return is submitted by the funder's own account, not a session");
         allow(s.initiatorRole === role, `the request names ${s.initiatorRole} as initiator`);
-        if (d.clock.now() >= s.expiresAt)
-          fail("INVALID_STATE", "the prepared request expired; prepare a new one");
+        if ((await m.chain.blockTimeMs()) >= s.expiresAt)
+          fail("INVALID_STATE", "the prepared request expired on the contract clock; prepare a new one");
         const payload = fromTypedJson(s.typed);
         const signature = (body as { signature: string }).signature;
         const v = verify(t, role, "REFUND_REQUEST", payload, signature);
@@ -729,7 +756,7 @@ export function refundRoutes(d: AppDeps): Route[] {
       const { c, m, t, role, rid } = entry(ctx, params);
       const rf = await contractRefund(m, t, rid);
       const revokerRole = revocationRule(rf, role);
-      const now = d.clock.now();
+      const now = await m.chain.blockTimeMs();
       const payload = refundRevokePayload(tradeBinding(t), {
         refundIntentId: rid,
         requestDigest: rf.requestDigest,
@@ -786,7 +813,7 @@ export function refundRoutes(d: AppDeps): Route[] {
         const rf = await contractRefund(m, t, rid);
         disputeRule(rf, role);
         const b = body as { reasonCode: string; evidenceDigest: string };
-        const now = d.clock.now();
+        const now = await m.chain.blockTimeMs();
         const payload = refundDisputePayload(tradeBinding(t), {
           refundIntentId: rid,
           requestDigest: rf.requestDigest,
@@ -842,7 +869,7 @@ export function refundRoutes(d: AppDeps): Route[] {
       if (rf.reason !== "INSPECTION_FAIL")
         fail("INVALID_STATE", "only INSPECTION_FAIL takes a signed authorization");
       inState(rf, ["TIMELOCKED"], "only a timelocked intent can be authorized");
-      const now = d.clock.now();
+      const now = await m.chain.blockTimeMs();
       const payload = refundAuthorizePayload(tradeBinding(t), {
         refundIntentId: rid,
         requestDigest: rf.requestDigest,

@@ -52,6 +52,15 @@ import { type Route, route } from "./routing.js";
  * gets the same NOT_FOUND as for a trade that does not exist (no enumeration). Mutations return
  * the exact relay call for the contract, which re-verifies every signature and predicate.
  */
+/**
+ * The escrow contract's clock: the time of the latest final block. Payload windows and time
+ * predicates the contract checks (refund rows, M15) are prepared and pre-checked against it, never
+ * against this process's wall clock, which a chain does not follow.
+ */
+export interface ChainClock {
+  blockTimeMs(): Promise<number>;
+}
+
 export interface TradeModules {
   /** Unexpected-asset recovery (M11); routes answer "no such endpoint" without it. */
   readonly assetRecovery?: AssetRecoveryModule;
@@ -60,6 +69,7 @@ export interface TradeModules {
   readonly release: ReleaseService;
   readonly journal: JournalService;
   readonly escrow: EscrowContract;
+  readonly chain: ChainClock;
 }
 
 /** Upload bodies carry base64 content; their limit is set per route (still bounded). */
