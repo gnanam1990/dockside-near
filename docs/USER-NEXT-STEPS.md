@@ -16,6 +16,7 @@ Never commit or paste keys, seed phrases, JWTs or API credentials into the repos
 ## 0. Prerequisites
 
 - Windows, macOS or Linux with Node 22 (`>=22.13 <23`), pnpm 10, Rust stable with `wasm32-unknown-unknown`, git.
+- A Docker Engine (on Windows, inside WSL 2) to build the deployable wasm in the pinned Linux container.
 - [near-cli-rs](https://github.com/near/near-cli-rs) for account creation, deployment and submitting relayed calls.
 - A NEAR testnet wallet you control for each funding account.
 - Four people with their own devices and browsers for the buyer approver, supplier signer, inspector and risk/policy
@@ -27,13 +28,23 @@ Never commit or paste keys, seed phrases, JWTs or API credentials into the repos
 ```sh
 git clone <your copy of this repository> dockside && cd dockside
 git checkout <the commit you intend to deploy>
-node scripts/clean-checkout.mjs --e2e --report clean-checkout.json
-pnpm install --frozen-lockfile && pnpm test
-node scripts/build-manifest.mjs --out build-manifest.json
+node scripts/clean-checkout.mjs --e2e --report clean-checkout.json      # your own machine
+mkdir -p .data/repro
+docker run --rm -v "$PWD":/repo:ro -v "$PWD/.data/repro":/out \
+  -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
+  -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
+  node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh "$(git rev-parse HEAD)" --e2e
 ```
 
-`clean-checkout.json` must say `"result": "PASS"`. Keep `build-manifest.json`. Its `contract.nearCodeHash` is the
-code hash your deployed account must report. Every later step uses this one commit and this one wasm.
+Both `clean-checkout.json` and `.data/repro/clean-checkout-report.json` must say `"result": "PASS"`. Keep
+`.data/repro/build-manifest.json` and deploy `.data/repro/dockside_escrow.wasm`, the wasm the container built (the
+script copies it only when its SHA-256 equals the manifest's). The manifest's `contract.nearCodeHash` is the code hash
+your deployed account must report. Do not deploy a wasm built on your own machine: it embeds that machine's cargo-home path
+(including your user name), and its digest differs from every other machine's (ADR-0015). Every later step uses this
+one commit and this one wasm.
+
+For the build recorded in [docs/status/M13.md](status/M13.md), the container wasm is 769 515 bytes; check its SHA-256
+and NEAR code hash there.
 
 ## 2. Create testnet accounts
 
@@ -41,12 +52,13 @@ Create these with near-cli-rs (faucet-sponsored creation works on testnet). Use 
 
 | Account | Purpose |
 |---|---|
-| `<escrow>.testnet` | holds the contract; needs about 8 testnet NEAR for storage staking (the wasm is 709 051 bytes) plus state |
+| `<escrow>.testnet` | holds the contract; needs about 7.7 testnet NEAR of storage staking for the code (the container-built wasm is 769 515 bytes; 1 NEAR per 100 kB) plus state, so fund it with 10 |
 | `<buyer>.testnet` | buyer party account and the recorded funder of the trade |
 | `<treasury>.testnet` (optional) | a second funder, to see per-funder ledgers and refunds |
 | `<supplier>.testnet` | supplier party account and the bound payout destination |
 | `<supplier-alt>.testnet` | a second supplier-owned account, for the destination-change check |
 | `<relayer>.testnet` | submits relayed calls and the worker's release transaction; give it a FunctionCall access key restricted to `<escrow>.testnet` |
+| `<sender>.testnet` (optional) | holds an existing testnet NEP-141 token and sends a small amount to the escrow by mistake, for the unexpected-asset recovery check |
 
 ```sh
 near account create-account sponsor-by-faucet-service <name>.testnet autogenerate-new-keypair save-to-keychain network-config testnet create
@@ -124,9 +136,15 @@ Each person uses their own device and browser:
    administrator grants the role afterwards.
 3. The buyer administrator enrols the ManifestAttestor and deterministic-policy services for the evidence policy.
 
+The administrators enrol services under **Organization → Service identities** (the custody operator creates the
+key and signs the proof; the locator is never shown) and manage keys under **Organization → Keys**. A person who
+lost a key generates a recovery key under `/recovery` on the new device.
+
 Not built, and worth knowing before you start: no NEP-413 wallet connector in the browser (Dockside keys are
 WebCrypto keys in each browser), no check that a principal controls the NEAR account named in the terms (RPC
-`view_access_key`), and no screens for key rotation, recovery or service enrollment (the API routes exist).
+`view_access_key`), and no way to create the trade revision that rebinds a rotated, revoked or recovered key. A
+trade bound to such a key says "new trade revision required" and can no longer be released with that key, so rotate
+or recover keys before you create the testnet trade, not during it.
 
 ## 7. Run the trade on testnet and keep the evidence
 
@@ -142,14 +160,24 @@ Use the web app throughout and submit every relay from step 4. Keep each transac
    ACTIVE and after it expires unresolved.
 5. The buyer locks the release intent and approves it. Exercise a dual-signed CANCEL on one intent, and an ABANDON
    after expiry plus grace on another, before the final one.
-6. Destination change: a forged and a unilateral change must be refused. A dual-consent change to
-   `<supplier-alt>.testnet` waits out the delay, is activated and bound, and the old approval, manifest and
-   inspection stop counting. Renew them before releasing.
+6. Destination change on the Agreement tab: a forged and a unilateral change must be refused. A dual-consent change
+   to `<supplier-alt>.testnet` waits out the delay (`DOCKSIDE_DESTINATION_CHANGE_DELAY_MS`, default one day, at
+   least one minute), is activated and bound, and the old approval, manifest and inspection stop counting. Renew
+   them before releasing.
 7. The buyer executes. The worker submits once and the reconciler reaches PAID only with the final receipt to the
    bound destination. Stop the worker mid-flight once and restart it: there must be no second submission.
-8. Export the audit record (`GET /v1/trades/:id/audit-export`) and verify its checksum.
-9. Record: commit, manifest, deploy/init/register/fund/release transaction hashes, receipts, `get_ledger` with
-   `conservation: true`, the supplier balance delta, the audit export and its checksum.
+8. Refunds on the Refund tab, on a second testnet trade: the treasury's excess return is prepared in the web app and
+   submitted from `<treasury>.testnet` itself with the exact call the page shows (no session or relayer can submit
+   it); revoke one to see QUARANTINED restored exactly; run a mutual cancellation from request and cosignature
+   through authorization after the period to REFUNDED at the original funder. Also run, at least once each,
+   `TRADE_EXPIRY`, `INSPECTION_FAIL` and `PERMANENT_HOLD`, which this build drove only to their refusals above the
+   contract.
+9. Optional, unexpected assets: `<sender>.testnet` sends a small NEP-141 amount to the escrow with `ft_transfer_call`.
+   It appears only in the "Asset recovery review" panel. The sender submits the request from its own account, the
+   risk/policy resolver approves, the 72-hour window passes, and execution returns the exact amount to the sender.
+10. Export the audit record (`GET /v1/trades/:id/audit-export`) and verify its checksum.
+11. Record: commit, manifest, deploy/init/register/fund/release/refund transaction hashes, receipts, `get_ledger` with
+   `conservation: true`, the supplier and funder balance deltas, the audit export and its checksum.
 
 ## 8. Accessibility evidence
 

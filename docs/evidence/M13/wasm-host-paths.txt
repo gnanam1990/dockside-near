@@ -1,0 +1,39 @@
+# Contract wasm built on the Windows host at commit 4bd99ec (same digest at 0ec1c86 and ff2aadd)
+# bytes 769847 sha256 c4dd8115a42fe340408f388be88d2fadbb9b57fe7558233a76b35aca99ad601a
+# Printable strings in the wasm that carry an absolute build-host path (user name replaced by <home>):
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hashbrown-0.17.1\src\raw.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\near-sdk-5.30.1\src\environmen
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.154\src\error.r
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memchr-2.8.3\src\arch\all\memc
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.154\src\value\s
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.154\src\ser.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\indexmap-2.14.2\src\inner.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\near-sdk-5.30.1\src\store\inde
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\near-sdk-5.30.1\src\utils\stab
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sha2-0.10.9\src\core_api.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\near-sdk-5.30.1\src\promise.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\digest-0.10.7\src\core_api\ct_
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bs58-0.5.1\src\encode.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bs58-0.5.1\src\decode.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.154\src\de.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\borsh-1.8.1\src\de\mod.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\near-sdk-5.30.1\src\store\vec\
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.154\src\read.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hashbrown-0.17.1\src\control\g
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.19\src\lib.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wee_alloc-0.4.5\src\lib.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\once_cell-1.21.4\src\lib.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\block-buffer-0.10.4\src\lib.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\zmij-1.0.23\src\lib.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memory_units-0.4.0\src\lib.rs
+   <home>\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wee_alloc-0.4.5\src\imp_wasm32
+# distinct path strings: 26  occurrences: 26
+# Toolchain library paths are already remapped by rustc (/rustc/<commit>/library/...):  33 occurrences
+
+# Linux container builds (node:22-bookworm-slim, Rust 1.97.1, CARGO_HOME=/root/.cargo), commit 4bd99ec:
+#   clean-checkout temporary directory      769 515 bytes  sha256 65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7
+#   /opt/other-build-dir/x/dockside/contract 769 515 bytes  sha256 65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7
+# Same digest at two checkout paths: the container build does not depend on where the repository is cloned.
+# Windows host build of the same commit: 769 847 bytes, sha256 c4dd8115a42fe340408f388be88d2fadbb9b57fe7558233a76b35aca99ad601a
+# (332 bytes longer). The 26 embedded host paths above are one confirmed source of the difference; they are
+# not claimed to be the only one.

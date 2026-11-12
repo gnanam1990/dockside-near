@@ -1,0 +1,35 @@
+# Linux container (node:22-bookworm-slim), commit 4bd99ec (main before M13).
+# 1. First clean-checkout run (scripts/clean-checkout.mjs --e2e): main browser suite
+     1) e2e/product.spec.ts:295:1 › T-036 buyer locks and approves; T-038 a lost outcome stays locked and never looks paid; then PAID
+           - unexpected value "Locked until reconciledProhibited while REVIEW: retrying payment, cancelling, abandoning, refunding and any terminal override. The reconciler reads the contract, the original transaction and its receipts next.Request reconciliationOpen adjudication"
+     1 failed
+       e2e/product.spec.ts:295:1 › T-036 buyer locks and approves; T-038 a lost outcome stays locked and never looks paid; then PAID
+     2 did not run
+     33 passed (5.4m)
+
+# 2. product.spec.ts alone with --repeat-each 2 and traces (the file runs serially; tests after a failure do not run):
+
+  1) e2e/product.spec.ts:295:1 › T-036 buyer locks and approves; T-038 a lost outcome stays locked and never looks paid; then PAID
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('operation').first().getByTestId('op-locked')
+    Expected substring: "Reconciliation requested"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByTestId('operation').first().getByTestId('op-locked') with timeout 15000ms
+      - waiting for getByTestId('operation').first().getByTestId('op-locked')
+        - locator resolved to <div data-testid="op-locked" class="callout callout--unknown">…</div>
+        - unexpected value "Locked until reconciledProhibited while REVIEW: retrying payment, cancelling, abandoning, refunding and any terminal override. The reconciler reads the contract, the original transaction and its receipts next.Request reconciliationOpen adjudicationRequest refused: operation is PAID; reconciliation runs on its own schedule."
+
+
+      390 |   await control("/control/faults", { hideAllReceipts: false });
+    Error: expect(locator).toContainText(expected) failed
+  1 failed
+  2 did not run
+  9 passed (4.0m)
+
+# 3. After the test fix (b8f6320), product.spec.ts with --repeat-each 3 on Linux:
+  18 passed (6.5m)
