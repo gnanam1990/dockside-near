@@ -36,6 +36,8 @@ export const SIGNING_DOMAINS = {
   REVOKE_CANCEL_CONSENT: { domain: "dockside/revoke-cancel-consent", version: 1 },
   ABANDON_RELEASE_INTENT: { domain: "dockside/abandon-release-intent", version: 1 },
   DESTINATION_CHANGE_REVOKE: { domain: "dockside/destination-change-revoke", version: 1 },
+  // Withdrawal of a pending key-rebinding revision (M14). Must equal contract domains.rs.
+  KEY_REBINDING_REVOKE: { domain: "dockside/key-rebinding-revoke", version: 1 },
   REFUND_AUTHORIZE: { domain: "dockside/refund-authorize", version: 1 },
   // Separate UNEXPECTED_ASSET_RECOVERY policy (M11). Must equal contract domains.rs.
   ASSET_RECOVERY_REQUEST: { domain: "dockside/asset-recovery-request", version: 1 },

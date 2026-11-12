@@ -70,6 +70,8 @@ export const ERROR_CODES = {
   PROFILE_MISMATCH: { http: 409, retry: "never" },
   CANCEL_DISAGREEMENT: { http: 409, retry: "never" },
   DESTINATION_CHANGE_PENDING: { http: 409, retry: "never" },
+  // Key-rebinding revision (M14). The escrow contract raises the same name.
+  KEY_REBINDING_PENDING: { http: 409, retry: "never" },
   FUNDED_RAIL_BLOCKED: { http: 409, retry: "never" },
   // Journal, outbox and reconciliation codes (M05).
   TRADE_FROZEN: { http: 409, retry: "never" },
