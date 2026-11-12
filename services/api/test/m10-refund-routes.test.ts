@@ -10,7 +10,7 @@
 import { fromTypedJson, generateEd25519KeyPair, loadConfig, signFor } from "@dockside/core";
 import type { FunctionCall } from "@dockside/near";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Actor } from "../../../packages/authority/test/helpers.js";
+import { type Actor, enrollHuman } from "../../../packages/authority/test/helpers.js";
 import { BUYER_ACCT, HOUR, NEAR, panicCode, TREASURY } from "../../../packages/release/test/chain.js";
 import { type ApiWorld, apiWorld, lockAndApprove, run } from "./m07-world.js";
 
@@ -73,6 +73,14 @@ describe("M10 refund routes: authority and funder returns", () => {
     expect((await a.http(actorOf(a, "outsiderClerk"), "GET", path(a, "/refund"))).json.error.code).toBe(
       "NOT_FOUND",
     );
+    // A second buyer approver of the same organisation holds the capability but is not bound.
+    const unbound = enrollHuman(a.w.c.w.h, actorOf(a, "buyerAdmin"), "BUYER_APPROVER");
+    const ub = await a.http(unbound, "POST", path(a, "/refund-challenges"), {
+      reason: "MUTUAL_CANCEL",
+      funder: BUYER_ACCT,
+    });
+    expect(DENIALS, ub.text).toContain(ub.json.error.code);
+    expect((await a.http(unbound, "GET", path(a, "/refund"))).json.viewerRole ?? null).toBeNull();
     expect(count(a, "refund_requests")).toBe(0);
     expect(count(a, "refund_signatures")).toBe(0);
   });
@@ -272,6 +280,72 @@ describe("M10 refund routes: authority and funder returns", () => {
     expect(() =>
       a.w.c.w.h.db.run("UPDATE refund_requests SET funder = 'x' WHERE refund_intent_id = ?", id),
     ).toThrow(/append-only/);
+  });
+  it("EXCESS_FUNDING_RETURN dispute: only buyer or risk may dispute; REVIEW blocks authorization and execution", async () => {
+    const c = a.w.c;
+    const buyer = actorOf(a, "buyer");
+    const risk = actorOf(a, "risk");
+    const ch = await a.http(buyer, "POST", path(a, "/refund-challenges"), {
+      reason: "EXCESS_FUNDING_RETURN",
+      funder: TREASURY,
+    });
+    expect(ch.status, ch.text).toBe(201);
+    c.ok(ch.json.funderWallet.call as FunctionCall, TREASURY);
+    const id = ch.json.refundIntentId as string;
+    expect((await refundOf(a, id))?.state).toBe("TIMELOCKED");
+    const dpath = path(a, `/refunds/${id}/dispute-challenges`);
+    const body = { reasonCode: "AMOUNT_MISMATCH", evidenceDigest: "ab".repeat(32) };
+    expect((await a.http(actorOf(a, "supplier"), "POST", dpath, body)).json.error.code).toBe("FORBIDDEN");
+    expect((await a.http(risk, "POST", dpath, { ...body, evidenceDigest: "xyz" })).json.error.code).toBe(
+      "VALIDATION_FAILED",
+    );
+    const dc = await a.http(risk, "POST", dpath, body);
+    expect(dc.status, dc.text).toBe(201);
+    expect(fromTypedJson(dc.json.payload)).toMatchObject({
+      disputantRole: "RISK_RESOLVER",
+      refundIntentId: id,
+    });
+    const sign = path(a, `/refunds/${id}/dispute`);
+    // Another key over the same payload, or the risk payload under the buyer session, is refused.
+    expect(
+      (
+        await a.http(risk, "POST", sign, {
+          payload: dc.json.payload,
+          signature: a.sign(buyer, "REFUND_DISPUTE", dc.json.payload),
+        })
+      ).json.error.code,
+    ).toBe("SIGNATURE_INVALID");
+    expect(
+      (
+        await a.http(buyer, "POST", sign, {
+          payload: dc.json.payload,
+          signature: a.sign(buyer, "REFUND_DISPUTE", dc.json.payload),
+        })
+      ).json.error.code,
+    ).toBe("FORBIDDEN");
+    a.relay(
+      await a.http(risk, "POST", sign, {
+        payload: dc.json.payload,
+        signature: a.sign(risk, "REFUND_DISPUTE", dc.json.payload),
+      }),
+    );
+    const rv = await refundOf(a, id);
+    expect(rv).toMatchObject({ state: "REVIEW" });
+    expect(rv?.dispute?.role).toBe("RISK_RESOLVER");
+    expect((await a.http(buyer, "POST", dpath, body)).json.error.code).toBe("INVALID_STATE");
+    expect((await a.http(buyer, "POST", path(a, `/refunds/${id}/authorization`))).json.error.code).toBe(
+      "INVALID_STATE",
+    );
+    expect((await a.http(buyer, "POST", path(a, `/refunds/${id}/execute`))).json.error.code).toBe(
+      "INVALID_STATE",
+    );
+    // The slice stays locked while disputed.
+    expect((await funderLedger(a, TREASURY))?.refundLocked).toBe(2n * NEAR);
+    const events = (await a.http(buyer, "GET", path(a, "/timeline"))).json.events.map(
+      (e: { eventType: string }) => e.eventType,
+    );
+    expect(events).toContain("REFUND_DISPUTE_SIGNED");
+    expect((await c.escrow.getLedger(c.t)).conservation).toBe(true);
   });
 });
 
