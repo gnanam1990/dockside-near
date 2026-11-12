@@ -92,7 +92,9 @@ export class Reconciler {
 
     if (isTerminal(op.state)) {
       const d = this.journal.disposition(operationId);
-      const inc = d ? postTerminalIncident(d.outcome, d.basis, facts.contract, history) : null;
+      // An UNAVAILABLE contract read is no contract evidence; never judge the coerced status.
+      const contract = facts.contractAvailable ? facts.contract : null;
+      const inc = d ? postTerminalIncident(d.outcome, d.basis, contract, history) : null;
       if (inc) this.incident(op, inc.kind, inc.detail, facts.successors);
       this.journal.touch(operationId, lease, op.version, {
         nextCheckAt: now + this.backoff(op.checks),
