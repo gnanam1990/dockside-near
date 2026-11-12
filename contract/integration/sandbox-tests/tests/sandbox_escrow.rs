@@ -9,7 +9,8 @@
 //! its return), T-009 (refund reasons to the original funder), T-019/T-022 (direct release of the
 //! exact locked value to the bound supplier, once), T-020/T-021/T-042 (unilateral destination
 //! change refused, dual-consent delayed change redirects the release), T-051 (unexpected NEP-141
-//! recovery to the proven sender after the 72-hour window), T-045 (on-chain code hash).
+//! recovery to the proven sender after the 72-hour window), T-031 (a transfer the runtime refunds
+//! is the authoritative no-transfer proof: FAILED, value restored), T-045 (on-chain code hash).
 
 use anyhow::Result;
 use dockside_fixtures::payloads::*;
@@ -324,5 +325,33 @@ async fn t051_unexpected_nep141_returns_to_the_proven_sender_after_the_72_hour_w
     let view = d.view("get_unexpected_asset", json!({ "asset_index": 0 })).await?;
     assert_eq!(view["state"], json!("RECOVERED"));
     assert_eq!(d.view("get_ledger", json!({ "trade_id": t })).await?, ledger_before, "native value untouched");
+    Ok(())
+}
+
+#[tokio::test]
+async fn t031_a_native_transfer_the_runtime_refunds_settles_failed_and_restores_the_exact_reservation() -> Result<()> {
+    let mut d = Dock::start("ghost", 5 * NEAR, HOUR).await?;
+    // The bound supplier destination is a valid name nobody created: nearcore refunds the
+    // transfer to the escrow, which is the authoritative no-transfer proof.
+    d.fx.accounts.supplier = "ghost-supplier.testnet".into();
+    funded_and_inspected(&mut d).await?;
+    let relayer = d.relayer.clone();
+    let intent = intent_args(&d.fx, d.rec(), d.now().await?, "ghost");
+    let id = d.ok(&relayer, "create_release_intent", intent, 0).await?.value["releaseIntentId"].as_str().expect("id").to_string();
+    let ap = approval_args(&d.fx, d.rec(), &id, d.now().await?, "ghost");
+    d.ok(&relayer, "approve_release", ap, 0).await?;
+    let escrow_before = d.net.balance(d.escrow.id()).await?;
+    let sent = d.ok(&relayer, "execute_release", execute_release_args(d.rec(), &id), 0).await?;
+    assert_eq!(sent.value["settled"], json!(false), "the settlement callback saw the refunded transfer");
+    let release = d.view("get_release", json!({ "trade_id": d.trade_id() })).await?;
+    assert!(release.to_string().contains("\"FAILED\""), "{release}");
+    let ledger = d.view("get_ledger", json!({ "trade_id": d.trade_id() })).await?;
+    assert_eq!(ledger["totals"]["reserved"], json!("0"));
+    assert_eq!(ledger["totals"]["available"], json!((5 * NEAR).to_string()));
+    assert_eq!(ledger["totals"]["released"], json!("0"));
+    // The value came back: the escrow's balance moved only by storage and gas rewards, never by
+    // the trade amount.
+    let escrow_after = d.net.balance(d.escrow.id()).await?;
+    assert!(escrow_after.abs_diff(escrow_before) < NEAR / 100, "{escrow_before} -> {escrow_after}");
     Ok(())
 }
