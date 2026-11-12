@@ -1,0 +1,25 @@
+> dockside@0.1.0 check <worktree>
+> pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run security
+> dockside@0.1.0 format:check <worktree>
+> biome format .
+Checked 166 files in 59ms. No fixes applied.
+> dockside@0.1.0 lint <worktree>
+> biome lint .
+Checked 167 files in 72ms. No fixes applied.
+> dockside@0.1.0 typecheck <worktree>
+> tsc -b tsconfig.build.json && tsc -p tsconfig.tests.json && pnpm --filter @dockside/web run typecheck
+> @dockside/web@0.1.0 typecheck <worktree>\apps\web
+> tsc -p tsconfig.json && tsc -p tsconfig.node.json
+> dockside@0.1.0 pretest <worktree>
+> pnpm run build && pnpm run contract:build
+> dockside@0.1.0 build <worktree>
+> tsc -b tsconfig.build.json
+> dockside@0.1.0 contract:build <worktree>
+> node scripts/build-contract.mjs
+> dockside@0.1.0 test <worktree>
+> vitest run
+ Test Files  38 passed (38)
+      Tests  433 passed (433)
+> dockside@0.1.0 security <worktree>
+> node scripts/secret-scan.mjs
+secret-scan: 341 files clean
