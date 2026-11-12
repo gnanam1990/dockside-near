@@ -14,7 +14,12 @@ import {
   toTypedJson,
   tradeTermsCanonical,
 } from "@dockside/core";
-import { inspectionPayload, parseEvidencePolicy, policyCanonical } from "@dockside/evidence";
+import {
+  type EvidencePolicyInput,
+  inspectionPayload,
+  parseEvidencePolicy,
+  policyCanonical,
+} from "@dockside/evidence";
 import { EscrowContract, type FunctionCall, type NearRpc, termsArg } from "@dockside/near";
 import { Database } from "@dockside/store";
 import { expect } from "vitest";
@@ -72,8 +77,8 @@ export function relogin(a: Actor): void {
   a.grant = a.h.svc.completeLogin({ challengeId: c.challengeId, proof: signChallenge(a.key, c) });
 }
 
-export async function chain(): Promise<Chain> {
-  const w = await makeWorld();
+export async function chain(opts: { policy?: EvidencePolicyInput } = {}): Promise<Chain> {
+  const w = await makeWorld(opts);
   const sim = new NearSim(CONTRACT, w.h.clock.now());
   for (const a of [BUYER_ACCT, TREASURY, SUPPLIER_ACCT, "relayer.testnet"]) sim.credit(a, 1000n * NEAR);
   expect(

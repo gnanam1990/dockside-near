@@ -10,3 +10,16 @@ DocksideError: NEAR RPC response is not valid JSON
 
 Finding: a real NEAR node sends header.timestamp as a JSON number past 2^53. The strict parser refused the
 whole envelope, so NearTxClient.latestBlock() (used by every worker submit) would fail against a real node.
+
+## R2 INSPECTION_FAIL request whose FAIL inspection expires inside the 48-hour appeal window (services/api/test/m15-refund-reasons.test.ts)
+Command: npx vitest run services/api/test/m15-refund-reasons.test.ts   (refunds.ts before the appeal-window check)
+Exit: 1
+     × is refused up front when the FAIL inspection would expire inside its 48-hour appeal window 395ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'code')
+ ❯ services/api/test/m15-refund-reasons.test.ts:269:27
+      Tests  1 failed | 3 passed (4)
+
+Finding: under the default 24-hour attestation lifetime the inspection route bounds the FAIL inspection to
+the attestation, so the contract can never authorize the refund after the 48-hour window; the API used to
+lock the slice anyway. TRADE_EXPIRY and PERMANENT_HOLD passed on the first run (routes from M10 were complete).

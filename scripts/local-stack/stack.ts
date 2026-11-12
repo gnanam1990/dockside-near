@@ -449,7 +449,7 @@ async function main(): Promise<void> {
         clock: systemClock,
         ids: randomIds,
         log,
-        modules: { evidence, holds, release, journal, escrow, assetRecovery },
+        modules: { evidence, holds, release, journal, escrow, assetRecovery, chain: new NearTxClient(rpc()) },
       }),
     ),
   );
