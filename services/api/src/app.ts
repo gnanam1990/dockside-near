@@ -17,6 +17,7 @@ import {
 import { AuditLog, type Database, isUniqueViolation, loadMigrations, type SqlValue } from "@dockside/store";
 import { z } from "zod";
 import { addressKey, RateLimiter, sessionKey } from "./limits.js";
+import { refundRoutes } from "./refunds.js";
 import { type HandlerInput, type Route, route } from "./routing.js";
 import { type TradeModules, tradeRoutes } from "./trades.js";
 
@@ -332,6 +333,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       return { events: new AuditLog(d.db, d.clock, d.ids).list({ organizationId: c.organizationId }, limit) };
     }),
     ...tradeRoutes(d),
+    ...refundRoutes(d),
   ];
 }
 
