@@ -7,7 +7,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { base58Encode } from "@dockside/core";
@@ -80,5 +80,54 @@ describe("T-045: exact-build manifest", () => {
     expect(tamper((x) => (x.dist.digest = "11".repeat(32)), "dist")).toContain("dist files");
     expect(tamper((x) => (x.lockfiles["pnpm-lock.yaml"] = "22".repeat(32)), "lock")).toContain("lockfiles");
     expect(tamper((x) => (x.commit = "f".repeat(40)), "commit")).toContain("not in this repository");
+  });
+
+  it("never passes a manifest commit that is not a full hex commit id to git or a shell", () => {
+    // A manifest is an input that may come from elsewhere (a CI artifact). Its commit must not be
+    // read as a git option (--output=<file> truncates that file) or reach cmd.exe on Windows.
+    const victim = join(dir, "victim.txt");
+    const pwned = join(dir, "pwned.txt");
+    writeFileSync(victim, "important data");
+    const crafted = [
+      `--output=${victim}`,
+      `x & echo PWNED> ${pwned} & rem`,
+      `x; echo PWNED > ${pwned}`,
+      "HEAD",
+      "F".repeat(40),
+    ];
+    for (const [i, commit] of crafted.entries()) {
+      const copy = JSON.parse(first.out);
+      copy.commit = commit;
+      const p = join(dir, `crafted-${i}.json`);
+      writeFileSync(p, JSON.stringify(copy));
+      const r = node(["--verify", p]);
+      expect(r.status, commit).toBe(1);
+      const out = JSON.parse(r.out);
+      expect(out.ok, commit).toBe(false);
+      expect(out.problems.join(";"), commit).toContain("is not a full commit id");
+    }
+    expect(readFileSync(victim, "utf8")).toBe("important data");
+    expect(existsSync(pwned)).toBe(false);
+    const nonString = JSON.parse(first.out);
+    nonString.commit = ["--output", victim];
+    const q = join(dir, "crafted-array.json");
+    writeFileSync(q, JSON.stringify(nonString));
+    expect(node(["--verify", q]).status).toBe(1);
+    expect(readFileSync(victim, "utf8")).toBe("important data");
+    // An honest full commit id still reaches git and gets the documentation-only comparison
+    // (skipped in a shallow checkout, where HEAD has no parent object).
+    const parentRun = spawnSync("git", ["rev-parse", "--verify", "--quiet", "HEAD~1"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    if (parentRun.status !== 0) return;
+    const parent = parentRun.stdout.trim();
+    const honest = JSON.parse(first.out);
+    honest.commit = parent;
+    const h = join(dir, "honest-parent.json");
+    writeFileSync(h, JSON.stringify(honest));
+    const problems = JSON.parse(node(["--verify", h]).out).problems.join(";");
+    expect(problems).not.toContain("is not a full commit id");
+    expect(problems).not.toContain("is not in this repository");
   });
 });
