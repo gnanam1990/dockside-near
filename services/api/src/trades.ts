@@ -968,7 +968,9 @@ export function tradeRoutes(d: AppDeps): Route[] {
         // Only a newer revision the destination protocol activated (a key rebinding binds itself).
         bindingRequired:
           view.revision > t.revision &&
-          view.destinationHistory.some((h) => h.status === "ACTIVATED" && h.successorDigest === view.termsDigest),
+          view.destinationHistory.some(
+            (h) => h.status === "ACTIVATED" && h.successorDigest === view.termsDigest,
+          ),
       };
     }),
     r(

@@ -694,7 +694,12 @@ async function main(): Promise<void> {
           tradeOffsetMs += ms;
           chainOffsetMs += ms;
           log({ event: "clock.advanced", advanceMs: ms, tradeOffsetMs, chainOffsetMs });
-          return json(res, 200, { tradeOffsetMs, chainOffsetMs, tradeNowMs: tradeClock.now(), chainNowMs: chainNow() });
+          return json(res, 200, {
+            tradeOffsetMs,
+            chainOffsetMs,
+            tradeNowMs: tradeClock.now(),
+            chainNowMs: chainNow(),
+          });
         }
         if (req.method === "POST" && url.pathname === "/control/faults") {
           const b = await readBody(req);
