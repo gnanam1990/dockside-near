@@ -78,6 +78,11 @@ export const ERROR_CODES = {
   // Refund requests (M10). The escrow contract raises the same names.
   NO_REFUND_SUBMIT: { http: 409, retry: "never" },
   DISPUTE_NOT_ALLOWED: { http: 409, retry: "never" },
+  // Unexpected-asset recovery (M11). The escrow contract raises the same names.
+  ADAPTER_UNSAFE: { http: 409, retry: "never" },
+  AMOUNT_MISMATCH: { http: 409, retry: "never" },
+  ASSET_MISMATCH: { http: 409, retry: "never" },
+  RECIPIENT_NOT_SENDER: { http: 409, retry: "never" },
   // Hardening (M09).
   RATE_LIMITED: { http: 429, retry: "later" },
   INTERNAL: { http: 500, retry: "unknown" },

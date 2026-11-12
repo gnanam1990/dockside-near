@@ -1,3 +1,4 @@
+export * from "./assets.js";
 export * from "./decide.js";
 export * from "./engine.js";
 export * from "./journal.js";
