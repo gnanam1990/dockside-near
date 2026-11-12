@@ -486,11 +486,16 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
           : undefined;
         // Limits apply before any body is read or signature verified. Health probes are exempt.
         const probe = method === "GET" && (url.pathname === "/healthz" || url.pathname === "/readyz");
-        if (!probe) {
-          if (route?.auth && presentedSessionToken !== undefined)
-            limiter.take(sessionKey(presentedSessionToken), sessionLimit);
-          else limiter.take(addressKey(req.socket.remoteAddress), unauthLimit);
-        }
+        // A presented session token is not trusted to allocate a window until it authenticates.
+        // A token that already authenticated in this window is checked against its own window;
+        // any other is checked against the address's budget, so an address that keeps failing is
+        // refused before any authentication work. Nothing is allocated here.
+        const sessionAuth = !probe && route?.auth === true && presentedSessionToken !== undefined;
+        if (sessionAuth) {
+          const sk = sessionKey(presentedSessionToken);
+          if (limiter.has(sk)) limiter.check(sk, sessionLimit);
+          else limiter.check(addressKey(req.socket.remoteAddress), unauthLimit);
+        } else if (!probe) limiter.take(addressKey(req.socket.remoteAddress), unauthLimit);
         if (!route) fail("NOT_FOUND", "no such endpoint");
         const params = (route.pattern.exec(url.pathname)?.groups ?? {}) as Record<string, string>;
         const reqOrigin = req.headers.origin;
@@ -517,10 +522,11 @@ export function createApp(d: AppDeps): (req: IncomingMessage, res: ServerRespons
               body: raw,
             });
           } catch (e) {
-            // Invented tokens get a fresh session window each; failures also count per address.
+            // Failures count per address only; invented tokens never get a window of their own.
             limiter.take(addressKey(req.socket.remoteAddress), unauthLimit);
             throw e;
           }
+          if (sessionAuth) limiter.take(sessionKey(presentedSessionToken), sessionLimit);
         }
         const body = method === "POST" ? (raw.byteLength ? parseStrictJson(raw) : {}) : undefined;
         const validated = route.schema ? parseWith(route.schema, body) : body;
