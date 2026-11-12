@@ -6,8 +6,8 @@
   - (b) `packages/near/src/escrow.ts:fundCall:no-terms-digest-binding:squatted-trade-id`
 - Verdict: **both confirmed and fixed** (contract change, new deployable wasm).
 - Branch: `feat/dockside-m32-hold-liveness-and-funding-binding`, base main `49fbaf7`. Main was merged in
-  twice: `66cfce9`, then `39435ec`, which brought m33 contract storage bounds and ADR-0022. The final runs
-  are on `f4f41ba`.
+  three times: `66cfce9`, then `39435ec` (m33 contract storage bounds, ADR-0022), then `a1ee8e2` (m31
+  rebinding consent integrity, ADR-0023). The final runs are on `a329b3d`.
 - Decision record: ADR-0024 (amends ADR-0004 decision 11). The sealed spec under `docs/spec/` was not edited.
 
 ## What the spec decides
@@ -82,11 +82,11 @@ self-made keys under the same trade id accepted the buyer's 10 NEAR (`committed 
 | Command | Exit | Result |
 | --- | --- | --- |
 | `cargo test --locked -p dockside-escrow-core --test t052_hold_liveness_and_funding_binding` | 0 | 4 passed |
-| `pnpm run contract:test` (at `f4f41ba`) | 0 | 21 test binaries ok, 0 failed |
-| `pnpm run check` (at `f4f41ba`) | 0 | 64 files passed, 1 skipped; 630 tests passed, 3 skipped |
+| `pnpm run contract:test` (at `a329b3d`) | 0 | 22 test binaries ok, 0 failed |
+| `pnpm run check` (at `a329b3d`) | 0 | 64 files passed, 1 skipped; 630 tests passed, 3 skipped |
 | `pnpm run web:e2e` (ports 9170-9179 via `DOCKSIDE_E2E_*`) | 0 | 51 + 3 + 8 + 3 passed (main, assets, reasons, clock configs) |
-| `pnpm run contract:reproduce` at `f4f41ba` (`DOCKSIDE_DOCKER="wsl.exe -d Ubuntu-24.04 -u root -- docker"`, `MSYS_NO_PATHCONV=1`) | 0 | clean checkout PASS, 630 passed |
-| `pnpm run contract:sandbox` at `f4f41ba` (near-sandbox 2.14.0, that wasm) | 0 | report `PASS`; sandbox_escrow 6 passed, near-sdk unit 7 passed, m33 bounds 1 passed, run-all journey 1 passed |
+| `pnpm run contract:reproduce` at `a329b3d` (`DOCKSIDE_DOCKER="wsl.exe -d Ubuntu-24.04 -u root -- docker"`, `MSYS_NO_PATHCONV=1`) | 0 | clean checkout PASS, 630 passed |
+| `pnpm run contract:sandbox` at `a329b3d` (near-sandbox 2.14.0, that wasm) | 0 | report `PASS`; 15 sandbox and near-sdk unit tests ok (including m33 bounds and the new `STALE_REVISION` assertion), run-all journey 1 passed |
 
 New wasm-level and chain-level checks:
 - `packages/near/test/m02-escrow-wasm.test.ts`: on the compiled wasm, a trade id squatted with other keys
@@ -107,15 +107,15 @@ fund` and passed on rerun.
 
 - Old deployed wasm: the testnet escrow `gnanam1990-dock-escrow.testnet` runs code hash
   `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` and keeps both defects until redeployed.
-- New wasm (reproduced at `f4f41ba`, which includes m33; `.data/repro/build-manifest.json`):
-  - sha256 `f3071e6c2d32a64714cf83588874ccb50a73de2713da6cf109d804e250995d72`
-  - NEAR code hash `HMgNFt6CPYzA3YDJ33RrkiGUVkr53u4diKg6RdTeT7gd`
-  - Before the m33 merge, this change alone reproduced as sha256
+- New wasm (reproduced at `a329b3d`, which also includes m31 and m33; `.data/repro/build-manifest.json`):
+  - sha256 `5d0d8a777e85a8ef823a583bf4b8e8813518b5ceb133016b46604d440cb3a3fb`
+  - NEAR code hash `7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N`
+  - Before the m31 and m33 merges, this change alone reproduced as sha256
     `16c01d84c32e483402253cbe7d1eafc88c216fa3935f6196f472bd7374f6282c` (code hash
     `2XossaAZqk1C3gJmmhtfSrxpkYGZCZh88gXtEaGz8tvw`), which is superseded.
 - Owner action: redeploy the escrow with this wasm. This change needs no state migration and no fresh account,
-  because it leaves the stored layout unchanged (ADR-0024 decision 3). See ADR-0022 for the m33 changes in
-  the same wasm. Clients must send `terms_digest` with `fund`
+  because it leaves the stored layout unchanged (ADR-0024 decision 3). For the m33 and m31 changes in the
+  same wasm, see ADR-0022 and ADR-0023. Clients must send `terms_digest` with `fund`
   from then on. No testnet or mainnet transaction was sent from this branch.
 
 ## Residual risk
