@@ -1,5 +1,6 @@
 // Runs INSIDE a Linux container (node:22-trixie-slim; the sandbox binary needs glibc 2.38+): starts a local NEAR sandbox node (nearcore's
-// sandbox build, fetched by the near-sandbox npm package from NEAR's release bucket) with one extra
+// sandbox build from NEAR's release bucket, checked against its pinned SHA-256 by fetch-sandbox.mjs
+// and handed to the near-sandbox npm package through NEAR_SANDBOX_BIN_PATH) with one extra
 // genesis account whose single full-access key is the public key given on the command line, and
 // exposes its JSON-RPC on 0.0.0.0:3031 so the container's published port reaches it. Local only:
 // no testnet, no mainnet, no state outside this container.
