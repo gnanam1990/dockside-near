@@ -87,6 +87,12 @@ export const TOKEN_SENDER = "token-sender.testnet";
 export const CLAIMANT = "other-claimant.testnet";
 const NFT_CONTRACT = "sim-nft.testnet";
 const WORKER_RELAYER = "relayer.testnet";
+/**
+ * The attestor and policy services relay with their own account. The worker's relayer key is
+ * sequenced by the journal (packages/journal/src/relayer.ts); a second, unsequenced submitter on
+ * the same key would race its nonces and strand one of the two transactions (M15).
+ */
+const SERVICE_RELAYER = "service-relayer.testnet";
 const PARTY_RELAYER = "party-relayer.testnet";
 const NEAR = 10n ** 24n;
 const DAY = 24 * 3600_000;
@@ -208,6 +214,7 @@ async function main(): Promise<void> {
     SUPPLIER_ACCT,
     SUPPLIER_ALT_ACCT,
     WORKER_RELAYER,
+    SERVICE_RELAYER,
     PARTY_RELAYER,
     TOKEN_SENDER,
     CLAIMANT,
@@ -371,7 +378,7 @@ async function main(): Promise<void> {
           const onChain = await escrow.getEvidence(t);
           if (onChain.current?.digest === att.manifestDigest) continue;
           const res = await submit(
-            WORKER_RELAYER,
+            SERVICE_RELAYER,
             escrow.submitManifestAttestationCall(t, att.typed, att.signature),
           );
           log({ event: "attestor.submitted", tradeId: t, outcome: res.outcome });
@@ -397,7 +404,7 @@ async function main(): Promise<void> {
           evaluated.set(t, key);
           for (const h of await holds.applyDeterministicPolicy(t, signer)) {
             const res = await submit(
-              WORKER_RELAYER,
+              SERVICE_RELAYER,
               escrow.setHoldCall(t, toTypedJson(h.setPayload), h.setSignature),
             );
             log({ event: "policy.hold_set", tradeId: t, ruleId: h.ruleId, outcome: res.outcome });

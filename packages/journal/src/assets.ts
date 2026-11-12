@@ -11,6 +11,7 @@ import type {
 } from "@dockside/near";
 import { type Database, isUniqueViolation, type Row, type SqlValue } from "@dockside/store";
 import { Journal, type Lease } from "./journal.js";
+import { withRelayerKey } from "./relayer.js";
 import { digestOf } from "./sources.js";
 
 /**
@@ -410,33 +411,47 @@ export class AssetRecoveryEngine {
       this.move(lease, op, { state: "NOT_SUBMITTED", reason });
       return;
     }
-    const block = await this.ports.tx.latestBlock();
-    const nonce =
-      (await this.ports.tx.accessKeyNonce(this.signer.signerId, this.signer.publicKey).catch(() => 0n)) + 1n;
-    const signed = await this.signer.sign(op.call, { nonce, blockHash: block.hash });
-    const submitting = this.move(lease, op, {
-      state: "SUBMITTING",
-      reason: null,
-      nextCheckAt: this.later(op),
-      tx: {
-        signerId: this.signer.signerId,
-        signed,
-        refBlockHeight: block.height,
-        tokenBalanceBefore: before,
+    // One submitter per relayer access key; the nonce is allocated durably (relayer.ts).
+    const sent = await withRelayerKey(
+      this.journal.leases,
+      this.signer,
+      this.cfg.holder,
+      this.cfg.leaseTtlMs,
+      () => this.ports.tx.accessKeyNonce(this.signer.signerId, this.signer.publicKey).catch(() => 0n),
+      async (nonce) => {
+        const block = await this.ports.tx.latestBlock();
+        const signed = await this.signer.sign(op.call, { nonce, blockHash: block.hash });
+        const submitting = this.move(lease, op, {
+          state: "SUBMITTING",
+          reason: null,
+          nextCheckAt: this.later(op),
+          tx: {
+            signerId: this.signer.signerId,
+            signed,
+            refBlockHeight: block.height,
+            tokenBalanceBefore: before,
+          },
+        });
+        this.boundary("asset.submit.persisted", op.operationId);
+        try {
+          return { signed, outcome: await this.ports.tx.send(signed) };
+        } catch (e) {
+          this.move(lease, submitting, {
+            state: "UNKNOWN",
+            reason: `BROADCAST_UNCERTAIN:${code(e)}`,
+            nextCheckAt: this.later(submitting),
+          });
+          return null;
+        }
       },
-    });
-    this.boundary("asset.submit.persisted", op.operationId);
-    let outcome: TxOutcome;
-    try {
-      outcome = await this.ports.tx.send(signed);
-    } catch (e) {
-      this.move(lease, submitting, {
-        state: "UNKNOWN",
-        reason: `BROADCAST_UNCERTAIN:${code(e)}`,
-        nextCheckAt: this.later(submitting),
-      });
+    );
+    if (!sent.ran) {
+      // Another submitter holds the relayer key: nothing was signed; the operation stays QUEUED.
+      this.move(lease, op, { reason: "RELAYER_KEY_BUSY", nextCheckAt: this.later(op) });
       return;
     }
+    if (!sent.value) return;
+    const { signed, outcome } = sent.value;
     this.journal.observe(lease, op.operationId, "BROADCAST", { kind: outcome.kind, txHash: signed.txHash });
     this.boundary("asset.submit.broadcast", op.operationId);
     await this.reconcile(this.journal.op(op.operationId), lease, outcome);
