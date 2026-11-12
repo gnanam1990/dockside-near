@@ -60,8 +60,8 @@ Full-suite results after merging main are recorded below.
 ## Full suite (after merging main)
 
 ```
-pnpm run check            exit 0 — format, lint, typecheck; Test Files 56 passed | 1 skipped (57),
-                                   Tests 589 passed | 3 skipped (592); secret-scan clean
+pnpm run check            exit 0 — format, lint, typecheck; Test Files 57 passed | 1 skipped (58),
+                                   Tests 590 passed | 3 skipped (593); secret-scan clean (main 9d0a680 merged)
 pnpm run contract:test    exit 0 — 103 passed, 0 failed
 ```
 
