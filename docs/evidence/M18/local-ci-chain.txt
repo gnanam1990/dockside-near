@@ -1,0 +1,56 @@
+# M18: node scripts/ci/local-run.mjs --job chain on the Windows host with DOCKSIDE_DOCKER="wsl.exe -d Ubuntu-24.04 -u root -- docker" and DOCKSIDE_NEAR_SANDBOX_PORT=4541, commit 419499a (exit 0, 43 min 41 s)
+# step lines and test summaries; the near-sandbox, run-all and nearcore-ownership test names
+=== [1] Check out: uses actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 (skipped locally)
+=== [2] Node.js 22: uses actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af (skipped locally)
+=== [3] pnpm from the packageManager field: runner setup (skipped; --with-setup runs it)
+=== [4] Install (frozen lockfile)
+=== [4] exit 0 in 1 s
+=== [5] Build TypeScript
+=== [5] exit 0 in 1 s
+=== [6] Docker Engine
+=== [6] exit 0 in 0 s
+=== [7] Linux clean-checkout reproduction and deployable wasm (node:22-bookworm-slim)
+ Test Files  52 passed | 1 skipped (53)
+secret-scan: 477 files clean
+test t019_failed_transfer_restores_exact_slices_and_requires_a_new_intent ... ok
+build manifest written: commit 419499acc65194efe1dc35986b9fbabbab448927 wasm 497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774 dist fcdec68fa4550024bf1612524d96239fc9feb4df8975a46828312b70263bbabe
+deployable wasm: /out/dockside_escrow.wasm sha256 497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774
+=== [7] exit 0 in 1299 s
+=== [8] Escrow on a local near-sandbox node and run-all validation (node:22-trixie-slim)
+test new_refuses_mainnet - should panic ... ok
+test new_sets_the_testnet_corridor_and_minimum_deposit ... ok
+test funding_records_each_funder_and_quarantines_the_excess ... ok
+test nep141_tokens_are_recorded_for_review_and_never_credited ... ok
+test a_deposit_below_the_minimum_is_refused - should panic ... ok
+test execute_release_schedules_the_exact_transfer_and_a_private_settlement ... ok
+test a_failed_release_transfer_settles_failed_and_restores_the_value ... ok
+test run_all_deploys_verifies_configures_the_relayer_and_completes_the_journey_on_sandbox ... ignored, needs near-cli-rs, the container-built wasm and its manifest (scripts/sandbox/container-sandbox.sh)
+test t045_deployed_code_hash_is_the_built_wasm_and_init_is_testnet_only ... ok
+test t031_a_native_transfer_the_runtime_refunds_settles_failed_and_restores_the_exact_reservation ... ok
+test t051_unexpected_nep141_returns_to_the_proven_sender_after_the_72_hour_window ... ok
+test t008_t009_refunds_return_exact_value_to_the_original_funder_only ... ok
+test t007_t019_t022_funding_and_direct_release_of_the_exact_value_to_the_bound_supplier ... ok
+test t020_t021_t042_dual_consent_delayed_destination_change_redirects_the_release ... ok
+test run_all_deploys_verifies_configures_the_relayer_and_completes_the_journey_on_sandbox ... ok
+sandbox suite PASS
+=== [8] exit 0 in 1285 s
+=== [9] NEAR account ownership against a local nearcore sandbox
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+=== [9] exit 0 in 33 s
+=== [10] Keep the reproduction and sandbox reports: uses actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 (skipped locally)
+local-run: job chain PASS
+
+# attempt 1 (commit c8c236a): stopped by hand after 11 min in step 7, still in apt-get install inside node:22-bookworm-slim
+=== [1] Check out: uses actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 (skipped locally)
+=== [2] Node.js 22: uses actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af (skipped locally)
+=== [3] pnpm from the packageManager field: runner setup (skipped; --with-setup runs it)
+=== [4] Install (frozen lockfile)
+=== [4] exit 0 in 1 s
+=== [5] Build TypeScript
+=== [5] exit 0 in 1 s
+=== [6] Docker Engine
+=== [6] exit 0 in 6 s
+=== [7] Linux clean-checkout reproduction and deployable wasm (node:22-bookworm-slim)
+=== [7] exit 137 in 668 s
+EXIT=137

@@ -1,0 +1,75 @@
+{
+  "schema": "dockside/build-manifest@1",
+  "commit": "419499acc65194efe1dc35986b9fbabbab448927",
+  "trackedTreeClean": true,
+  "toolchain": {
+    "node": "v22.23.5",
+    "pnpm": "10.34.9",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+    "platform": "linux-x64"
+  },
+  "lockfiles": {
+    "pnpm-lock.yaml": "af2f3cf8c8207d319ce6be676e9c3e597c03289a30d1e45d960bca102ad7685a",
+    "contract/Cargo.lock": "7676107e9fc5e311862c03adc8f25a0df3ec997667c39dce0b627df89d10b26d"
+  },
+  "migrations": [
+    {
+      "file": "0001_foundation.sql",
+      "sha256": "ca65e5083d96299f759cbc6b16c2f9ff7b4130980346bf761b066d41b58ff74b"
+    },
+    {
+      "file": "0002_authority.sql",
+      "sha256": "617a8ecd6c85d3d9f787eb37a378b1b155140c991000250eded45b457e7ac3cb"
+    },
+    {
+      "file": "0003_evidence.sql",
+      "sha256": "c0f77a535947bf1dba4a91d77410ba0e76cb348e07c8fd51155699486ea8b765"
+    },
+    {
+      "file": "0004_release.sql",
+      "sha256": "b0f1211b46f9b3b08977f3d3eabbc986551325612469347e40ca0177d7ba438d"
+    },
+    {
+      "file": "0005_journal.sql",
+      "sha256": "6cc53f75e4820466401b283c368f049295b7c0ca4bd09ef11b55fc6e9ad2e945"
+    },
+    {
+      "file": "0006_refund_requests.sql",
+      "sha256": "b1368ae2f74367e2392db01d37279098a80dc0a870015f503b713fd50a4ba80c"
+    },
+    {
+      "file": "0007_asset_recoveries.sql",
+      "sha256": "006bef3212c4eb3217cbc503450cf6e75ca12f42fbab48bea26e8f2a2582a71f"
+    },
+    {
+      "file": "0008_relayer_nonces.sql",
+      "sha256": "04d8c7aca0360fac64eb9b1a59f21c84262c3b88db40831d2467e8554d09eb36"
+    },
+    {
+      "file": "0009_key_rebinding.sql",
+      "sha256": "835a01cfa4f2e981fa6257437db4f9810dc6cec5680a4b06565efca797a816a0"
+    },
+    {
+      "file": "0010_settings_export_wallet.sql",
+      "sha256": "aab7b444c6f05ce987cbe4f14113f5624755030ceb1e8f48acf2ddc03254a928"
+    }
+  ],
+  "dist": {
+    "files": 256,
+    "digest": "fcdec68fa4550024bf1612524d96239fc9feb4df8975a46828312b70263bbabe"
+  },
+  "contract": {
+    "path": "contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm",
+    "bytes": 809036,
+    "sha256": "497b15ab60c9e23933afbe16f9c18054806adec06a46abfc8e30b3b9fd202774",
+    "nearCodeHash": "5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM",
+    "builtAt": "2026-11-12T08:22:30.264Z"
+  },
+  "deployment": {
+    "network": "near-testnet",
+    "accountId": null,
+    "codeHashOnChain": null,
+    "status": "BLOCKED"
+  }
+}

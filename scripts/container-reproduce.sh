@@ -11,6 +11,8 @@
 #     -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
 #     node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh <commit> [--e2e]
+# (`pnpm run contract:reproduce [--e2e]` builds this command, and also mounts the shared git
+# directory at /gitdir so a git worktree can be reproduced: a worktree's .git is only a file.)
 # Writes /out/clean-checkout-report.json, /out/build-manifest.json and /out/dockside_escrow.wasm (the
 # deployable artifact, rebuilt from the same commit in this container and checked against the
 # manifest's SHA-256). With --e2e it first installs the Playwright Chromium headless shell and its
@@ -19,6 +21,10 @@ set -eu
 REF="${1:?usage: container-reproduce.sh <commit> [--e2e]}"
 E2E="${2:-}"
 export DEBIAN_FRONTEND=noninteractive
+# A stalled mirror connection must time out and retry, not hang the job (seen once in M18); the
+# setting also covers the apt-get runs of `playwright install --with-deps`.
+printf '%s\n' 'Acquire::http::Timeout "60";' 'Acquire::https::Timeout "60";' 'Acquire::Retries "5";' \
+  >/etc/apt/apt.conf.d/80-dockside-network
 apt-get update -qq >/dev/null
 apt-get install -y -qq --no-install-recommends git curl ca-certificates build-essential >/dev/null
 if [ ! -x "${CARGO_HOME:-/root/.cargo}/bin/rustup" ]; then
@@ -31,8 +37,10 @@ rustup target add wasm32-unknown-unknown >/dev/null 2>&1
 corepack enable
 corepack prepare pnpm@10.34.9 --activate >/dev/null 2>&1
 git config --global --add safe.directory '*'
+SRC=/repo
+[ -d /gitdir ] && SRC=/gitdir
 rm -rf /work && mkdir -p /work
-git clone --quiet --no-local /repo /work/src
+git clone --quiet --no-local "$SRC" /work/src
 cd /work/src
 git -c advice.detachedHead=false checkout --quiet "$REF"
 uname -sm

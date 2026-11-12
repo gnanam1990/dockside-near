@@ -1,0 +1,74 @@
+{
+  "schema": "dockside/local-ci-run@1",
+  "workflow": "<worktree>/.github/workflows/ci.yml",
+  "job": "test",
+  "host": "win32-x64",
+  "node": "v22.23.1",
+  "commit": "468d0d4b97b0df10217d5186052477781e83781f",
+  "steps": [
+    {
+      "step": 1,
+      "name": "Check out",
+      "uses": "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+      "result": "SKIPPED",
+      "reason": "provided by the runner"
+    },
+    {
+      "step": 2,
+      "name": "Node.js 22",
+      "uses": "actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af",
+      "result": "SKIPPED",
+      "reason": "provided by the runner"
+    },
+    {
+      "step": 3,
+      "name": "pnpm from the packageManager field",
+      "command": "corepack enable\npnpm --version",
+      "result": "SKIPPED",
+      "reason": "runner setup"
+    },
+    {
+      "step": 4,
+      "name": "Rust 1.97.1 with the wasm32 target",
+      "command": "rustup toolchain install 1.97.1 --profile minimal --target wasm32-unknown-unknown\nrustup default 1.97.1\nrustc --version\ncargo --version",
+      "result": "SKIPPED",
+      "reason": "runner setup"
+    },
+    {
+      "step": 5,
+      "name": "Install (frozen lockfile)",
+      "command": "pnpm install --frozen-lockfile",
+      "exitCode": 0,
+      "ms": 837
+    },
+    {
+      "step": 6,
+      "name": "Check (format, lint, typecheck, unit and integration tests, secret scan)",
+      "command": "pnpm run check",
+      "exitCode": 0,
+      "ms": 69426
+    },
+    {
+      "step": 7,
+      "name": "Contract host tests",
+      "command": "pnpm run contract:test",
+      "exitCode": 0,
+      "ms": 125831
+    },
+    {
+      "step": 8,
+      "name": "Playwright Chromium (version pinned by apps/web)",
+      "command": "pnpm --filter @dockside/web exec playwright install --with-deps chromium",
+      "exitCode": 0,
+      "ms": 36717
+    },
+    {
+      "step": 9,
+      "name": "Browser suites (four local stacks over the simulated chain)",
+      "command": "pnpm run web:e2e",
+      "exitCode": 0,
+      "ms": 646641
+    }
+  ],
+  "result": "PASS"
+}

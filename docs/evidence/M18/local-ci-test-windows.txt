@@ -1,0 +1,49 @@
+# M18: node scripts/ci/local-run.mjs --job test on the Windows host, commit 468d0d4 (exit 0, 14 min 40 s)
+# ports: DOCKSIDE_E2E_{,ASSETS_,REASONS_,CLOCK_}{API,WEB,CONTROL}_PORT = 8941, 8942, 4541
+# step lines, vitest, biome, secret-scan, cargo and Playwright summaries; the full log is not retained
+=== [1] Check out: uses actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 (skipped locally)
+=== [2] Node.js 22: uses actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af (skipped locally)
+=== [3] pnpm from the packageManager field: runner setup (skipped; --with-setup runs it)
+=== [4] Rust 1.97.1 with the wasm32 target: runner setup (skipped; --with-setup runs it)
+=== [5] Install (frozen lockfile)
+=== [5] exit 0 in 1 s
+=== [6] Check (format, lint, typecheck, unit and integration tests, secret scan)
+Checked 221 files in 92ms. No fixes applied.
+Checked 222 files in 130ms. No fixes applied.
+dockside_escrow.wasm 809360 bytes sha256 b8b3598df9190f73c892185a36b3367fd0fc5a847272038d0e6e31f8eb3535ed
+ Test Files  52 passed | 1 skipped (53)
+      Tests  571 passed | 3 skipped (574)
+> node scripts/secret-scan.mjs
+secret-scan: 473 files clean
+=== [6] exit 0 in 69 s
+=== [7] Contract host tests
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.47s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+=== [7] exit 0 in 126 s
+=== [8] Playwright Chromium (version pinned by apps/web)
+=== [8] exit 0 in 37 s
+=== [9] Browser suites (four local stacks over the simulated chain)
+  51 passed (8.6m)
+  3 passed (21.0s)
+RACE_WINNER RELEASE lock="Contract accepted" refund="Contract did not accept the call: {"ActionError":{"kind":{"FunctionCallError":{"ExecutionError":"DOCKSIDE:VALUE_LOCKED: a release intent holds value"}}}}."
+  8 passed (1.5m)
+  3 passed (19.7s)
+=== [9] exit 0 in 647 s
+local-run: job test PASS

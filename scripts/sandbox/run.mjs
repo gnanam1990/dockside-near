@@ -1,6 +1,6 @@
 // `pnpm run contract:sandbox`: run scripts/sandbox/container-sandbox.sh in node:22-trixie-slim.
 //
-// Needs Docker and the deployable wasm with its manifest from scripts/container-reproduce.sh in
+// Needs Docker and the deployable wasm with its manifest from `pnpm run contract:reproduce` in
 // .data/repro (USER-NEXT-STEPS §1). Writes .data/sandbox/sandbox-report.json and the test logs.
 //
 // Options: --ref <commit> (default HEAD), --repro <dir> (default .data/repro), --out <dir>
@@ -9,8 +9,9 @@
 // host paths are then translated to /mnt/<drive>/... for the Linux side.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dockerCommand, gitCommonDir, hostPath as enginePath } from "../lib/docker.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const args = process.argv.slice(2);
@@ -20,14 +21,8 @@ const opt = (name, def) => {
 };
 const git = (...a) => execFileSync("git", a, { cwd: ROOT, encoding: "utf8" }).trim();
 
-const docker = (process.env.DOCKSIDE_DOCKER || "docker").split(" ").filter(Boolean);
-const viaWsl = /(^|[\\/])wsl(\.exe)?$/i.test(docker[0] ?? "");
-const hostPath = (p) => {
-  const abs = resolve(p);
-  if (!viaWsl) return abs;
-  const m = /^([A-Za-z]):[\\/](.*)$/.exec(abs);
-  return m ? `/mnt/${m[1].toLowerCase()}/${m[2].split("\\").join("/")}` : abs.split("\\").join("/");
-};
+const docker = dockerCommand();
+const hostPath = (p) => enginePath(p, docker);
 
 const ref = opt("ref", git("rev-parse", "HEAD"));
 const repro = resolve(ROOT, opt("repro", ".data/repro"));
@@ -35,15 +30,14 @@ const out = resolve(ROOT, opt("out", ".data/sandbox"));
 for (const f of ["dockside_escrow.wasm", "build-manifest.json"]) {
   if (!existsSync(join(repro, f))) {
     console.error(
-      `contract:sandbox: ${join(repro, f)} is missing; build it with scripts/container-reproduce.sh first (USER-NEXT-STEPS §1)`,
+      `contract:sandbox: ${join(repro, f)} is missing; build it with \`pnpm run contract:reproduce\` first (USER-NEXT-STEPS §1)`,
     );
     process.exit(2);
   }
 }
 mkdirSync(out, { recursive: true });
 // A worktree's .git is a file; clone from the shared git directory instead.
-let gitDir = git("rev-parse", "--git-common-dir");
-if (!isAbsolute(gitDir)) gitDir = resolve(ROOT, gitDir);
+const gitDir = gitCommonDir(ROOT);
 
 const run = [
   ...docker.slice(1),
