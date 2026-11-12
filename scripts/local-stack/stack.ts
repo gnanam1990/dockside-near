@@ -247,6 +247,10 @@ async function main(): Promise<void> {
     ...(env["DOCKSIDE_RECOVERY_DELAY_MS"] === undefined
       ? {}
       : { DOCKSIDE_RECOVERY_DELAY_MS: env["DOCKSIDE_RECOVERY_DELAY_MS"] }),
+    // The browser tests shorten the recovery challenge lifetime so an expired one can be re-issued.
+    ...(env["DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS"] === undefined
+      ? {}
+      : { DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS: env["DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS"] }),
     // The browser tests shorten the destination-change delay new proposals bind (never below 1 minute).
     ...(env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"]
       ? { DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: env["DOCKSIDE_DESTINATION_CHANGE_DELAY_MS"] }
@@ -265,6 +269,9 @@ async function main(): Promise<void> {
       sessionTtlMs: config.DOCKSIDE_SESSION_TTL_MS,
       invitationTtlMs: config.DOCKSIDE_INVITATION_TTL_MS,
       recoveryDelayMs: config.DOCKSIDE_RECOVERY_DELAY_MS,
+      ...(config.DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS === undefined
+        ? {}
+        : { recoveryChallengeTtlMs: config.DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS }),
       requestProofSkewMs: config.DOCKSIDE_REQUEST_PROOF_SKEW_MS,
     },
   });

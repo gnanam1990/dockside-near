@@ -496,3 +496,49 @@ describe("a rotated buyer key", () => {
     expect(consent.json.error.code).toBe("INVALID_STATE");
   });
 });
+
+describe("re-issuing an expired key-recovery challenge over HTTP", () => {
+  it("a security administrator re-issues it after expiry; others are refused; the new challenge proves", async () => {
+    const admin = await login(actor("supplierAdmin").principalId, actor("supplierAdmin").key);
+    const clerk = actor("supplierClerk");
+    const key = generateEd25519KeyPair();
+    const start = await a.http(admin, "POST", "/v1/recoveries", {
+      principalId: clerk.principalId,
+      publicKey: key.publicKey,
+    });
+    expect(start.status, start.text).toBe(201);
+    const id = start.json.recoveryId as string;
+    const early = await a.http(admin, "POST", `/v1/recoveries/${id}/challenges`);
+    expect(early.json.error.code).toBe("INVALID_STATE");
+    a.w.c.w.h.clock.advance(start.json.challenge.expiresAt - a.w.c.w.h.clock.now() + 1);
+    const expired = await a.http(null, "POST", "/v1/recoveries/prove", {
+      challengeId: start.json.challenge.challengeId,
+      proof: popProof(key, start.json.challenge),
+    });
+    expect(expired.json.error.code).toBe("EXPIRED");
+    for (const role of ["buyerAdmin", "supplier", "auditor", "outsiderAdmin"]) {
+      const r = await a.http(actor(role), "POST", `/v1/recoveries/${id}/challenges`);
+      expect(["FORBIDDEN", "UNAUTHENTICATED"], `${role}: ${r.text}`).toContain(r.json.error.code);
+    }
+    expect((await a.http(null, "POST", `/v1/recoveries/${id}/challenges`)).json.error.code).toBe(
+      "UNAUTHENTICATED",
+    );
+    const again = await a.http(admin, "POST", `/v1/recoveries/${id}/challenges`);
+    expect(again.status, again.text).toBe(201);
+    expect(again.json).toMatchObject({
+      recoveryId: id,
+      notBefore: start.json.notBefore,
+      keyVersion: start.json.keyVersion,
+    });
+    const dir = await a.http(admin, "GET", "/v1/organization/directory");
+    expect(dir.json.recoveries.find((r: { id: string }) => r.id === id).challengeExpiresAt).toBe(
+      again.json.challenge.expiresAt,
+    );
+    const proved = await a.http(null, "POST", "/v1/recoveries/prove", {
+      challengeId: again.json.challenge.challengeId,
+      proof: popProof(key, again.json.challenge),
+    });
+    expect(proved.status, proved.text).toBe(201);
+    expect(audit("RECOVERY_CHALLENGE_REISSUED")).toBe(1);
+  });
+});

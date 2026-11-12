@@ -62,6 +62,9 @@ function main(): void {
       sessionTtlMs: config.DOCKSIDE_SESSION_TTL_MS,
       invitationTtlMs: config.DOCKSIDE_INVITATION_TTL_MS,
       recoveryDelayMs: config.DOCKSIDE_RECOVERY_DELAY_MS,
+      ...(config.DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS === undefined
+        ? {}
+        : { recoveryChallengeTtlMs: config.DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS }),
       requestProofSkewMs: config.DOCKSIDE_REQUEST_PROOF_SKEW_MS,
     },
   });
