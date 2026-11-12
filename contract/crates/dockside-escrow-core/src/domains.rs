@@ -25,6 +25,7 @@ pub const DESTINATION_SNAPSHOT: &str = "dockside/destination-snapshot";
 pub const RESERVATION_SOURCE: &str = "dockside/reservation-source";
 pub const HOLDS_VIEW: &str = "dockside/holds-view";
 pub const DESTINATION_CHANGE_REVOKE: &str = "dockside/destination-change-revoke";
+pub const KEY_REBINDING_REVOKE: &str = "dockside/key-rebinding-revoke";
 pub const REFUND_AUTHORIZE: &str = "dockside/refund-authorize";
 
 /// Separate unexpected-asset recovery policy (UNEXPECTED_ASSET_RECOVERY).

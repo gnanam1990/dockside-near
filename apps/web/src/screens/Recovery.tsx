@@ -98,7 +98,12 @@ export function RecoveryScreen() {
       publicKey: key.publicKey,
     });
     if (!v.ok) {
-      setFailure({ kind: "refused-to-sign", reason: `The recovery challenge was not signed: ${v.reason}.` });
+      setFailure({
+        kind: "refused-to-sign",
+        reason: v.reason.includes("expired")
+          ? `The recovery challenge was not signed: ${v.reason}. Ask a security administrator to re-issue the recovery challenge (Organization keys, Recoveries) and paste the new package.`
+          : `The recovery challenge was not signed: ${v.reason}.`,
+      });
       return;
     }
     setPending({ kind: "prove", key, verified: v.value, notBefore: pkg.notBefore });

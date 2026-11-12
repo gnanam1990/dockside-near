@@ -273,6 +273,28 @@ const destinationChangeViewSchema = z
   })
   .strict();
 
+const keyRebindingViewSchema = z
+  .object({
+    successorDigest: z.string(),
+    successorRevision: z.number().int(),
+    roles: z.array(
+      z.enum(["buyer", "supplier", "inspector", "riskResolver", "manifestAttestor", "policySetter"]),
+    ),
+    rebindsParty: z.boolean(),
+    proposedBy: z.enum(["BUYER", "SUPPLIER"]),
+    proposedAt: z.number().int(),
+    consentDeadline: z.number().int(),
+    buyerConsentAt: z.number().int().nullable(),
+    supplierConsentAt: z.number().int().nullable(),
+    delayUntil: z.number().int().nullable(),
+    status: z.enum(["PROPOSED", "CONSENTED", "ACTIVATED", "REVOKED", "EXPIRED"]),
+    closedAt: z.number().int().nullable(),
+    supersededIntent: z.string().nullable(),
+    successorIntent: z.string().nullable(),
+  })
+  .strict();
+export type KeyRebindingView = z.output<typeof keyRebindingViewSchema>;
+
 /** Contract view of release intents, the live value lock, release blockers and destination changes. */
 export const releaseViewSchema = z
   .object({
@@ -289,6 +311,8 @@ export const releaseViewSchema = z
     ),
     pendingDestinationChange: destinationChangeViewSchema.nullable(),
     destinationHistory: z.array(destinationChangeViewSchema),
+    pendingKeyRebinding: keyRebindingViewSchema.nullable(),
+    keyRebindingHistory: z.array(keyRebindingViewSchema),
     abandonPolicy: z
       .object({ id: z.literal("dockside-abandon-v1"), revision: z.literal(1), graceMs: z.number().int() })
       .strict(),
@@ -563,6 +587,47 @@ export class EscrowContract {
   activateDestinationChangeCall(tradeId: string, successorDigest: string): FunctionCall {
     return this.call(
       "activate_destination_change",
+      { trade_id: tradeId, successor_digest: successorDigest },
+      100n,
+    );
+  }
+
+  /* ------------------------- key rebinding (M14) ------------------------- */
+
+  proposeKeyRebindingCall(
+    tradeId: string,
+    successorTerms: TypedJson,
+    proposerRole: "BUYER" | "SUPPLIER",
+    signature: string,
+  ): FunctionCall {
+    return this.call(
+      "propose_key_rebinding",
+      { trade_id: tradeId, successor_terms: successorTerms, proposer_role: proposerRole, signature },
+      100n,
+    );
+  }
+
+  consentKeyRebindingCall(
+    tradeId: string,
+    successorDigest: string,
+    role: "BUYER" | "SUPPLIER",
+    signature: string,
+  ): FunctionCall {
+    return this.call("consent_key_rebinding", {
+      trade_id: tradeId,
+      successor_digest: successorDigest,
+      role,
+      signature,
+    });
+  }
+
+  revokeKeyRebindingCall(tradeId: string, payload: TypedJson, signature: string): FunctionCall {
+    return this.call("revoke_key_rebinding", { trade_id: tradeId, payload, signature });
+  }
+
+  activateKeyRebindingCall(tradeId: string, successorDigest: string): FunctionCall {
+    return this.call(
+      "activate_key_rebinding",
       { trade_id: tradeId, successor_digest: successorDigest },
       100n,
     );
