@@ -27,6 +27,8 @@ export const SIGNING_DOMAINS = {
   ABANDON_RELEASE_INTENT: "dockside/abandon-release-intent",
   // Destination change (M09 routes, M10 screen) and dockside-refund-v1 requests (M10).
   DESTINATION_CHANGE_REVOKE: "dockside/destination-change-revoke",
+  // Withdrawal of a pending key-rebinding revision (M14).
+  KEY_REBINDING_REVOKE: "dockside/key-rebinding-revoke",
   REFUND_REQUEST: "dockside/refund-request",
   REFUND_REVOKE: "dockside/refund-revoke",
   REFUND_DISPUTE: "dockside/refund-dispute",
