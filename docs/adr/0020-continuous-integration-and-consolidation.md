@@ -73,11 +73,16 @@ validated by parsing it, by a policy check and by replaying its commands locally
    git worktree can be reproduced (a worktree's `.git` is a file). The nearcore account-ownership
    suite takes `DOCKSIDE_DOCKER` too and defaults to `docker` off Windows, so it runs on a Linux
    runner.
-7. **Timeouts.** The `test` job's 60 minutes cover the four browser stacks (about 12 minutes on this
-   host) with room for slower hosted runners. The `chain` job builds the contract twice and the
-   near-workspaces test crates from a cold cargo cache; its 60-minute limit is above what this build
-   measured, but a hosted-runner timing does not exist until the workflow runs on GitHub (see the
-   M18 status).
+7. **Timeouts.** The `test` job's 60 minutes cover its replay on this host (14.7 minutes, 11 of them
+   the four browser stacks) with room for slower hosted runners. The `chain` job builds the contract
+   twice and the near-workspaces test crates; its local replay took 43.7 minutes, of which about 10
+   were compute and the rest package downloads at roughly 100 KB/s at the time. A hosted runner with
+   fast mirrors should finish it within 30 minutes, but no hosted timing exists until the workflow
+   runs on GitHub; if it comes close to the 60-minute limit, split it into a reproduction job and a
+   sandbox job that downloads the reproduction artifact (M18 status).
+8. **apt calls time out and retry.** Both container scripts write an apt.conf setting (60-second
+   timeouts, 5 retries), which also covers the apt-get runs of `playwright install --with-deps`, so a
+   stalled mirror connection fails and retries instead of hanging the job until its timeout.
 
 ## Consequences
 
