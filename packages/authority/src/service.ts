@@ -754,11 +754,13 @@ export class AuthorityService {
       const rec = this.recoveryRow(String(c.recoveryId));
       if (rec["status"] !== "PENDING_PROOF") fail("INVALID_STATE", "recovery is not awaiting proof");
       const now = this.clock.now();
-      this.db.run(
-        "UPDATE key_versions SET status = 'PENDING_ACTIVATION', proven_at = ? WHERE id = ?",
+      // Status-guarded: a recovery key revoked meanwhile must never re-enter activation (M27).
+      const proven = this.db.run(
+        "UPDATE key_versions SET status = 'PENDING_ACTIVATION', proven_at = ? WHERE id = ? AND status = 'PENDING_PROOF'",
         now,
         String(rec["new_key_version_id"]),
       );
+      if (Number(proven.changes) !== 1) fail("INVALID_STATE", "the recovery key is no longer awaiting proof");
       this.db.run("UPDATE recoveries SET status = 'WAITING' WHERE id = ?", String(rec["id"]));
       this.log(
         this.actorOf(c.organizationId, c.principalId, String(rec["new_key_version_id"]), null),
@@ -801,11 +803,14 @@ export class AuthorityService {
       const now = this.clock.now();
       const actor = this.actorCtx(ctx);
       const newId = String(rec["new_key_version_id"]);
-      this.db.run(
+      const activated = this.db.run(
         "UPDATE key_versions SET status = 'ACTIVE', activated_at = ? WHERE id = ? AND status = 'PENDING_ACTIVATION'",
         now,
         newId,
       );
+      // Fail closed before the suspended keys are revoked: nothing was activated (M27).
+      if (Number(activated.changes) !== 1)
+        fail("INVALID_STATE", "the recovery key is no longer awaiting activation");
       for (const s of JSON.parse(String(rec["suspended_key_ids_json"])) as { id: string }[]) {
         this.revokeKeyTx(s.id, "RECOVERED", actor);
       }
@@ -2055,6 +2060,35 @@ export class AuthorityService {
       reason,
       enrollmentId: enrollmentId ?? null,
     });
+    // Revoking the new key of an open recovery closes that recovery, as the principal's own veto
+    // does: the suspended prior keys return to their prior status and the recovery is CANCELLED,
+    // so the revoked key can never be proven or activated and a fresh recovery may start (M27).
+    const open = this.db.get(
+      "SELECT * FROM recoveries WHERE new_key_version_id = ? AND status IN ('PENDING_PROOF','WAITING')",
+      keyId,
+    );
+    if (open) {
+      const now = this.clock.now();
+      for (const s of JSON.parse(String(open["suspended_key_ids_json"])) as {
+        id: string;
+        prior: KeyStatus;
+      }[]) {
+        this.db.run(
+          "UPDATE key_versions SET status = ?, suspended_at = NULL WHERE id = ? AND status = 'SUSPENDED'",
+          s.prior,
+          s.id,
+        );
+      }
+      this.db.run(
+        "UPDATE recoveries SET status = 'CANCELLED', cancelled_at = ? WHERE id = ?",
+        now,
+        String(open["id"]),
+      );
+      this.log(actor, "RECOVERY_CANCELLED", "recovery", String(open["id"]), {
+        principalId: String(open["principal_id"]),
+        reason: "RECOVERY_KEY_REVOKED",
+      });
+    }
     return this.keyView(this.keyRow(keyId));
   }
 
