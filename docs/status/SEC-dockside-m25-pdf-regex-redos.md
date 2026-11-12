@@ -56,3 +56,13 @@ exit 0 — Tests 9 passed (9)
 ```
 
 Full-suite results after merging main are recorded below.
+
+## Full suite (after merging main)
+
+```
+pnpm run check            exit 0 — format, lint, typecheck; Test Files 56 passed | 1 skipped (57),
+                                   Tests 589 passed | 3 skipped (592); secret-scan clean
+pnpm run contract:test    exit 0 — 103 passed, 0 failed
+```
+
+Web e2e and sandbox suites were not run: this change touches only `packages/evidence`.
