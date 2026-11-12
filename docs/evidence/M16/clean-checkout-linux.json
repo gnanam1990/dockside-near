@@ -1,0 +1,125 @@
+{
+  "schema": "dockside/clean-checkout@1",
+  "ref": "b657885",
+  "commit": "b657885814e8f4c12a5123b837d6753babaf23f9",
+  "startedAt": "2026-11-12T06:28:29.198Z",
+  "finishedAt": "2026-11-12T06:38:45.656Z",
+  "result": "PASS",
+  "wasm": {
+    "fresh": "65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7",
+    "sourceCheckout": null,
+    "reproducible": "NOT_COMPARED"
+  },
+  "steps": [
+    {
+      "name": "clone",
+      "command": "git clone --quiet --no-local \"<source>\" \"<tmp>/dockside\"",
+      "exitCode": 0,
+      "ms": 143,
+      "summary": [],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "checkout",
+      "command": "git -c advice.detachedHead=false checkout --quiet b657885814e8f4c12a5123b837d6753babaf23f9",
+      "exitCode": 0,
+      "ms": 30,
+      "summary": [],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "versions",
+      "command": "node --version && pnpm --version && rustc --version && cargo --version",
+      "exitCode": 0,
+      "ms": 285,
+      "summary": [],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "install",
+      "command": "pnpm install --frozen-lockfile",
+      "exitCode": 0,
+      "ms": 927,
+      "summary": [],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "wasm target",
+      "command": "rustup target list --installed",
+      "exitCode": 0,
+      "ms": 24,
+      "summary": [],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "check",
+      "command": "pnpm run check",
+      "exitCode": 0,
+      "ms": 67723,
+      "summary": [
+        "Checked 192 files in 35ms. No fixes applied.",
+        "Checked 193 files in 63ms. No fixes applied.",
+        "dockside_escrow.wasm 769515 bytes sha256 65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7",
+        "\ Test Files \ \\46 passed\\\ (46)\",
+        "\      Tests \ \\497 passed\\\ (497)\",
+        "secret-scan: 412 files clean"
+      ],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "contract host tests",
+      "command": "pnpm run contract:test",
+      "exitCode": 0,
+      "ms": 26710,
+      "summary": [
+        "test t019_failed_transfer_restores_exact_slices_and_requires_a_new_intent ... ok",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.57s",
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "cargoTestsPassed": 93
+    },
+    {
+      "name": "audit",
+      "command": "pnpm audit --prod",
+      "exitCode": 0,
+      "ms": 3532,
+      "summary": [],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "build manifest",
+      "command": "node scripts/build-manifest.mjs --out \"<tmp>/build-manifest.json\"",
+      "exitCode": 0,
+      "ms": 645,
+      "summary": [
+        "build manifest written: commit b657885814e8f4c12a5123b837d6753babaf23f9 wasm 65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7 dist dcf3f9348d29f2fb70b208361e00f93a74beb8c3e439224704abb074972d8a6c"
+      ],
+      "cargoTestsPassed": 0
+    },
+    {
+      "name": "browser suite",
+      "command": "pnpm run web:e2e",
+      "exitCode": 0,
+      "ms": 516429,
+      "summary": [
+        "36 passed (6.8m)",
+        "3 passed (22.7s)",
+        "8 passed (1.4m)"
+      ],
+      "cargoTestsPassed": 0
+    }
+  ],
+  "notRun": [
+    "NEAR testnet deployment, funding and the direct native release (BLOCKED: needs testnet accounts and signing)",
+    "independent human principals on separate devices (INV-13 acceptance: NOT_RUN)"
+  ]
+}

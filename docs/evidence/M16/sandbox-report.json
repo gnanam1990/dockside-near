@@ -1,0 +1,92 @@
+{
+  "schema": "dockside/sandbox-report@1",
+  "commit": "b657885814e8f4c12a5123b837d6753babaf23f9",
+  "wasmSha256": "65b3a00db16f86ed2379fa48ec99236b86822598115ea0d9af5c216a786e24a7",
+  "tools": {
+    "nearSandbox": {
+      "version": "2.14.0",
+      "sha256": "a0ba004218b218bd74351795e7ce2eda4a2b6af5cd3e252bd5e8bfe3c8f2e691"
+    },
+    "nearCliRs": {
+      "version": "0.31.1",
+      "sha256": "8b92f4f79f324a882ad79b58d61b91dccc676dd653dc72a1f23693aa5db99e21"
+    }
+  },
+  "suite": {
+    "exit": 0,
+    "results": [
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "result": "ok",
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "runAllValidation": {
+    "exit": 0,
+    "results": [
+      {
+        "result": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "result": "PASS"
+}
