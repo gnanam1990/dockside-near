@@ -17,7 +17,7 @@
 #   docker run --rm -v <repo>:/repo:ro [-v <repo .git dir>:/gitdir:ro] -v <repro dir>:/repro:ro \
 #     -v <out dir>:/out -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
-#     node:22-trixie-slim sh /repo/scripts/sandbox/container-sandbox.sh <commit>
+#     node:22-trixie-slim@sha256:<IMAGES.trixie digest> sh /repo/scripts/sandbox/container-sandbox.sh <commit>
 # (`pnpm run contract:sandbox` builds this command.) Writes /out/sandbox-report.json and the
 # test logs.
 set -eu
@@ -32,13 +32,8 @@ printf '%s\n' 'Acquire::http::Timeout "60";' 'Acquire::https::Timeout "60";' 'Ac
   >/etc/apt/apt.conf.d/80-dockside-network
 apt-get update -qq >/dev/null
 apt-get install -y -qq --no-install-recommends git curl ca-certificates build-essential pkg-config libssl-dev >/dev/null
-if [ ! -x "${CARGO_HOME:-/root/.cargo}/bin/rustup" ]; then
-  curl -sSf https://sh.rustup.rs | sh -s -- -y -q --profile minimal --default-toolchain 1.97.1 >/dev/null
-fi
-. "${CARGO_HOME:-/root/.cargo}/env"
-rustup toolchain install 1.97.1 --profile minimal >/dev/null 2>&1
-rustup default 1.97.1 >/dev/null
-rustup target add wasm32-unknown-unknown >/dev/null 2>&1
+# Rust 1.97.1 from the rustup installer pinned by version and SHA-256 (ADR-0021).
+. /repo/scripts/lib/rust-bootstrap.sh
 
 TOOLS=/opt/near-tools
 mkdir -p "$TOOLS" && cd "$TOOLS"
