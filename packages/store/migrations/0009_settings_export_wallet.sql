@@ -1,4 +1,4 @@
--- 0008 organization settings, signed audit export keys and NEAR account links (M17).
+-- 0009 organization settings, signed audit export keys and NEAR account links (M17).
 --
 -- organization_settings: append-only revisions of an organisation's editable settings (retention).
 -- Each change is a new revision written with compare-and-swap on the previous revision number, the
