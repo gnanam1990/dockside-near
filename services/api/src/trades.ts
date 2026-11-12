@@ -40,6 +40,7 @@ import type { ReleaseService } from "@dockside/release";
 import { AuditLog } from "@dockside/store";
 import { z } from "zod";
 import type { AppDeps } from "./app.js";
+import type { AssetRecoveryModule } from "./assets.js";
 import { buildAuditExport } from "./export.js";
 import { type Route, route } from "./routing.js";
 
@@ -52,6 +53,8 @@ import { type Route, route } from "./routing.js";
  * the exact relay call for the contract, which re-verifies every signature and predicate.
  */
 export interface TradeModules {
+  /** Unexpected-asset recovery (M11); routes answer "no such endpoint" without it. */
+  readonly assetRecovery?: AssetRecoveryModule;
   readonly evidence: EvidenceService;
   readonly holds: HoldService;
   readonly release: ReleaseService;

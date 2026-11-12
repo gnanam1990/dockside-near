@@ -34,7 +34,7 @@ describe("endpoint catalog matches services/api", () => {
       expect(hit, `${r.method} ${r.pattern}`).toBe(true);
     }
   });
-  it("serves the destination-change and refund request routes as implemented, none planned (M09, M10)", () => {
+  it("serves the destination-change and refund request and asset-recovery routes as implemented, none planned (M09, M10, M11)", () => {
     const ids = Object.keys(ENDPOINTS);
     for (const id of [
       "destinationChange",
@@ -57,6 +57,15 @@ describe("endpoint catalog matches services/api", () => {
       "refundAuthorizationChallenge",
       "refundAuthorizationSignature",
       "refundExecute",
+      "assetRecoveries",
+      "assetRecoveryRequest",
+      "assetRecoveryApprovalChallenge",
+      "assetRecoveryApproval",
+      "assetRecoveryChallengePayload",
+      "assetRecoveryChallenge",
+      "assetRecoveryRevocationChallenge",
+      "assetRecoveryRevocation",
+      "assetRecoveryExecute",
     ]) {
       expect(ids, id).toContain(id);
       const s = ENDPOINTS[id as keyof typeof ENDPOINTS] as EndpointSpec;

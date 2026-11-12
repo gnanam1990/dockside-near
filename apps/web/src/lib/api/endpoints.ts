@@ -5,7 +5,8 @@
  * backend's real "no such endpoint" answer as an explicit unavailable state rather than
  * inventing data. Since M07 every TDD §15 trade route is served; a backend without escrow/RPC
  * configuration answers those routes with "no such endpoint" (TRADE_MODULES_NOT_CONFIGURED).
- * M09 added the destination-change routes and M10 the refund request routes; no entry is planned.
+ * M09 added the destination-change routes, M10 the refund request routes and M11 the
+ * unexpected-asset recovery routes; no entry is planned.
  */
 export type Availability = "implemented" | "planned";
 
@@ -428,6 +429,71 @@ export const ENDPOINTS = {
     true,
     "implemented",
     "M10",
+  ),
+  assetRecoveries: e("assetRecoveries", "GET", "/v1/trades/:id/asset-recoveries", true, "implemented", "M11"),
+  assetRecoveryRequest: e(
+    "assetRecoveryRequest",
+    "POST",
+    "/v1/trades/:id/asset-recovery-requests",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryApprovalChallenge: e(
+    "assetRecoveryApprovalChallenge",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/approval-challenges",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryApproval: e(
+    "assetRecoveryApproval",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/approval",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryChallengePayload: e(
+    "assetRecoveryChallengePayload",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/challenge-payloads",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryChallenge: e(
+    "assetRecoveryChallenge",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/challenge",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryRevocationChallenge: e(
+    "assetRecoveryRevocationChallenge",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/revocation-challenges",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryRevocation: e(
+    "assetRecoveryRevocation",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/revocation",
+    true,
+    "implemented",
+    "M11",
+  ),
+  assetRecoveryExecute: e(
+    "assetRecoveryExecute",
+    "POST",
+    "/v1/trades/:id/asset-recoveries/:rid/execute",
+    true,
+    "implemented",
+    "M11",
   ),
   tradeTimeline: e("tradeTimeline", "GET", "/v1/trades/:id/timeline", true, "implemented", "M07"),
   listPayouts: e("listPayouts", "GET", "/v1/payouts", true, "implemented", "M07"),

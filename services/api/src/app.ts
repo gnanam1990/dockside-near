@@ -16,6 +16,7 @@ import {
 } from "@dockside/core";
 import { AuditLog, type Database, isUniqueViolation, loadMigrations, type SqlValue } from "@dockside/store";
 import { z } from "zod";
+import { assetRoutes } from "./assets.js";
 import { addressKey, RateLimiter, sessionKey } from "./limits.js";
 import { refundRoutes } from "./refunds.js";
 import { type HandlerInput, type Route, route } from "./routing.js";
@@ -336,6 +337,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     }),
     ...tradeRoutes(d),
     ...refundRoutes(d),
+    ...assetRoutes(d),
   ];
 }
 

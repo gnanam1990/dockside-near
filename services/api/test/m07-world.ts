@@ -17,11 +17,12 @@ import {
   signFor,
   type TypedJson,
 } from "@dockside/core";
-import type { FunctionCall } from "@dockside/near";
+import { AssetRecoveryJournal } from "@dockside/journal";
+import { type FunctionCall, NearTxClient, Nep141Reader } from "@dockside/near";
 import { expect } from "vitest";
 import { type Actor, bootstrap, enrollHuman, ORIGIN } from "../../../packages/authority/test/helpers.js";
 import { fillAll } from "../../../packages/evidence/test/world.js";
-import { type JWorld, jworld, run } from "../../../packages/journal/test/world.js";
+import { type JWorld, jworld, rpcFor, run } from "../../../packages/journal/test/world.js";
 import { createApp } from "../src/app.js";
 
 export interface Res {
@@ -82,7 +83,19 @@ export async function apiWorld(opts: { funded?: boolean; evidence?: boolean } = 
       clock: h.clock,
       ids: randomIds,
       log: (line) => logs.push(JSON.stringify(line)),
-      modules: { evidence: c.w.evidence, holds: c.w.holds, release: c.rel, journal: w.svc, escrow: c.escrow },
+      modules: {
+        evidence: c.w.evidence,
+        holds: c.w.holds,
+        release: c.rel,
+        journal: w.svc,
+        escrow: c.escrow,
+        // M11: token views and transaction lookups go through the simulated chain's JSON-RPC.
+        assetRecovery: {
+          journal: new AssetRecoveryJournal(h.db, h.clock, randomIds),
+          token: (contract: string) => new Nep141Reader(rpcFor(w.url), contract),
+          tx: new NearTxClient(rpcFor(w.url)),
+        },
+      },
     }),
   );
   const base = await new Promise<string>((resolve) =>
