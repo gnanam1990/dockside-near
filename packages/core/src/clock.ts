@@ -62,6 +62,11 @@ export const ID_PREFIXES = {
   disposition: "dsp",
   incident: "inc",
   operatorRequest: "opr",
+  assetRecovery: "arc",
+  assetRecoveryOperation: "aop",
+  assetRecoveryObservation: "aob",
+  assetRecoverySignature: "ars",
+  assetRecoveryValidation: "arv",
 } as const;
 export type IdPrefix = (typeof ID_PREFIXES)[keyof typeof ID_PREFIXES];
 
