@@ -1387,12 +1387,12 @@ export class AuthorityService {
     const roles: RebindingPlanRole[] = [];
     const issuesOf = (role: string) => status.issues.filter((i) => i.role === role).map((i) => i.code);
     const humans = [
-      ["buyer", terms.buyer, "BUYER_APPROVER"],
-      ["supplier", terms.supplier, "SUPPLIER_SIGNER"],
-      ["inspector", terms.inspector, "INSPECTOR"],
-      ["riskResolver", terms.riskResolver, "RISK_RESOLVER"],
+      ["buyer", terms.buyer],
+      ["supplier", terms.supplier],
+      ["inspector", terms.inspector],
+      ["riskResolver", terms.riskResolver],
     ] as const;
-    for (const [role, b, cap] of humans) {
+    for (const [role, b] of humans) {
       const issues = issuesOf(role);
       const from = {
         keyVersionId: b.keyVersionId,
