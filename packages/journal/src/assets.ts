@@ -392,7 +392,7 @@ export class AssetRecoveryEngine {
     }
     this.journal.observe(lease, op.operationId, "CONTRACT", { recovery: rec, phase: "pre-submit" });
     this.journal.observe(lease, op.operationId, "TOKEN", { escrowBalance: before, phase: "pre-submit" });
-    if (!rec || rec.state !== "CHALLENGE_PERIOD") {
+    if (rec?.state !== "CHALLENGE_PERIOD") {
       const reason = rec ? `RECOVERY_${rec.state}` : "RECOVERY_NOT_FOUND";
       this.journal.update(lease, op, { state: "NOT_SUBMITTED", reason });
       return;
