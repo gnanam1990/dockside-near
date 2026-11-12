@@ -396,6 +396,16 @@ export function tradeRoutes(d: AppDeps): Route[] {
       payload: {},
     });
   const authority = (): AuthorityService => d.authority;
+  // Key rebinding (M14): only the bound buyer approver or supplier signer principal, checked
+  // before any trade state is read; the key check follows once the successor is known. Audited.
+  const requirePartyPrincipal = (ctx: AuthContext, t: TradeTerms): void => {
+    const ok =
+      (ctx.principal.id === t.buyer.principalId && ctx.capabilities.includes("BUYER_APPROVER")) ||
+      (ctx.principal.id === t.supplier.principalId && ctx.capabilities.includes("SUPPLIER_SIGNER"));
+    if (ok) return;
+    log(ctx, "KEY_REBINDING_DENIED", "trade", t.tradeId);
+    fail("FORBIDDEN", "only the designated buyer approver or supplier signer");
+  };
 
   return [
     /* ------------------------------ trades ------------------------------ */
@@ -1008,7 +1018,12 @@ export function tradeRoutes(d: AppDeps): Route[] {
         delayMs: t.delayPolicy.destinationChangeDelayMs,
         pending: view.pendingDestinationChange,
         history: view.destinationHistory,
-        bindingRequired: view.revision > t.revision,
+        // Only a newer revision the destination protocol activated (a key rebinding binds itself).
+        bindingRequired:
+          view.revision > t.revision &&
+          view.destinationHistory.some(
+            (h) => h.status === "ACTIVATED" && h.successorDigest === view.termsDigest,
+          ),
       };
     }),
     r(
@@ -1097,7 +1112,152 @@ export function tradeRoutes(d: AppDeps): Route[] {
       return out;
     }),
 
+    /* ------------------------- key rebinding (M14) ------------------------- */
+    // A successor revision that changes only bound key versions and public keys, after a key the
+    // active revision binds was rotated, revoked or recovered. The authority's rebinding plan picks
+    // each affected role's current ACTIVE key; both bound parties sign the same digest (a party
+    // whose key changes signs with its new key, the other party's bound key anchors it); a signed
+    // delay applies when a party key changes; activation is a relay the contract re-checks, and
+    // binding makes evidence, holds and release follow the new revision (renewed authority).
+    r("GET", "/v1/trades/:id/key-rebinding", true, undefined, async ({ ctx, params }) => {
+      const c = must(ctx);
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      const view = await m.release.sync(t.tradeId);
+      const plan = authority().rebindingPlan(t);
+      let successor: { revision: number; digest: string; roles: string[]; rebindsParty: boolean } | null =
+        null;
+      let successorError: string | null = null;
+      if (view.revision === t.revision && plan.requiresNewRevision) {
+        try {
+          const s = await m.release.keyRebindingSuccessor(t.tradeId);
+          successor = {
+            revision: s.terms.revision,
+            digest: s.digest,
+            roles: s.roles,
+            rebindsParty: s.rebindsParty,
+          };
+        } catch (e) {
+          if (!(e instanceof DocksideError)) throw e;
+          successorError = e.code;
+        }
+      }
+      const activated = view.keyRebindingHistory.at(-1);
+      return {
+        tradeId: t.tradeId,
+        boundRevision: t.revision,
+        contractRevision: view.revision,
+        delayMs: t.delayPolicy.destinationChangeDelayMs,
+        plan,
+        successor,
+        successorError,
+        pending: view.pendingKeyRebinding,
+        history: view.keyRebindingHistory,
+        destinationChangePending:
+          view.pendingDestinationChange !== null &&
+          ["PROPOSED", "CONSENTED"].includes(view.pendingDestinationChange.status),
+        bindingRequired:
+          view.revision > t.revision &&
+          activated?.status === "ACTIVATED" &&
+          activated.successorDigest === view.termsDigest,
+        observedAt: d.clock.now(),
+      };
+    }),
+    r("POST", "/v1/trades/:id/key-rebinding-challenges", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "ACCEPT_TRADE_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requirePartyPrincipal(c, t);
+      const s = await m.release.keyRebindingSuccessor(t.tradeId);
+      m.release.rebindingParty(c, t, s);
+      const party = c.principal.id === t.buyer.principalId ? "buyer" : "supplier";
+      return {
+        purpose: "TRADE_REVISION",
+        payload: toTypedJson(s.canonical),
+        digest: s.digest,
+        revision: s.terms.revision,
+        predecessorDigest: tradeRevisionDigest(t),
+        roles: s.roles,
+        rebindsParty: s.rebindsParty,
+        // The key this session signs with: the new key when the rebinding changes this party's key.
+        signerKeyVersionId: s.terms[party].keyVersionId,
+        pending: s.pending,
+      };
+    }),
+    r(
+      "POST",
+      "/v1/trades/:id/key-rebinding-consents",
+      true,
+      z.object({ successorDigest: hex64, signature: sig }).strict(),
+      async ({ ctx, params, body }) => {
+        const c = must(ctx);
+        act(c, "ACCEPT_TRADE_REVISION");
+        const m = mods(d);
+        const t = loadTrade(m, c, params["id"] as string);
+        requirePartyPrincipal(c, t);
+        const b = body as { successorDigest: string; signature: string };
+        const out = await m.release.recordKeyRebindingConsent(c, {
+          tradeId: t.tradeId,
+          successorDigest: b.successorDigest,
+          signature: b.signature,
+        });
+        log(c, "KEY_REBINDING_CONSENT_RECORDED", "trade", t.tradeId);
+        return call(out.relay);
+      },
+    ),
+    r("POST", "/v1/trades/:id/key-rebinding-revocation-challenges", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "ACCEPT_TRADE_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requirePartyPrincipal(c, t);
+      const p = await m.release.prepareKeyRebindingRevocation(c, t.tradeId);
+      return { purpose: "KEY_REBINDING_REVOKE", payload: p.typed, digest: p.digest };
+    }),
+    r("POST", "/v1/trades/:id/key-rebinding-revocations", true, signed, async ({ ctx, params, body }) => {
+      const c = must(ctx);
+      act(c, "ACCEPT_TRADE_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requirePartyPrincipal(c, t);
+      const b = body as { payload: unknown; signature: string };
+      const payload = canonical(b.payload);
+      if ((payload as Record<string, CanonicalValue>)["tradeId"] !== t.tradeId)
+        fail("VALIDATION_FAILED", "revocation names a different trade");
+      const relay = await m.release.recordKeyRebindingRevocation(c, { payload, signature: b.signature });
+      log(c, "KEY_REBINDING_REVOCATION_RECORDED", "trade", t.tradeId);
+      return call(relay);
+    }),
+    r("POST", "/v1/trades/:id/key-rebinding-activation", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "ACCEPT_TRADE_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requirePartyPrincipal(c, t);
+      const s = await m.release.currentKeyRebinding(t.tradeId);
+      if (!s || s.pending?.status === "ACTIVATED") fail("NOT_FOUND", "no pending key rebinding");
+      m.release.rebindingParty(c, t, s);
+      const relay = await m.release.prepareKeyRebindingActivation(t.tradeId);
+      log(c, "KEY_REBINDING_ACTIVATION_PREPARED", "trade", t.tradeId);
+      return call(relay);
+    }),
+    r("POST", "/v1/trades/:id/key-rebinding-binding", true, empty, async ({ ctx, params }) => {
+      const c = must(ctx);
+      act(c, "ACCEPT_TRADE_REVISION");
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      requirePartyPrincipal(c, t);
+      const s = await m.release.currentKeyRebinding(t.tradeId);
+      if (s?.pending?.status !== "ACTIVATED") fail("INVALID_STATE", "no activated key rebinding to bind");
+      m.release.rebindingParty(c, t, s);
+      const out = await m.release.bindActivatedRevision(t.tradeId);
+      log(c, "KEY_REBINDING_REVISION_BOUND", "trade", t.tradeId);
+      return out;
+    }),
+
     /* ------------------------- payout / refund / timeline ------------------------- */
+
     r("GET", "/v1/trades/:id/payout", true, undefined, async ({ ctx, params }) => {
       const c = must(ctx);
       const m = mods(d);

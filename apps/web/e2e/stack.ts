@@ -11,6 +11,9 @@ import { waitForScreen } from "./helpers";
 /** Recovery delay the browser-test stack runs with (playwright.config.ts), so tests can watch it elapse. */
 export const RECOVERY_DELAY_MS = 20_000;
 
+/** Key-recovery challenge lifetime of the browser-test stack (M14), so an expired one can be re-issued. */
+export const RECOVERY_CHALLENGE_TTL_MS = 25_000;
+
 /** Read at call time: a second Playwright config (the asset-recovery stack) sets another port. */
 const controlUrl = () => `http://127.0.0.1:${Number(process.env["DOCKSIDE_E2E_CONTROL_PORT"] ?? 8792)}`;
 

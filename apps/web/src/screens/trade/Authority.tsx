@@ -1,10 +1,11 @@
+import { Link } from "../../app/router";
 import { TableScroller } from "../../components/Data";
 import { Callout } from "../../components/States";
 import { StatusBadge } from "../../components/Status";
 import type { OrganizationAttestor } from "../../lib/api/trade";
 import { useTrade } from "./common";
 
-const ROLE_LABEL: Record<string, string> = {
+export const ROLE_LABEL: Record<string, string> = {
   buyer: "Buyer approver",
   supplier: "Supplier signer",
   inspector: "Named inspector",
@@ -16,9 +17,10 @@ const ROLE_LABEL: Record<string, string> = {
 /**
  * Rotation, revocation and recovery never change a trade silently. When any authority this
  * revision binds is no longer its current usable key (M01 bindingStatus, served on the trade
- * projection), every tab says so and names the role and the reason.
+ * projection), every tab says so, names the role and the reason, and points to the key-rebinding
+ * revision (M14) that both parties sign on the Agreement tab.
  */
-export function AuthorityRevisionCallout() {
+export function AuthorityRevisionCallout({ onAgreementTab = false }: { onAgreementTab?: boolean }) {
   const t = useTrade();
   const a = t.p.authority;
   if (!a?.requiresNewRevision) return null;
@@ -48,9 +50,21 @@ export function AuthorityRevisionCallout() {
           </li>
         ))}
       </ul>
-      <p className="small">
-        Creating that revision (renewed keys, then fresh evidence, inspection and release authority) is not
-        served by this API build; see the Agreement tab for the revision this trade binds.
+      <p>
+        The bound buyer approver and supplier signer each sign a key-rebinding revision that changes only
+        these key versions; it then needs fresh evidence attestation, inspection and release authority.{" "}
+        {onAgreementTab ? (
+          <a href="#key-rebinding" data-testid="authority-revision-link">
+            Go to the key-rebinding revision below
+          </a>
+        ) : (
+          <Link
+            href={`/trades/${encodeURIComponent(t.tradeId)}/agreement`}
+            data-testid="authority-revision-link"
+          >
+            Open the key-rebinding revision on the Agreement tab
+          </Link>
+        )}
       </p>
     </Callout>
   );
