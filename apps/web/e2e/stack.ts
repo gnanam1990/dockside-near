@@ -11,10 +11,11 @@ import { waitForScreen } from "./helpers";
 /** Recovery delay the browser-test stack runs with (playwright.config.ts), so tests can watch it elapse. */
 export const RECOVERY_DELAY_MS = 20_000;
 
-const CONTROL = `http://127.0.0.1:${Number(process.env["DOCKSIDE_E2E_CONTROL_PORT"] ?? 8792)}`;
+/** Read at call time: a second Playwright config (the asset-recovery stack) sets another port. */
+const controlUrl = () => `http://127.0.0.1:${Number(process.env["DOCKSIDE_E2E_CONTROL_PORT"] ?? 8792)}`;
 
 export async function control<T = Record<string, unknown>>(path: string, body?: unknown): Promise<T> {
-  const r = await fetch(CONTROL + path, {
+  const r = await fetch(controlUrl() + path, {
     method: body === undefined ? "GET" : "POST",
     headers: { "content-type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

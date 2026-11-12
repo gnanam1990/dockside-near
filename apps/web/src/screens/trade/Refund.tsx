@@ -21,6 +21,7 @@ import type {
 } from "../../lib/api/trade";
 import { formatUntil, formatUtc } from "../../lib/format";
 import { describeStatus } from "../../lib/status";
+import { AssetRecoveryPanel } from "./AssetRecovery";
 import { Near, Section, useTrade } from "./common";
 import { OperationDetail } from "./Operation";
 
@@ -954,13 +955,7 @@ export function RefundTab() {
             </section>
           ) : null}
           <PolicyMatrix policy={v.policy} />
-          <section aria-labelledby="assets-title">
-            <h3 id="assets-title">Asset recovery review</h3>
-            <p>
-              Unexpected assets are reviewed separately and never appear as refundable native NEAR. This API
-              build serves no asset-recovery records, so none are shown.
-            </p>
-          </section>
+          <AssetRecoveryPanel />
         </>
       )}
     </Section>
