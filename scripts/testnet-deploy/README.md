@@ -65,7 +65,7 @@ the API or the web app.
 
   | Variable | Account | Needs |
   |---|---|---|
-  | `DOCKSIDE_ESCROW_ACCOUNT` | holds the contract | about 8.7 NEAR (7.7 for the 769 515-byte wasm, plus state); fund it with 10 |
+  | `DOCKSIDE_ESCROW_ACCOUNT` | holds the contract | 1 NEAR per 100 kB of wasm (about 8 NEAR for a 0.8 MB build) plus 1 NEAR; the preflight computes the exact amount; fund it with 10 |
   | `DOCKSIDE_BUYER_ACCOUNT` | buyer party and funder | the trade amount plus 0.1 NEAR |
   | `DOCKSIDE_SUPPLIER_ACCOUNT` | supplier party and payout destination | exists; it signs nothing |
   | `DOCKSIDE_RELAYER_ACCOUNT` | submits the relayed calls | 2 NEAR |
