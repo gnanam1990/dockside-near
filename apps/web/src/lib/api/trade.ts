@@ -1,6 +1,7 @@
 import type { TypedJson } from "../canonical";
 import type { ApiOutcome, DocksideClient } from "./client";
 import { ENDPOINTS, type EndpointId } from "./endpoints";
+import type { BindingStatus, ServiceScope } from "./types";
 
 /**
  * Wire types of the M07/M08 trade routes (services/api/src/trades.ts). The UI only renders
@@ -37,6 +38,8 @@ export interface TradeListItem extends TermsSummary {
   readonly holdsBlocking: number;
   readonly liveIntentState: string | null;
   readonly frozen: boolean;
+  /** Some authority this revision binds was rotated, revoked or recovered (M12). */
+  readonly requiresNewRevision?: boolean;
 }
 
 export interface SlotEvaluation {
@@ -117,6 +120,8 @@ export interface TradeProjection {
     readonly expiresAt: number;
   } | null;
   readonly holds: { readonly blocking: number; readonly items: HoldSummary[] };
+  /** M01 bindingStatus of this revision; absent from builds before M12. */
+  readonly authority?: BindingStatus;
   readonly release: {
     readonly liveIntent: {
       readonly releaseIntentId: string;
@@ -194,6 +199,18 @@ export interface AttestorView {
   readonly issues: { readonly role: string; readonly code: string }[];
   readonly enrollment: Record<string, unknown>;
   readonly currentAttestation: string | null;
+  /** The viewer organization's ManifestAttestor enrollments (M12); never another organization's. */
+  readonly organizationAttestors?: OrganizationAttestor[];
+}
+
+export interface OrganizationAttestor {
+  readonly enrollmentId: string;
+  readonly serviceId: string;
+  readonly status: string;
+  readonly activeKeyVersion: number | null;
+  readonly scope: ServiceScope;
+  readonly boundByRevision: boolean;
+  readonly coverage: "COVERS" | "SCOPE_MISMATCH";
 }
 
 export interface IntentJson {
