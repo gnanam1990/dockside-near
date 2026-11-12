@@ -1,0 +1,32 @@
+M24 red run: npx vitest run packages/near/test/m24-run-all-windows.test.ts before the fixes (exit 1, 18 of 18 failed)
+
+     × honours NEAR_CLI when it names a binary 4ms
+     × defaults to `near` off Windows 0ms
+     × finds the real near.exe under the npm global prefix on Windows 0ms
+     × maps an npm shim (NEAR_CLI or `where near`) to the real near.exe beside it 0ms
+     × refuses a shim it cannot map, and a missing near-cli-rs, with NEAR_CLI_MISSING 2ms
+     × is what `tool.mjs near-cli` prints 53ms
+     × retries only an expired transaction, which was never included 0ms
+     × never retries a transaction that may have been included 0ms
+     × recognises an interactive prompt that met a closed stdin 0ms
+     × describes a failure with near-cli-rs's own error, not 'printed no transaction id' 0ms
+     × re-runs (re-signs) after an expired transaction and returns the success 0ms
+     × gives up after the bound and keeps the real error 0ms
+     × does not retry a timeout or a sent transaction 0ms
+     × runs the binary with stdin closed, writes every attempt and surfaces the error 53ms
+     × asks near-cli-rs for an ed25519 key non-interactively 0ms
+     × runs every near-cli-rs command through near-run with stdin from /dev/null 1ms
+     × validates every fallback like the primary 0ms
+     × moves to the next URL on a transport failure, never on an RPC answer 17ms
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > NEAR_CLI resolution (shared by run-all and the Node helpers) > honours NEAR_CLI when it names a binary
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > NEAR_CLI resolution (shared by run-all and the Node helpers) > defaults to `near` off Windows
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > NEAR_CLI resolution (shared by run-all and the Node helpers) > finds the real near.exe under the npm global prefix on Windows
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > NEAR_CLI resolution (shared by run-all and the Node helpers) > maps an npm shim (NEAR_CLI or `where near`) to the real near.exe beside it
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > NEAR_CLI resolution (shared by run-all and the Node helpers) > refuses a shim it cannot map, and a missing near-cli-rs, with NEAR_CLI_MISSING
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > NEAR_CLI resolution (shared by run-all and the Node helpers) > is what `tool.mjs near-cli` prints
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > near-cli-rs failure classification > retries only an expired transaction, which was never included
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > near-cli-rs failure classification > never retries a transaction that may have been included
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > near-cli-rs failure classification > recognises an interactive prompt that met a closed stdin
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > near-cli-rs failure classification > describes a failure with near-cli-rs's own error, not 'printed no transaction id'
+ FAIL  packages/near/test/m24-run-all-windows.test.ts > near-cli-rs runner with bounded retries > re-runs (re-signs) after an expired transaction and returns the success
