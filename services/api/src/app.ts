@@ -72,7 +72,7 @@ export interface AppDeps {
   /** Request limiter; one per process by default (M09). */
   readonly limiter?: RateLimiter;
   /**
-   * The deployment's dedicated audit-export key in its isolated signer (M17, ADR-0016). Absent:
+   * The deployment's dedicated audit-export key in its isolated signer (M17, ADR-0017). Absent:
    * the signed export answers INVALID_STATE EXPORT_KEY_NOT_CONFIGURED; the checksummed export works.
    */
   readonly exportSigner?: ExportKeySigner;
@@ -375,7 +375,7 @@ export function buildRoutes(d: AppDeps): Route[] {
       const limit = Math.min(Number(query.get("limit") ?? "200") || 200, 1000);
       return { events: new AuditLog(d.db, d.clock, d.ids).list({ organizationId: c.organizationId }, limit) };
     }),
-    /** Published trust anchor for offline verification of signed audit exports (ADR-0016). */
+    /** Published trust anchor for offline verification of signed audit exports (ADR-0017). */
     r("GET", "/v1/audit-export-keys", true, undefined, ({ ctx }) => {
       requireAction(ctx, "EXPORT_AUDIT");
       return exportKeyList(d.db, d.config.DOCKSIDE_ORIGIN);

@@ -18,7 +18,7 @@ import type { AppDeps } from "./app.js";
 import { type Route, route } from "./routing.js";
 
 /**
- * NEAR account ownership (ADR-0016, T-004). A signed-in principal links a NEAR account by asking its
+ * NEAR account ownership (ADR-0017, T-004). A signed-in principal links a NEAR account by asking its
  * wallet to sign a NEP-413 message the server issued. The server then:
  *   1. verifies the NEP-413 signature (Borsh tag 2^31+413, message, 32-byte nonce, recipient = this
  *      origin) with the public key the wallet reported;

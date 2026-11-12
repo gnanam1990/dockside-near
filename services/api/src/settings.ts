@@ -8,7 +8,7 @@ import { exportKeyList } from "./export-signing.js";
 import { type Route, route } from "./routing.js";
 
 /**
- * Organization settings (UI-SPEC §3.10, ADR-0016): evidence policies, retention and integrations.
+ * Organization settings (UI-SPEC §3.10, ADR-0017): evidence policies, retention and integrations.
  *
  * - Reads need ORG_SECURITY_ADMIN or AUDITOR of the caller's own organisation; every write needs
  *   ORG_SECURITY_ADMIN. Nobody reads or writes another organisation's settings.
@@ -175,7 +175,7 @@ const TERMINAL = new Set(["PAID", "REFUNDED", "FAILED", "WITHDRAWN"]);
  * Which evidence objects the current retention period makes eligible for deletion. Computed from the
  * persisted journal and hold records: a trade is settled once it has a PAID release or a REFUNDED
  * refund and no operation is still open; nothing under an unresolved hold or a freeze is eligible.
- * This is a preview: no object is deleted by this build (the deletion job is not built, ADR-0016).
+ * This is a preview: no object is deleted by this build (the deletion job is not built, ADR-0017).
  */
 function retentionPreview(d: AppDeps, organizationId: string, days: number, asOf: number) {
   const now = asOf;

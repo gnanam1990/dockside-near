@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Offline verifier for signed Dockside audit exports (ADR-0016).
+ * Offline verifier for signed Dockside audit exports (ADR-0017).
  *
  *   verify-export <signed-export.json> --trusted-keys <keys.json> [--json]
  *
