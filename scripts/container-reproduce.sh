@@ -11,6 +11,8 @@
 #     -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
 #     node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh <commit> [--e2e]
+# (`pnpm run contract:reproduce [--e2e]` builds this command, and also mounts the shared git
+# directory at /gitdir so a git worktree can be reproduced: a worktree's .git is only a file.)
 # Writes /out/clean-checkout-report.json, /out/build-manifest.json and /out/dockside_escrow.wasm (the
 # deployable artifact, rebuilt from the same commit in this container and checked against the
 # manifest's SHA-256). With --e2e it first installs the Playwright Chromium headless shell and its
@@ -31,8 +33,10 @@ rustup target add wasm32-unknown-unknown >/dev/null 2>&1
 corepack enable
 corepack prepare pnpm@10.34.9 --activate >/dev/null 2>&1
 git config --global --add safe.directory '*'
+SRC=/repo
+[ -d /gitdir ] && SRC=/gitdir
 rm -rf /work && mkdir -p /work
-git clone --quiet --no-local /repo /work/src
+git clone --quiet --no-local "$SRC" /work/src
 cd /work/src
 git -c advice.detachedHead=false checkout --quiet "$REF"
 uname -sm

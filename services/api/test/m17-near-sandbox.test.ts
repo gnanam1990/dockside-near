@@ -1,8 +1,9 @@
 /**
  * M17 NEAR account ownership against a REAL nearcore node: the local NEAR sandbox (nearcore's sandbox
  * build) in a Linux container on this machine, not testnet. Opt-in: runs only with
- * DOCKSIDE_NEAR_SANDBOX=1 (`pnpm run test:sandbox`), because it needs Docker inside WSL and downloads
- * the sandbox binary into the container. Port 4531 on the loopback interface carries its RPC.
+ * DOCKSIDE_NEAR_SANDBOX=1 (`pnpm run test:sandbox`), because it needs Docker (inside WSL on Windows)
+ * and downloads the sandbox binary into the container. Port 4531 on the loopback interface
+ * (DOCKSIDE_NEAR_SANDBOX_PORT) carries its RPC.
  *
  * The test generates a wallet key here; the container's genesis gives the account `dockside-wallet.testnet`
  * that public key as its only full-access key (the private key never leaves this process). Then:
@@ -40,16 +41,27 @@ const ACCOUNT = "dockside-wallet.testnet";
 const keys = generateKeyPairSync("ed25519");
 const walletPublicKey = exportPublicKey(keys.publicKey);
 
+// DOCKSIDE_DOCKER overrides the docker command (as for `pnpm run contract:sandbox`); the default is
+// Docker inside WSL on Windows and the local `docker` elsewhere (a Linux CI runner).
+const DOCKER = (
+  process.env["DOCKSIDE_DOCKER"] ||
+  (process.platform === "win32" ? "wsl.exe -d Ubuntu-24.04 -u root -- docker" : "docker")
+)
+  .split(" ")
+  .filter(Boolean);
+const VIA_WSL = /(^|[\\/])wsl(\.exe)?$/i.test(DOCKER[0] ?? "");
+
 function docker(args: string[], timeout = 120_000) {
-  return spawnSync("wsl.exe", ["-d", "Ubuntu-24.04", "-u", "root", "--", "docker", ...args], {
+  return spawnSync(DOCKER[0] ?? "docker", [...DOCKER.slice(1), ...args], {
     encoding: "utf8",
     timeout,
     env: { ...process.env, MSYS_NO_PATHCONV: "1" },
   });
 }
 
-/** C:\a\b -> /mnt/c/a/b */
+/** C:\a\b -> /mnt/c/a/b when the Docker Engine runs in WSL; unchanged otherwise. */
 function wslPath(p: string): string {
+  if (!VIA_WSL) return p;
   return p.replace(/^([A-Za-z]):\\/, (_m, d: string) => `/mnt/${d.toLowerCase()}/`).replace(/\\/g, "/");
 }
 
