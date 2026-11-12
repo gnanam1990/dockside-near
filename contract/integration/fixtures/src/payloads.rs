@@ -598,6 +598,24 @@ pub fn asset_request_args(fx: &Fixture, rec: &TradeRecord, a: &UnexpectedAsset, 
     json!({ "asset_index": a.index, "trade_id": rec.terms.trade_id, "payload": p })
 }
 
+/// Unsigned revocation of the latest recovery by the claimed sender's own account.
+pub fn asset_sender_revoke_args(fx: &Fixture, rec: &TradeRecord, a: &UnexpectedAsset, now: u64, n: &str) -> J {
+    let r = a.recoveries.last().expect("recovery");
+    let p = with_header(
+        rec,
+        &fx.accounts.contract,
+        vec![
+            ("recoveryId", s(&r.id)),
+            ("requestDigest", s(&r.request_digest)),
+            ("revokerRole", s("CLAIMED_SENDER")),
+            ("issuedAt", u(now)),
+            ("expiresAt", u(now + HOUR)),
+            ("nonce", s(&fx.nonce(&format!("rvk-{n}")))),
+        ],
+    );
+    json!({ "asset_index": a.index, "trade_id": rec.terms.trade_id, "payload": p, "signature": null })
+}
+
 pub fn asset_approval_args(fx: &Fixture, rec: &TradeRecord, a: &UnexpectedAsset, now: u64, n: &str) -> J {
     let r = a.recoveries.last().expect("recovery");
     let p = with_header(

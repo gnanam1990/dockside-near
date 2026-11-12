@@ -226,6 +226,7 @@ impl Mirror {
             }
             "ft_on_transfer" => {
                 let index = self.unexpected.len() as u64;
+                assets::ensure_capacity(index, 1)?;
                 let amount = arg_str(a, "amount")?;
                 let asset = assets::record(index, "NEP-141", c.predecessor, None, amount, &arg_str(a, "sender_id")?, &arg_str(a, "msg")?, c.now_ms)?;
                 self.unexpected.push(asset);
@@ -238,6 +239,10 @@ impl Mirror {
             "approve_asset_recovery" => {
                 let (i, p, sig) = (arg_u64(a, "asset_index")?, arg(a, "payload")?, arg_str(a, "signature")?);
                 self.govern(i, &arg_str(a, "trade_id")?, &c, |x, t, ctx| assets::approve_recovery(x, t, ctx, &p, &sig)).map(|d| json!(d))
+            }
+            "revoke_asset_recovery" => {
+                let (i, p, sig) = (arg_u64(a, "asset_index")?, arg(a, "payload")?, arg_opt_str(a, "signature"));
+                self.govern(i, &arg_str(a, "trade_id")?, &c, |x, t, ctx| assets::revoke_recovery(x, t, ctx, &p, sig.as_deref())).map(|_| J::Null)
             }
             "execute_asset_recovery" => {
                 let (i, id) = (arg_u64(a, "asset_index")?, arg_str(a, "recovery_id")?);
