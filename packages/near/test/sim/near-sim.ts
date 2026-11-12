@@ -16,6 +16,7 @@
 import { createPublicKey, verify } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import type { SimExternalContract } from "./sim-token.js";
 
 export const WASM_PATH = fileURLToPath(
   new URL("../../../../contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm", import.meta.url),
@@ -63,6 +64,8 @@ export class NearSim {
   balances = new Map<string, bigint>();
   /** Accounts that do not exist: transfers to them fail and the value returns to the sender. */
   readonly missing = new Set<string>();
+  /** Other simulated contracts (for example a NEP-141 token) that calls and views route to. */
+  readonly externals = new Map<string, SimExternalContract>();
   nowMs: number;
 
   constructor(
@@ -320,6 +323,22 @@ export class NearSim {
           this.credit(this.contractId, -a.amountYocto);
           this.credit(p.receiver, a.amountYocto);
         } else {
+          const ext = this.externals.get(p.receiver);
+          if (ext) {
+            // A cross-contract call from the escrow (the recovery adapter): the attached deposit
+            // leaves the contract only if the external call succeeds (a failed receipt refunds it).
+            const res = ext.call(a.method ?? "", JSON.parse(a.args ?? "{}"), {
+              predecessor: this.contractId,
+              depositYocto: a.amountYocto,
+              sim: this,
+            });
+            if (res.ok) {
+              this.credit(this.contractId, -a.amountYocto);
+              this.credit(p.receiver, a.amountYocto);
+            }
+            status = res.ok ? "success" : "failure";
+            continue;
+          }
           if (p.receiver !== this.contractId)
             throw new Error("simulator only runs callbacks on the contract itself");
           const res = this.call(a.method ?? "", JSON.parse(a.args ?? "{}"), {

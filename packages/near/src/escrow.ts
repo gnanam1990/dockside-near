@@ -296,23 +296,76 @@ export const releaseViewSchema = z
   .strict();
 export type ReleaseView = z.output<typeof releaseViewSchema>;
 
-export const unexpectedAssetSchema = z.array(
-  z
-    .object({
-      index: z.number().int(),
-      standard: z.enum(["NEP-141", "NEP-171", "NEP-245"]),
-      assetContract: z.string(),
-      tokenId: z.string().nullable(),
-      observedAmount: z.string(),
-      claimedSender: z.string(),
-      msgDigest: z.string(),
-      observedAt: z.number().int(),
-      state: z.literal("ASSET_RECOVERY_REVIEW"),
-      originalFunder: z.null(),
-      withdrawable: z.literal(false),
-    })
-    .strict(),
-);
+const assetRecoverySchema = z
+  .object({
+    recoveryId: z.string(),
+    tradeId: z.string(),
+    tradeRevision: z.number().int(),
+    recipient: z.string(),
+    amount: z.string().regex(/^(0|[1-9][0-9]{0,38})$/),
+    recoveryCapability: z.string(),
+    requestDigest: z.string(),
+    evidenceDigest: z.string(),
+    state: z.enum([
+      "REQUESTED",
+      "CHALLENGE_PERIOD",
+      "SUBMITTED",
+      "RECOVERED",
+      "FAILED",
+      "CHALLENGED",
+      "REVOKED",
+    ]),
+    requestedAt: z.number().int(),
+    requestExpiresAt: z.number().int(),
+    approvalDigest: z.string().nullable(),
+    validationDigest: z.string().nullable(),
+    approvedAt: z.number().int().nullable(),
+    deadline: z.number().int().nullable(),
+    challenge: z
+      .object({
+        role: z.string(),
+        account: z.string().nullable(),
+        reasonCode: z.string(),
+        evidenceDigest: z.string(),
+        digest: z.string(),
+        at: z.number().int(),
+      })
+      .strict()
+      .nullable(),
+    revokedBy: z.string().nullable(),
+    executor: z.string().nullable(),
+    history: z.array(z.tuple([z.string(), z.number().int()])),
+  })
+  .strict();
+export type AssetRecoveryView = z.output<typeof assetRecoverySchema>;
+
+export const unexpectedAssetViewSchema = z
+  .object({
+    index: z.number().int(),
+    standard: z.enum(["NEP-141", "NEP-171", "NEP-245"]),
+    assetContract: z.string(),
+    tokenId: z.string().nullable(),
+    observedAmount: z.string(),
+    claimedSender: z.string(),
+    msgDigest: z.string(),
+    observedAt: z.number().int(),
+    state: z.enum([
+      "ASSET_RECOVERY_REVIEW",
+      "UNRECOVERABLE_OR_REVIEW",
+      "RECOVERY_REQUESTED",
+      "RECOVERY_CHALLENGE_PERIOD",
+      "RECOVERY_SUBMITTED",
+      "RECOVERED",
+    ]),
+    originalFunder: z.null(),
+    withdrawable: z.literal(false),
+    recoveryCapability: z.string().nullable(),
+    liveRecoveryId: z.string().nullable(),
+    recoveries: z.array(assetRecoverySchema),
+  })
+  .strict();
+export type UnexpectedAssetView = z.output<typeof unexpectedAssetViewSchema>;
+export const unexpectedAssetSchema = z.array(unexpectedAssetViewSchema);
 
 /** An unsigned contract call for the acting party's wallet to sign and submit. */
 export interface FunctionCall {
@@ -360,6 +413,9 @@ export class EscrowContract {
   }
   getUnexpectedAssets(fromIndex = 0, limit = 50) {
     return this.view("get_unexpected_assets", { from_index: fromIndex, limit }, unexpectedAssetSchema);
+  }
+  getUnexpectedAsset(assetIndex: number) {
+    return this.view("get_unexpected_asset", { asset_index: assetIndex }, unexpectedAssetViewSchema);
   }
 
   private call(
@@ -535,5 +591,61 @@ export class EscrowContract {
 
   executeRefundCall(tradeId: string, refundIntentId: string): FunctionCall {
     return this.call("execute_refund", { trade_id: tradeId, refund_intent_id: refundIntentId }, 100n);
+  }
+
+  /* -------------------- unexpected-asset recovery (M11) -------------------- */
+
+  /** Must be signed and submitted by the claimed sender's own account (proof of control). */
+  requestAssetRecoveryCall(assetIndex: number, tradeId: string, payload: TypedJson): FunctionCall {
+    return this.call("request_asset_recovery", { asset_index: assetIndex, trade_id: tradeId, payload });
+  }
+
+  approveAssetRecoveryCall(assetIndex: number, tradeId: string, payload: TypedJson, signature: string) {
+    return this.call("approve_asset_recovery", {
+      asset_index: assetIndex,
+      trade_id: tradeId,
+      payload,
+      signature,
+    });
+  }
+
+  /** `signature` is null only for a claimant challenging from its own account. */
+  challengeAssetRecoveryCall(
+    assetIndex: number,
+    tradeId: string,
+    payload: TypedJson,
+    signature: string | null,
+  ): FunctionCall {
+    return this.call("challenge_asset_recovery", {
+      asset_index: assetIndex,
+      trade_id: tradeId,
+      payload,
+      signature,
+    });
+  }
+
+  /** `signature` is null only for the claimed sender revoking from its own account. */
+  revokeAssetRecoveryCall(
+    assetIndex: number,
+    tradeId: string,
+    payload: TypedJson,
+    signature: string | null,
+  ): FunctionCall {
+    return this.call("revoke_asset_recovery", {
+      asset_index: assetIndex,
+      trade_id: tradeId,
+      payload,
+      signature,
+    });
+  }
+
+  /** Permissionless after the window; attaches the one-yoctoNEAR NEP-141 adapter deposit. */
+  executeAssetRecoveryCall(assetIndex: number, recoveryId: string): FunctionCall {
+    return this.call(
+      "execute_asset_recovery",
+      { asset_index: assetIndex, recovery_id: recoveryId },
+      100n,
+      1n,
+    );
   }
 }
