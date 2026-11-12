@@ -19,9 +19,9 @@ export interface JsonLimits {
   readonly maxArrayLength: number;
   readonly maxObjectKeys: number;
   /**
-   * Integers outside the safe range: rejected (default), or kept exactly as their decimal digits in a
-   * string. Only for upstream responses that carry u64 counters as JSON numbers (a NEAR node's block
-   * timestamp in nanoseconds); never for request bodies.
+   * Integers outside the safe range: rejected by default. A boundary that must read a peer's
+   * u64 fields (NEAR RPC block headers carry `timestamp` in nanoseconds as a JSON number) may ask
+   * for them as their exact decimal string instead; they are never turned into a lossy number.
    */
   readonly unsafeIntegers?: "reject" | "decimal-string";
 }
@@ -119,7 +119,7 @@ class Parser {
   }
 
   number(): number | string {
-    const m = /^-?(0|[1-9][0-9]*)([.eE])?/.exec(this.s.slice(this.i, this.i + 40));
+    const m = /^-?(0|[1-9][0-9]*)([.eE])?/.exec(this.s.slice(this.i, this.i + 32));
     if (!m) return this.err("invalid number");
     if (m[2] !== undefined) {
       fail("VALIDATION_FAILED", "fractional or exponent numbers are not accepted; use decimal strings", {
@@ -129,7 +129,7 @@ class Parser {
     const raw = m[0];
     const n = Number(raw);
     if (!Number.isSafeInteger(n)) {
-      if (this.limits.unsafeIntegers === "decimal-string" && raw.length <= 39 && !raw.startsWith("-")) {
+      if (this.limits.unsafeIntegers === "decimal-string" && !raw.startsWith("-")) {
         this.i += raw.length;
         return raw;
       }

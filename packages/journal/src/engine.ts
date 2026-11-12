@@ -2,6 +2,7 @@ import { DocksideError, fail } from "@dockside/core";
 import type { TxSigner } from "@dockside/near";
 import { decide, ledgerChecks, postTerminalIncident, type ReceiptClass } from "./decide.js";
 import type { Journal, Lease, OperationRecord } from "./journal.js";
+import { withRelayerKey } from "./relayer.js";
 import { type ChainPorts, digestOf, gatherFacts } from "./sources.js";
 import { isTerminal, type OperationState, planPath, submitState } from "./states.js";
 
@@ -334,54 +335,70 @@ export class OutboxWorker {
       await this.reconciler.reconcileOne(operationId, lease);
       return true;
     }
-    const block = await this.ports.tx.latestBlock();
-    const nonce = (await this.ports.tx.accessKeyNonce(this.signer.signerId, this.signer.publicKey)) + 1n;
-    const signed = await this.signer.sign(op.call, { nonce, blockHash: block.hash });
-    op = this.journal.transition(
-      operationId,
-      lease,
-      op.version,
-      [submitState(op.kind)],
-      "SUBMIT_PERSISTED",
-      { txHash: signed.txHash, refHeight: block.height },
-      { submit: { ...signed, refHeight: block.height }, outboxDone: lease },
+    // One submitter per relayer access key; the nonce is allocated durably (relayer.ts).
+    const sent = await withRelayerKey(
+      this.journal,
+      this.signer,
+      this.cfg.holder,
+      this.cfg.leaseTtlMs,
+      () => this.ports.tx.accessKeyNonce(this.signer.signerId, this.signer.publicKey),
+      async (nonce) => {
+        const block = await this.ports.tx.latestBlock();
+        const signed = await this.signer.sign(op.call, { nonce, blockHash: block.hash });
+        const persisted = this.journal.transition(
+          operationId,
+          lease,
+          op.version,
+          [submitState(op.kind)],
+          "SUBMIT_PERSISTED",
+          { txHash: signed.txHash, refHeight: block.height },
+          { submit: { ...signed, refHeight: block.height }, outboxDone: lease },
+        );
+        this.boundary("submit.persisted", operationId);
+        let outcome: Awaited<ReturnType<ChainPorts["tx"]["send"]>> | null = null;
+        let lostCode = "";
+        try {
+          outcome = await this.ports.tx.send(signed);
+        } catch (e) {
+          lostCode = (e as { code?: string }).code ?? "FOREIGN";
+        }
+        if (!outcome) {
+          this.boundary("submit.lost", operationId);
+          this.journal.observe(operationId, lease, {
+            source: "TX_STATUS",
+            subject: signed.txHash,
+            observedAt: this.journal.clock.now(),
+            freshnessMs: 0,
+            confidence: "UNAVAILABLE",
+            revision: null,
+            correlationId: `cor-${operationId}-submit`,
+            rawDigest: digestOf({ lost: signed.txHash, code: lostCode, at: this.journal.clock.now() }),
+            fact: { kind: "RESPONSE_LOST", error: lostCode },
+          });
+          this.journal.transition(
+            operationId,
+            lease,
+            persisted.version,
+            ["UNKNOWN"],
+            "RESPONSE_LOST",
+            {
+              txHash: signed.txHash,
+              error: lostCode,
+            },
+            { nextCheckAt: this.journal.clock.now() + this.cfg.baseBackoffMs },
+          );
+          this.boundary("unknown.persisted", operationId);
+          return "LOST" as const;
+        }
+        return "RETURNED" as const;
+      },
     );
-    this.boundary("submit.persisted", operationId);
-    let outcome: Awaited<ReturnType<ChainPorts["tx"]["send"]>> | null = null;
-    let lostCode = "";
-    try {
-      outcome = await this.ports.tx.send(signed);
-    } catch (e) {
-      lostCode = (e as { code?: string }).code ?? "FOREIGN";
+    if (!sent.ran) {
+      // Another submitter holds the relayer key: nothing was signed; try again shortly.
+      this.journal.deferOutbox(operationId, lease, now + this.cfg.baseBackoffMs);
+      return false;
     }
-    if (!outcome) {
-      this.boundary("submit.lost", operationId);
-      this.journal.observe(operationId, lease, {
-        source: "TX_STATUS",
-        subject: signed.txHash,
-        observedAt: this.journal.clock.now(),
-        freshnessMs: 0,
-        confidence: "UNAVAILABLE",
-        revision: null,
-        correlationId: `cor-${operationId}-submit`,
-        rawDigest: digestOf({ lost: signed.txHash, code: lostCode, at: this.journal.clock.now() }),
-        fact: { kind: "RESPONSE_LOST", error: lostCode },
-      });
-      this.journal.transition(
-        operationId,
-        lease,
-        op.version,
-        ["UNKNOWN"],
-        "RESPONSE_LOST",
-        {
-          txHash: signed.txHash,
-          error: lostCode,
-        },
-        { nextCheckAt: this.journal.clock.now() + this.cfg.baseBackoffMs },
-      );
-      this.boundary("unknown.persisted", operationId);
-      return true;
-    }
+    if (sent.value === "LOST") return true;
     this.boundary("submit.returned", operationId);
     await this.reconciler.reconcileOne(operationId, lease);
     return true;

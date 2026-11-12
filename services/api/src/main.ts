@@ -44,7 +44,7 @@ function tradeModules(
     token: (assetContract: string) => new Nep141Reader(rpc, assetContract),
     tx: new NearTxClient(rpc),
   };
-  return { evidence, holds, release, journal, escrow, assetRecovery };
+  return { evidence, holds, release, journal, escrow, assetRecovery, chain: assetRecovery.tx };
 }
 
 /** Chain adapter for NEAR account ownership checks and the RPC connection test (M17). */
