@@ -73,14 +73,14 @@ and browser flow.
 
 ## Verification (green)
 
-| Step | Command | Exit | Result |
-| --- | --- | --- | --- |
-| New host tests | `cargo test ... --test sec_m31_rebinding_consent_integrity` | 0 | 6 passed |
-| Contract host tests | `pnpm run contract:test` (after both merges of main) | 0 | 109 tests ok, 0 failed |
-| Full check | `pnpm run check` (after the last merge of main) | 0 | format, lint, typecheck, vitest 62 files / 621 passed / 3 skipped, secret scan clean |
-| Browser suites | `pnpm run web:e2e`, ports 9160–9168 | 1, then 0 | main 51 passed (including T-042 destination and key-rebinding), assets 3 passed; reasons failed once at an evidence-upload status wait in `completeEvidence` (`flows.ts:101`), which is not on the changed path; rerun reasons 8 passed, clock 3 passed |
-| Linux clean-checkout reproduction | `DOCKSIDE_DOCKER="wsl.exe -d Ubuntu-24.04 -u root -- docker" MSYS_NO_PATHCONV=1 pnpm run contract:reproduce` | 0 | report `PASS` at commit `31f69d1` |
-| near-sandbox suites | same `DOCKSIDE_DOCKER`, `pnpm run contract:sandbox` | 0 | 7 chain tests passed, including the new `m31_a_revoked_destination_consent_cannot_be_replayed_from_public_arguments` and T-045 (deployed code hash equals the manifest); run-all journey passed |
+| Step                              | Command                                                                                                      | Exit      | Result                                                                                                                                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New host tests                    | `cargo test ... --test sec_m31_rebinding_consent_integrity`                                                  | 0         | 6 passed                                                                                                                                                                                                                                                |
+| Contract host tests               | `pnpm run contract:test` (after both merges of main)                                                         | 0         | 109 tests ok, 0 failed                                                                                                                                                                                                                                  |
+| Full check                        | `pnpm run check` (after the last merge of main)                                                              | 0         | format, lint, typecheck, vitest 62 files / 621 passed / 3 skipped, secret scan clean                                                                                                                                                                    |
+| Browser suites                    | `pnpm run web:e2e`, ports 9160–9168                                                                          | 1, then 0 | main 51 passed (including T-042 destination and key-rebinding), assets 3 passed; reasons failed once at an evidence-upload status wait in `completeEvidence` (`flows.ts:101`), which is not on the changed path; rerun reasons 8 passed, clock 3 passed |
+| Linux clean-checkout reproduction | `DOCKSIDE_DOCKER="wsl.exe -d Ubuntu-24.04 -u root -- docker" MSYS_NO_PATHCONV=1 pnpm run contract:reproduce` | 0         | report `PASS` at commit `31f69d1`                                                                                                                                                                                                                       |
+| near-sandbox suites               | same `DOCKSIDE_DOCKER`, `pnpm run contract:sandbox`                                                          | 0         | 7 chain tests passed, including the new `m31_a_revoked_destination_consent_cannot_be_replayed_from_public_arguments` and T-045 (deployed code hash equals the manifest); run-all journey passed                                                         |
 
 The new sandbox test resubmits the public proposal and consent arguments after the buyer's revocation, as real
 transactions on nearcore. The proposal is accepted again, the withdrawn consent is refused with `NONCE_REPLAYED`,
@@ -89,10 +89,10 @@ activation is refused, and the destination and revision are unchanged. Its fixtu
 
 ## Deployable wasm
 
-| | sha256 | NEAR code hash |
-| --- | --- | --- |
-| Before (testnet escrow `gnanam1990-dock-escrow.testnet`) | — | `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` |
-| After (commit `31f69d1`, 810467 bytes) | `5cbe83d387c68ee14bcb63a8c33200afb9955cefa2a1a6622a51a9364a8e240b` | `7F312wsCkcZpGvQw4aiStUgDPd4SdFoUk3wddyLA6rNn` |
+|                                                          | sha256                                                             | NEAR code hash                                 |
+| -------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| Before (testnet escrow `gnanam1990-dock-escrow.testnet`) | —                                                                  | `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` |
+| After (commit `31f69d1`, 810467 bytes)                   | `5cbe83d387c68ee14bcb63a8c33200afb9955cefa2a1a6622a51a9364a8e240b` | `7F312wsCkcZpGvQw4aiStUgDPd4SdFoUk3wddyLA6rNn` |
 
 Later commits on this branch change only documentation, so the wasm is unchanged.
 
