@@ -24,6 +24,11 @@ const FILTERS: ReadonlyArray<{ id: string; label: string; match: (t: TradeListIt
     match: (t) => LOCKED.includes(t.liveIntentState ?? ""),
   },
   { id: "frozen", label: "Frozen by an incident", match: (t) => t.frozen },
+  {
+    id: "new-revision",
+    label: "Needs a new trade revision",
+    match: (t) => t.requiresNewRevision === true,
+  },
   { id: "mine-inspect", label: "I am the named inspector", match: (t) => t.relations.includes("INSPECTOR") },
 ];
 
@@ -72,7 +77,14 @@ function TradeTable({ trades, receivedAt }: { trades: TradeListItem[]; receivedA
                   }}
                 />
               </td>
-              <td className="tabular">r{t.revision}</td>
+              <td className="tabular">
+                r{t.revision}
+                {t.requiresNewRevision ? (
+                  <p className="small" data-testid="needs-new-revision">
+                    Bound key rotated, revoked or recovered: a new trade revision is required
+                  </p>
+                ) : null}
+              </td>
               <td>{t.relations.join(", ")}</td>
               <td>{t.holdsBlocking > 0 ? `${t.holdsBlocking} blocking release` : "None blocking"}</td>
               <td>

@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
+import { RECOVERY_DELAY_MS } from "./e2e/stack";
 
 /**
  * Browser tests run the real API process with every trade module (scripts/local-stack: the
@@ -65,6 +66,8 @@ export default defineConfig({
         DOCKSIDE_ORIGIN: WEB,
         DOCKSIDE_STACK_API_PORT: String(API_PORT),
         DOCKSIDE_STACK_CONTROL_PORT: String(CONTROL_PORT),
+        // Short recovery delay so the browser tests can watch it hold and then elapse (default two days).
+        DOCKSIDE_RECOVERY_DELAY_MS: String(RECOVERY_DELAY_MS),
         // New proposals bind a one-minute destination-change delay (the configurable minimum), so
         // the browser test waits out a real delay that the API and the contract both enforce.
         DOCKSIDE_DESTINATION_CHANGE_DELAY_MS: "60000",

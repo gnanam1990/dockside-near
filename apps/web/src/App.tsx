@@ -5,6 +5,9 @@ import { AppShell } from "./components/AppShell";
 import { AuditScreen } from "./screens/Audit";
 import { InspectionsScreen, NotFoundScreen, PayoutsScreen } from "./screens/Operations";
 import { OrganizationScreen } from "./screens/Organization";
+import { OrganizationKeysScreen } from "./screens/org/Keys";
+import { OrganizationServicesScreen } from "./screens/org/Services";
+import { RecoveryScreen } from "./screens/Recovery";
 import { SignInScreen } from "./screens/SignIn";
 import { CountersignScreen, TradeCreateScreen } from "./screens/TradeCreate";
 import { TradesScreen } from "./screens/Trades";
@@ -31,6 +34,12 @@ function titleOf(r: Route): string {
       return "Audit";
     case "organization":
       return "Organization";
+    case "organization-keys":
+      return "Keys and recovery";
+    case "organization-services":
+      return "Service identities";
+    case "recovery":
+      return "Recover access";
     case "not-found":
       return "Page not found";
   }
@@ -57,6 +66,12 @@ function Screen({ route }: { route: Route }) {
       return <AuditScreen />;
     case "organization":
       return <OrganizationScreen />;
+    case "organization-keys":
+      return <OrganizationKeysScreen />;
+    case "organization-services":
+      return <OrganizationServicesScreen />;
+    case "recovery":
+      return <RecoveryScreen />;
     case "not-found":
       return <NotFoundScreen path={route.path} />;
   }

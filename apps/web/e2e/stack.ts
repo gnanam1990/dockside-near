@@ -8,6 +8,9 @@ import { deflateSync } from "node:zlib";
 import { type Browser, type BrowserContext, expect, type Page } from "@playwright/test";
 import { waitForScreen } from "./helpers";
 
+/** Recovery delay the browser-test stack runs with (playwright.config.ts), so tests can watch it elapse. */
+export const RECOVERY_DELAY_MS = 20_000;
+
 const CONTROL = `http://127.0.0.1:${Number(process.env["DOCKSIDE_E2E_CONTROL_PORT"] ?? 8792)}`;
 
 export async function control<T = Record<string, unknown>>(path: string, body?: unknown): Promise<T> {

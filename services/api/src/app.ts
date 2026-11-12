@@ -145,6 +145,8 @@ export function buildRoutes(d: AppDeps): Route[] {
         session: c.session,
       };
     }),
+    r("GET", "/v1/me/keys", true, undefined, ({ ctx }) => a.ownKeys(must(ctx))),
+    r("GET", "/v1/organization/directory", true, undefined, ({ ctx }) => a.organizationDirectory(must(ctx))),
     r(
       "POST",
       "/v1/invitations",

@@ -9,6 +9,7 @@ import { isApiIdentifier } from "../lib/api/endpoints";
 import { type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
 import { formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
+import { AuthorityRevisionCallout } from "./trade/Authority";
 import { BlockerList, Near, Section, TradeContext, type TradeCtx, useTrade } from "./trade/common";
 import { DestinationChange } from "./trade/Destination";
 import { EvidenceTab } from "./trade/Evidence";
@@ -651,6 +652,7 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
                 <p>Value is held; every economic action is refused until risk review closes the incident.</p>
               </Callout>
             ) : null}
+            <AuthorityRevisionCallout />
             <TabBody tab={tb} />
           </TradeContext.Provider>
         ) : null}

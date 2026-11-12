@@ -874,3 +874,28 @@ textarea {
 .ok {
   font-weight: 600;
 }
+
+/* M12 key management: one bordered block per principal or service, inline forms inside it. */
+.stack-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.principal {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  background: var(--surface-panel);
+  min-width: 0;
+}
+.principal > h3 {
+  margin-top: 0;
+}
+.inline-form {
+  border-top: 1px solid var(--border-default);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  min-width: 0;
+}
