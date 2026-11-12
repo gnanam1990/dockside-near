@@ -345,6 +345,18 @@ export class AssetRecoveryEngine {
     this.cfg.onBoundary?.(b, id);
   }
 
+  /** Persist a fenced update; a state change is a named boundary (`asset.transition.<STATE>`). */
+  private move(
+    lease: Lease,
+    op: AssetOperation,
+    patch: Parameters<AssetRecoveryJournal["update"]>[2],
+  ): AssetOperation {
+    const next = this.journal.update(lease, op, patch);
+    if (patch.state !== undefined && patch.state !== op.state)
+      this.boundary(`asset.transition.${patch.state}`, op.operationId);
+    return next;
+  }
+
   private later(op: AssetOperation): number {
     return (
       this.journal.clock.now() +
@@ -359,6 +371,7 @@ export class AssetRecoveryEngine {
       if (!lease) continue;
       try {
         const op = this.journal.op(id);
+        this.boundary("asset.claimed", id);
         if (op.state === "QUEUED") await this.submit(op, lease);
         else await this.reconcile(op, lease);
         done.push(id);
@@ -384,7 +397,7 @@ export class AssetRecoveryEngine {
       before = await this.ports.token(op.assetContract).balanceOf(this.ports.escrow.contractId);
     } catch (e) {
       // Nothing was signed or sent: try again later.
-      this.journal.update(lease, op, {
+      this.move(lease, op, {
         reason: `PRECHECK_UNAVAILABLE:${code(e)}`,
         nextCheckAt: this.later(op),
       });
@@ -394,14 +407,14 @@ export class AssetRecoveryEngine {
     this.journal.observe(lease, op.operationId, "TOKEN", { escrowBalance: before, phase: "pre-submit" });
     if (rec?.state !== "CHALLENGE_PERIOD") {
       const reason = rec ? `RECOVERY_${rec.state}` : "RECOVERY_NOT_FOUND";
-      this.journal.update(lease, op, { state: "NOT_SUBMITTED", reason });
+      this.move(lease, op, { state: "NOT_SUBMITTED", reason });
       return;
     }
     const block = await this.ports.tx.latestBlock();
     const nonce =
       (await this.ports.tx.accessKeyNonce(this.signer.signerId, this.signer.publicKey).catch(() => 0n)) + 1n;
     const signed = await this.signer.sign(op.call, { nonce, blockHash: block.hash });
-    const submitting = this.journal.update(lease, op, {
+    const submitting = this.move(lease, op, {
       state: "SUBMITTING",
       reason: null,
       nextCheckAt: this.later(op),
@@ -417,7 +430,7 @@ export class AssetRecoveryEngine {
     try {
       outcome = await this.ports.tx.send(signed);
     } catch (e) {
-      this.journal.update(lease, submitting, {
+      this.move(lease, submitting, {
         state: "UNKNOWN",
         reason: `BROADCAST_UNCERTAIN:${code(e)}`,
         nextCheckAt: this.later(submitting),
@@ -441,7 +454,7 @@ export class AssetRecoveryEngine {
       height = (await this.ports.tx.latestBlock()).height;
     } catch (e) {
       const to: AssetOpState | undefined = op.state === "SUBMITTING" ? "UNKNOWN" : undefined;
-      return this.journal.update(lease, op, {
+      return this.move(lease, op, {
         ...(to ? { state: to } : {}),
         reason: `SOURCE_UNAVAILABLE:${code(e)}`,
         nextCheckAt: this.later(op),
@@ -453,6 +466,7 @@ export class AssetRecoveryEngine {
       txHash: op.txHash,
       error: outcome.kind === "NOT_FOUND" ? null : outcome.error,
     });
+    this.boundary("asset.reconcile.observed", op.operationId);
     const state = rec?.state ?? null;
     if (state === "RECOVERED") {
       const after = await this.ports.token(op.assetContract).balanceOf(this.ports.escrow.contractId);
@@ -461,34 +475,34 @@ export class AssetRecoveryEngine {
         phase: "post-settlement",
       });
       const moved = op.tokenBalanceBefore === null ? false : op.tokenBalanceBefore - after >= op.amount;
-      return this.journal.update(lease, op, {
+      return this.move(lease, op, {
         state: moved ? "RECOVERED" : "REVIEW",
         reason: moved ? "CONTRACT_RECOVERED_TOKEN_MOVED" : "TOKEN_BALANCE_CONTRADICTS_CONTRACT",
         nextCheckAt: this.later(op),
       });
     }
     if (state === "FAILED")
-      return this.journal.update(lease, op, { state: "FAILED", reason: "ADAPTER_TRANSFER_REVERTED" });
+      return this.move(lease, op, { state: "FAILED", reason: "ADAPTER_TRANSFER_REVERTED" });
     if (state === "SUBMITTED")
-      return this.journal.update(lease, op, {
+      return this.move(lease, op, {
         ...(op.state === "PROCESSING" ? {} : { state: "PROCESSING" as const }),
         reason: "AWAITING_ADAPTER_OUTCOME",
         nextCheckAt: this.later(op),
       });
     // The recovery was not executed by this transaction (still open, or ended before execution).
     if (outcome.kind === "FINAL_FAILURE")
-      return this.journal.update(lease, op, {
+      return this.move(lease, op, {
         state: "NOT_SUBMITTED",
         reason: `CONTRACT_REFUSED:${contractCode(outcome) ?? "UNKNOWN"}`,
       });
     if (outcome.kind === "FINAL_SUCCESS")
-      return this.journal.update(lease, op, {
+      return this.move(lease, op, {
         state: "REVIEW",
         reason: "TX_SUCCESS_WITHOUT_CONTRACT_EXECUTION",
       });
     if (outcome.kind === "NOT_FOUND" && op.refBlockHeight !== null) {
       if (height - op.refBlockHeight > this.ports.txValidityBlocks)
-        return this.journal.update(lease, op, { state: "NOT_SUBMITTED", reason: "TX_EXPIRED_NOT_INCLUDED" });
+        return this.move(lease, op, { state: "NOT_SUBMITTED", reason: "TX_EXPIRED_NOT_INCLUDED" });
       if (state === "CHALLENGE_PERIOD") {
         // Identical persisted bytes: same hash and nonce, so the chain can include it at most once.
         try {
@@ -511,7 +525,7 @@ export class AssetRecoveryEngine {
         }
       }
     }
-    return this.journal.update(lease, op, {
+    return this.move(lease, op, {
       ...(op.state === "UNKNOWN" ? {} : { state: "UNKNOWN" as const }),
       reason: `TX_${outcome.kind}`,
       nextCheckAt: this.later(op),

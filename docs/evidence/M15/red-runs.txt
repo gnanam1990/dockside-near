@@ -23,3 +23,17 @@ TypeError: Cannot read properties of undefined (reading 'code')
 Finding: under the default 24-hour attestation lifetime the inspection route bounds the FAIL inspection to
 the attestation, so the contract can never authorize the refund after the 48-hour window; the API used to
 lock the slice anyway. TRADE_EXPIRY and PERMANENT_HOLD passed on the first run (routes from M10 were complete).
+
+## R3 asset-recovery engine process kills (packages/journal/test/m15-asset-process-kill.test.ts)
+Command: npx vitest run packages/journal/test/m15-asset-process-kill.test.ts   (engine without the asset.claimed,
+asset.reconcile.observed and asset.transition.<STATE> boundaries)
+Exit: 1
+     × kill after claiming the operation, before any signing: the restart submits once 376ms
+     × kill after observing the chain, before deciding: the restart decides from fresh observations 336ms
+     × a lost broadcast response persisted as UNKNOWN, killed there: no second transaction, RECOVERED 416ms
+     × killed in PROCESSING (callback pending) and again at REVIEW: REVIEW survives every restart and is never left 20197ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  4 failed | 3 passed (7)
+
+The engine could not be stopped at those points, so the process ran past them (or to its timeout) before the
+kill. After the boundaries were added: 7 passed.
