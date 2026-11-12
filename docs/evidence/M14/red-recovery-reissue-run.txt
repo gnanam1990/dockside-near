@@ -1,0 +1,10 @@
+     × refuses while the current challenge is still open, then re-issues once it expired 80ms
+     × only a security administrator of the same organization other than the principal may re-issue 49ms
+     × a cancelled or completed recovery is closed for re-issue 55ms
+     × the recovery challenge lifetime is its own setting (out-of-band hand-over), bounded by its own maximum 49ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected 'FOREIGN:w.h.svc.reissueRecoveryChalle…' to be 'INVALID_STATE' // Object.is equality
+AssertionError: expected 'FOREIGN:w.h.svc.reissueRecoveryChalle…' to be 'FORBIDDEN' // Object.is equality
+AssertionError: expected 'FOREIGN:w.h.svc.reissueRecoveryChalle…' to be 'INVALID_STATE' // Object.is equality
+AssertionError: expected 300000 to be 1800000 // Object.is equality
+      Tests  4 failed (4)

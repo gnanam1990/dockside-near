@@ -4,6 +4,11 @@ export interface AuthorityConfig {
   readonly origin: string;
   readonly network: Network;
   readonly challengeTtlMs: number;
+  /**
+   * Lifetime of a RECOVERY_KEY challenge (M14). The recovery package is handed over out of band,
+   * so it may differ from the general challenge lifetime; defaults to `challengeTtlMs`.
+   */
+  readonly recoveryChallengeTtlMs?: number;
   readonly sessionTtlMs: number;
   readonly invitationTtlMs: number;
   readonly recoveryDelayMs: number;
@@ -253,6 +258,8 @@ export interface RecoveryView {
   readonly completedBy: string | null;
   readonly completedAt: number | null;
   readonly cancelledAt: number | null;
+  /** Expiry of the latest RECOVERY_KEY challenge issued for this recovery (M14). */
+  readonly challengeExpiresAt: number | null;
 }
 
 export interface DirectoryPrincipal extends PrincipalView {

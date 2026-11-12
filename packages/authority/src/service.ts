@@ -823,6 +823,84 @@ export class AuthorityService {
     });
   }
 
+  /**
+   * Re-issue the RECOVERY_KEY challenge of a recovery whose challenge expired before the principal
+   * proved its new key (M14). Same authority as starting a recovery (a security administrator of
+   * the organization other than the principal); same new key, version and not-before, so the
+   * delay keeps running from the original request and the principal's veto stays open; the
+   * expired challenge stays unusable. Refused while the current challenge is still open.
+   */
+  reissueRecoveryChallenge(
+    ctx: AuthContext,
+    input: { recoveryId: string },
+  ): { recoveryId: string; notBefore: number; keyVersion: number; challenge: ChallengeView } {
+    this.require(ctx, "START_RECOVERY");
+    const rec = this.db.get("SELECT * FROM recoveries WHERE id = ?", input.recoveryId);
+    if (!rec) fail("NOT_FOUND", "recovery not found");
+    if (rec["organization_id"] !== ctx.organizationId) {
+      this.deny(
+        "FORBIDDEN",
+        "recovery belongs to another organization",
+        ctx.principal.id,
+        "recovery",
+        input.recoveryId,
+      );
+    }
+    if (rec["principal_id"] === ctx.principal.id) {
+      this.deny(
+        "SEPARATION_OF_DUTIES",
+        "a different administrator must recover this principal",
+        ctx.principal.id,
+        "recovery",
+        input.recoveryId,
+      );
+    }
+    if (rec["status"] !== "PENDING_PROOF")
+      fail(
+        "INVALID_STATE",
+        "only a recovery still awaiting proof of its new key has a challenge to re-issue",
+      );
+    const now = this.clock.now();
+    const open = this.db.get(
+      "SELECT id, expires_at FROM proof_challenges WHERE purpose = 'RECOVERY_KEY' AND related_id = ? AND status = 'PENDING' AND expires_at > ?",
+      input.recoveryId,
+      now,
+    );
+    if (open)
+      fail("INVALID_STATE", "the current recovery challenge has not expired", {
+        expiresAt: Number(open["expires_at"]),
+      });
+    const k = this.keyRow(String(rec["new_key_version_id"]));
+    if (k["status"] !== "PENDING_PROOF")
+      fail("INVALID_STATE", "the recovery key is no longer awaiting proof");
+    return this.db.transaction(() => {
+      const challenge = this.issueHumanChallenge({
+        purpose: "RECOVERY_KEY",
+        organizationId: String(rec["organization_id"]),
+        principalId: String(rec["principal_id"]),
+        subjectName: null,
+        requestedCapability: null,
+        invitationId: null,
+        recoveryId: input.recoveryId,
+        previousKeyVersionId: null,
+        publicKey: String(k["public_key"]),
+        keyVersion: Number(k["version"]),
+        keyVersionId: String(k["id"]),
+      });
+      this.log(this.actorCtx(ctx), "RECOVERY_CHALLENGE_REISSUED", "recovery", input.recoveryId, {
+        principalId: String(rec["principal_id"]),
+        challengeId: challenge.challengeId,
+        expiresAt: challenge.expiresAt,
+      });
+      return {
+        recoveryId: input.recoveryId,
+        notBefore: Number(rec["not_before"]),
+        keyVersion: Number(k["version"]),
+        challenge,
+      };
+    });
+  }
+
   /** The principal can veto a recovery during the delay by proving its existing (suspended) key. */
   createRecoveryCancelChallenge(input: { recoveryId: string }): ChallengeView {
     const rec = this.recoveryRow(input.recoveryId);
@@ -2034,6 +2112,12 @@ export class AuthorityService {
       completedBy: str(r["completed_by"]),
       completedAt: num(r["completed_at"]),
       cancelledAt: num(r["cancelled_at"]),
+      challengeExpiresAt: num(
+        this.db.get(
+          "SELECT MAX(expires_at) AS e FROM proof_challenges WHERE purpose = 'RECOVERY_KEY' AND related_id = ?",
+          String(r["id"]),
+        )?.["e"],
+      ),
     };
   }
 
@@ -2070,7 +2154,7 @@ export class AuthorityService {
       keyVersion: input.keyVersion,
       nonce: newNonce(),
       issuedAt: now,
-      expiresAt: now + this.cfg.challengeTtlMs,
+      expiresAt: now + this.challengeLifetime(input.purpose),
     };
     const digestHex = digestHexFor("POP_CHALLENGE", payload);
     this.db.transaction(() => {
@@ -2180,7 +2264,17 @@ export class AuthorityService {
     if (c["status"] === "CONSUMED") fail("NONCE_REPLAYED", "challenge already consumed");
     if (c["origin"] !== this.cfg.origin) fail("WRONG_ORIGIN", "challenge was issued for a different origin");
     const payload = JSON.parse(String(c["payload_json"])) as { issuedAt: number; expiresAt: number };
-    checkValidityWindow(payload, this.clock.now(), { maxLifetimeMs: this.cfg.challengeTtlMs, maxSkewMs: 0 });
+    checkValidityWindow(payload, this.clock.now(), {
+      maxLifetimeMs: this.challengeLifetime(String(c["purpose"])),
+      maxSkewMs: 0,
+    });
+  }
+
+  /** RECOVERY_KEY challenges have their own lifetime (handed over out of band); all others share one. */
+  private challengeLifetime(purpose: string): number {
+    return purpose === "RECOVERY_KEY"
+      ? (this.cfg.recoveryChallengeTtlMs ?? this.cfg.challengeTtlMs)
+      : this.cfg.challengeTtlMs;
   }
 
   private markConsumed(c: Row): void {
