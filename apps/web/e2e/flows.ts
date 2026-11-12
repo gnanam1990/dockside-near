@@ -35,6 +35,7 @@ export async function createTrade(
   await b
     .getByLabel("Milestone", { exact: true })
     .fill(`Milestone ${opts.milestone} delivered and inspected`);
+  if (opts.expiresInDays) await b.getByLabel("Agreement lifetime (days)").fill(opts.expiresInDays);
   await b.getByRole("button", { name: "Continue" }).click();
   await b.getByLabel("Supplier NEAR testnet account").fill(info.accounts.supplier);
   await b.getByLabel("Buyer funding NEAR testnet account").fill(info.accounts.buyer);
@@ -111,9 +112,19 @@ export async function waitAttested(page: Page, tradeId: string): Promise<void> {
 }
 
 export async function inspectPass(inspector: Page, tradeId: string): Promise<void> {
+  await inspect(inspector, tradeId, "PASS", "DOCS_MATCH");
+}
+
+/** The named inspector signs its decision over the current attested manifest and relays it. */
+export async function inspect(
+  inspector: Page,
+  tradeId: string,
+  decision: "PASS" | "FAIL" | "REVIEW",
+  reasonCode: string,
+): Promise<void> {
   await openTab(inspector, tradeId, "evidence");
-  await inspector.getByTestId("inspector-workbench").getByLabel("PASS").check();
-  await inspector.getByLabel("Reason code", { exact: true }).fill("DOCS_MATCH");
+  await inspector.getByTestId("inspector-workbench").getByLabel(decision).check();
+  await inspector.getByLabel("Reason code", { exact: true }).fill(reasonCode);
   await signAction(inspector, "inspect", "Prepare inspection", "Sign inspection");
 }
 
