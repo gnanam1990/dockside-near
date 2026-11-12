@@ -19,6 +19,7 @@
 # Options:
 #   --network <testnet|sandbox>  required; nothing else is accepted (mainnet is refused)
 #   --rpc-url <url>              default https://rpc.testnet.near.org, or http://127.0.0.1:4521 for sandbox
+#   --fallback-rpc-urls <a,b>    further RPC URLs for the read-only checks (same rules as --rpc-url)
 #   --wasm <file>                default .data/repro/dockside_escrow.wasm (scripts/container-reproduce.sh)
 #   --manifest <file>            default .data/repro/build-manifest.json
 #   --amount-yocto <n>           journey trade amount, default 50000000000000000000000 (0.05 NEAR)
@@ -26,7 +27,12 @@
 #   --skip-deploy                reuse an escrow that already runs the manifest's code
 #   --relayer-key-file <file>    reuse a function-call key file near-cli-rs saved earlier
 #   --allowance <amount>         allowance of a new relayer key, default '1 NEAR'
-# Environment: NEAR_CLI (near-cli-rs binary, default `near`), CARGO (default `cargo`).
+# Environment: NEAR_CLI (near-cli-rs binary; on Windows the real near.exe is found from the npm
+# global prefix or `where near`), CARGO (default `cargo`), DOCKSIDE_FALLBACK_RPC_URLS.
+#
+# Every near-cli-rs command runs through `tool.mjs near-run` with stdin closed, so a question it
+# asks fails at once instead of hanging; "Transaction has expired" (never included) is signed
+# again, at most 3 attempts.
 #
 # Signing: the escrow, buyer and relayer accounts sign with their own keys from the near-cli-rs
 # keychain (`sign-with-keychain` checks the OS keychain, then ~/.near-credentials). The relayed
@@ -44,11 +50,10 @@ OUT=""
 SKIP_DEPLOY=""
 KEY_FILE=""
 ALLOWANCE="1 NEAR"
-NEAR_BIN="${NEAR_CLI:-near}"
 CARGO_BIN="${CARGO:-cargo}"
 
 usage() {
-  sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
@@ -56,6 +61,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --network) NETWORK="${2:-}"; shift 2 ;;
     --rpc-url) RPC_URL="${2:-}"; shift 2 ;;
+    --fallback-rpc-urls) DOCKSIDE_FALLBACK_RPC_URLS="${2:-}"; export DOCKSIDE_FALLBACK_RPC_URLS; shift 2 ;;
     --wasm) WASM="${2:-}"; shift 2 ;;
     --manifest) MANIFEST="${2:-}"; shift 2 ;;
     --amount-yocto) AMOUNT_YOCTO="${2:-}"; shift 2 ;;
@@ -80,7 +86,9 @@ CLI_NETWORK=$(node "$TOOL" profile $(net_flags) --field cliNetwork)
 RPC=$(node "$TOOL" profile $(net_flags) --field rpcUrl)
 RPC_URL="$RPC"
 node "$TOOL" accounts >/dev/null
-command -v "$NEAR_BIN" >/dev/null 2>&1 || { say "near-cli-rs ($NEAR_BIN) is required; set NEAR_CLI"; exit 2; }
+# NEAR_CLI, or on Windows the real near.exe behind npm's near/near.cmd/near.ps1 shims.
+NEAR_BIN=$(node "$TOOL" near-cli </dev/null)
+"$NEAR_BIN" --version </dev/null >/dev/null 2>&1 || { say "near-cli-rs ($NEAR_BIN) does not run; set NEAR_CLI"; exit 2; }
 command -v "$CARGO_BIN" >/dev/null 2>&1 || { say "cargo is required to build the journey payload builder"; exit 2; }
 
 if [ -z "$OUT" ]; then OUT="$ROOT/.data/testnet-run/$NETWORK-$(date -u +%Y%m%dT%H%M%SZ)"; fi
@@ -110,10 +118,11 @@ RELAYER="$DOCKSIDE_RELAYER_ACCOUNT"
 if [ -z "$SKIP_DEPLOY" ]; then
   say "3/7 deploy and initialise $ESCROW in one transaction"
   # One transaction: nobody can initialise the contract between the deploy and `new`.
-  if ! "$NEAR_BIN" contract deploy "$ESCROW" use-file "$WASM" \
+  if ! node "$TOOL" near-run --near "$NEAR_BIN" --out "$OUT/deploy.txt" -- \
+      contract deploy "$ESCROW" use-file "$WASM" \
       with-init-call new json-args '{"network":"near-testnet","min_deposit_yocto":null}' \
       prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' \
-      network-config "$CLI_NETWORK" sign-with-keychain send >"$OUT/deploy.txt" 2>&1; then
+      network-config "$CLI_NETWORK" sign-with-keychain send </dev/null >/dev/null; then
     say "deploy failed; near-cli-rs output in $OUT/deploy.txt"
     exit 1
   fi
@@ -128,10 +137,12 @@ node "$TOOL" verify-deployment $(net_flags) --code-hash "$CODE_HASH" >"$OUT/depl
 
 if [ -z "$KEY_FILE" ]; then
   say "5/7 add a function-call key for $RELAYER restricted to $ESCROW"
-  if ! "$NEAR_BIN" account add-key "$RELAYER" grant-function-call-access --allowance "$ALLOWANCE" \
+  # --signature-scheme: near-cli-rs 0.31 otherwise asks which scheme the new key pair uses.
+  if ! node "$TOOL" near-run --near "$NEAR_BIN" --out "$OUT/relayer-key.txt" -- \
+      account add-key "$RELAYER" grant-function-call-access --allowance "$ALLOWANCE" \
       --contract-account-id "$ESCROW" --function-names '' \
-      autogenerate-new-keypair save-to-legacy-keychain \
-      network-config "$CLI_NETWORK" sign-with-keychain send >"$OUT/relayer-key.txt" 2>&1; then
+      autogenerate-new-keypair --signature-scheme ed25519 save-to-legacy-keychain \
+      network-config "$CLI_NETWORK" sign-with-keychain send </dev/null >/dev/null; then
     say "adding the relayer key failed; near-cli-rs output in $OUT/relayer-key.txt"
     exit 1
   fi
@@ -143,7 +154,7 @@ node "$TOOL" verify-relayer-key $(net_flags) --key-file "$KEY_FILE" >"$OUT/relay
 
 say "6/7 journey"
 node "$TOOL" journey $(net_flags) --near "$NEAR_BIN" --key-file "$KEY_FILE" --mirror "$MIRROR" \
-  --out "$OUT" --amount-yocto "$AMOUNT_YOCTO" >"$OUT/journey-checks.json"
+  --out "$OUT" --amount-yocto "$AMOUNT_YOCTO" </dev/null >"$OUT/journey-checks.json"
 
 say "7/7 run record"
 COMMIT=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)
