@@ -9,6 +9,8 @@ import type { OutboxWorker, Reconciler } from "@dockside/journal";
 export interface WorkerLoopDeps {
   readonly worker: OutboxWorker;
   readonly reconciler: Reconciler;
+  /** Further journaled engines run in the same tick (M11: unexpected-asset recovery executions). */
+  readonly engines?: readonly { runOnce(): Promise<string[]> }[];
   readonly intervalMs: number;
   readonly log?: (line: Record<string, string | number | null>) => void;
 }
@@ -16,6 +18,7 @@ export interface WorkerLoopDeps {
 export interface TickResult {
   readonly delivered: string[];
   readonly reconciled: string[];
+  readonly engines: string[];
 }
 
 export class WorkerLoop {
@@ -35,16 +38,19 @@ export class WorkerLoop {
       try {
         const delivered = await this.deps.worker.runOnce();
         const reconciled = await this.deps.reconciler.runOnce();
-        if (delivered.length || reconciled.length)
+        const engines: string[] = [];
+        for (const e of this.deps.engines ?? []) engines.push(...(await e.runOnce()));
+        if (delivered.length || reconciled.length || engines.length)
           this.deps.log?.({
             event: "worker.tick",
             delivered: delivered.length,
             reconciled: reconciled.length,
+            engines: engines.length,
           });
-        return { delivered, reconciled };
+        return { delivered, reconciled, engines };
       } catch (e) {
         this.deps.log?.({ event: "worker.error", code: (e as { code?: string }).code ?? "INTERNAL" });
-        return { delivered: [], reconciled: [] };
+        return { delivered: [], reconciled: [], engines: [] };
       } finally {
         this.running = null;
       }

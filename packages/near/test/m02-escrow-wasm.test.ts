@@ -423,7 +423,17 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
     );
     expect(panicCode(r)).toBe("NOTHING_ELIGIBLE");
     const exported = WebAssembly.Module.exports(w.sim.module).map((e) => e.name);
-    expect(exported.filter((n) => /withdraw|sweep|recover/i.test(n))).toEqual([]);
+    // No unilateral withdrawal or sweep exists. The only recovery entry points are the separate
+    // UNEXPECTED_ASSET_RECOVERY protocol (M11: sender request, risk approval, 72-hour challenge).
+    expect(exported.filter((n) => /withdraw|sweep/i.test(n))).toEqual([]);
+    expect(exported.filter((n) => /recover/i.test(n)).sort()).toEqual([
+      "approve_asset_recovery",
+      "challenge_asset_recovery",
+      "execute_asset_recovery",
+      "on_asset_recovery_transfer",
+      "request_asset_recovery",
+      "revoke_asset_recovery",
+    ]);
   });
 
   it("holds: policy setter SETs, only the risk resolver RESOLVEs, on the compiled contract", async () => {

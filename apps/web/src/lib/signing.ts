@@ -31,6 +31,10 @@ export const SIGNING_DOMAINS = {
   REFUND_REVOKE: "dockside/refund-revoke",
   REFUND_DISPUTE: "dockside/refund-dispute",
   REFUND_AUTHORIZE: "dockside/refund-authorize",
+  // Separate unexpected-asset recovery policy (M11): approval, challenge and revocation.
+  ASSET_RECOVERY_APPROVAL: "dockside/asset-recovery-approval",
+  ASSET_RECOVERY_CHALLENGE: "dockside/asset-recovery-challenge",
+  ASSET_RECOVERY_REVOKE: "dockside/asset-recovery-revoke",
 } as const;
 
 export type SigningPurpose = keyof typeof SIGNING_DOMAINS;

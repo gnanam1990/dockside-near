@@ -37,6 +37,14 @@ export const SIGNING_DOMAINS = {
   ABANDON_RELEASE_INTENT: { domain: "dockside/abandon-release-intent", version: 1 },
   DESTINATION_CHANGE_REVOKE: { domain: "dockside/destination-change-revoke", version: 1 },
   REFUND_AUTHORIZE: { domain: "dockside/refund-authorize", version: 1 },
+  // Separate UNEXPECTED_ASSET_RECOVERY policy (M11). Must equal contract domains.rs.
+  ASSET_RECOVERY_REQUEST: { domain: "dockside/asset-recovery-request", version: 1 },
+  ASSET_RECOVERY_APPROVAL: { domain: "dockside/asset-recovery-approval", version: 1 },
+  ASSET_RECOVERY_CHALLENGE: { domain: "dockside/asset-recovery-challenge", version: 1 },
+  ASSET_RECOVERY_REVOKE: { domain: "dockside/asset-recovery-revoke", version: 1 },
+  // Digest of the read-only adapter validation report a risk/policy approval signs over.
+  ASSET_RECOVERY_VALIDATION: { domain: "dockside/asset-recovery-validation", version: 1 },
+  ASSET_RECOVERY_EVIDENCE: { domain: "dockside/asset-recovery-evidence", version: 1 },
   // Digest-only domains (never signed on their own).
   DESTINATION_SNAPSHOT: { domain: "dockside/destination-snapshot", version: 1 },
   RESERVATION_SOURCE: { domain: "dockside/reservation-source", version: 1 },

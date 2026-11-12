@@ -35,6 +35,12 @@ export interface SimEnvelope {
   readonly depositYocto: string;
 }
 
+function outcomeStatus(ok: boolean, raw: string | null, error: string | null): Record<string, unknown> {
+  return ok
+    ? { SuccessValue: Buffer.from(raw ?? "").toString("base64") }
+    : { Failure: { ActionError: { kind: { FunctionCallError: { ExecutionError: error } } } } };
+}
+
 export function simTxHash(encoded: string): string {
   return base58Encode(createHash("sha256").update(Buffer.from(encoded, "base64")).digest());
 }
@@ -217,7 +223,12 @@ export class SimChainServer {
       this.sim.nowMs = this.now();
       const args = JSON.parse(Buffer.from(String(p["args_base64"] ?? ""), "base64").toString("utf8") || "{}");
       try {
-        const v = this.sim.view(String(p["method_name"]), args);
+        const ext = this.sim.externals.get(String(p["account_id"]));
+        if (!ext && String(p["account_id"]) !== this.sim.contractId)
+          throw new Error("account has no contract");
+        const v = ext
+          ? ext.view(String(p["method_name"]), args)
+          : this.sim.view(String(p["method_name"]), args);
         reply({ result: { ...base, logs: [], result: [...Buffer.from(JSON.stringify(v))] } });
       } catch (e) {
         reply({ result: { ...base, logs: [], error: (e as Error).message } });
@@ -258,6 +269,8 @@ export class SimChainServer {
     this.height += 1;
     this.sim.nowMs = this.now();
     const deposit = BigInt(env.depositYocto);
+    if (this.sim.externals.has(env.receiverId)) return { tx: this.sendExternal(hash, env, ref, deposit) };
+    if (env.receiverId !== this.sim.contractId) return { error: "INVALID_TRANSACTION" };
     this.sim.credit(env.signerId, -deposit);
     const r = this.sim.call(env.methodName, env.args, { predecessor: env.signerId, depositYocto: deposit });
     if (!r.ok) this.sim.credit(env.signerId, deposit);
@@ -300,6 +313,69 @@ export class SimChainServer {
     return { tx };
   }
 
+  /** A transaction to another simulated contract (a token wallet call such as ft_transfer_call). */
+  private sendExternal(hash: string, env: SimEnvelope, ref: number, deposit: bigint): StoredTx {
+    const ext = this.sim.externals.get(env.receiverId);
+    if (!ext) throw new Error("no external contract");
+    const args = (env.args ?? {}) as Record<string, unknown>;
+    const res = ext.call(env.methodName, args, {
+      predecessor: env.signerId,
+      depositYocto: deposit,
+      sim: this.sim,
+    });
+    if (res.ok) {
+      this.sim.credit(env.signerId, -deposit);
+      this.sim.credit(env.receiverId, deposit);
+      this.executions.set(env.methodName, (this.executions.get(env.methodName) ?? 0) + 1);
+    }
+    const receipts: SimReceipt[] = [
+      {
+        receipt_id: this.rid(`${hash}:0`),
+        predecessor_id: env.signerId,
+        receiver_id: env.receiverId,
+        actions: [
+          {
+            FunctionCall: {
+              method_name: env.methodName,
+              args: Buffer.from(JSON.stringify(env.args)).toString("base64"),
+              gas: Number(BigInt(env.gas) / 1000n),
+              deposit: env.depositYocto,
+            },
+          },
+        ],
+        status: outcomeStatus(res.ok, res.raw, res.error),
+      },
+    ];
+    for (const [i, n] of res.nested.entries())
+      receipts.push({
+        receipt_id: this.rid(`${hash}:nested:${i}`),
+        predecessor_id: n.predecessor,
+        receiver_id: n.receiver,
+        actions: [
+          {
+            FunctionCall: {
+              method_name: n.method,
+              args: Buffer.from(n.args).toString("base64"),
+              deposit: "0",
+            },
+          },
+        ],
+        status: outcomeStatus(n.ok, n.raw, n.error),
+      });
+    receipts.push(this.gasRefund(hash, env.signerId));
+    const tx: StoredTx = {
+      hash,
+      env,
+      refHeight: ref,
+      receipts,
+      status: outcomeStatus(res.ok, res.raw, res.error),
+      final: true,
+      deferred: [],
+    };
+    this.txs.set(hash, tx);
+    return tx;
+  }
+
   private gasRefund(hash: string, to: string): SimReceipt {
     return {
       receipt_id: this.rid(`${hash}:gas-refund`),
@@ -324,7 +400,7 @@ export class SimChainServer {
         status: null,
       };
       const callbacks = p.actions.some((a) => a.kind === "function_call");
-      if (callbacks && this.faults.deferCallbacks) {
+      if (callbacks && this.faults.deferCallbacks && p.receiver === this.sim.contractId) {
         for (const a of p.actions)
           receipt.actions.push({
             FunctionCall: {
@@ -338,6 +414,9 @@ export class SimChainServer {
         continue;
       }
       let status: "success" | "failure" = "success";
+      let externalStatus: Record<string, unknown> | null = null;
+      let externalRefund: bigint | null = null;
+      const nested: CallResult[] = [];
       for (const a of p.actions) {
         if (a.kind === "transfer") {
           receipt.actions.push({ Transfer: { deposit: String(a.amountYocto) } });
@@ -355,11 +434,30 @@ export class SimChainServer {
               deposit: String(a.amountYocto),
             },
           });
+          const ext = this.sim.externals.get(p.receiver);
+          if (ext) {
+            // Cross-contract call from the escrow (the recovery adapter). A failed receipt is
+            // reverted and its attached deposit returns to the escrow in a runtime refund receipt.
+            const xr = ext.call(a.method ?? "", JSON.parse(a.args ?? "{}"), {
+              predecessor: this.sim.contractId,
+              depositYocto: a.amountYocto,
+              sim: this.sim,
+            });
+            if (xr.ok) {
+              this.sim.credit(this.sim.contractId, -a.amountYocto);
+              this.sim.credit(p.receiver, a.amountYocto);
+            }
+            externalStatus = outcomeStatus(xr.ok, xr.raw, xr.error);
+            if (!xr.ok) externalRefund = a.amountYocto;
+            status = xr.ok ? "success" : "failure";
+            continue;
+          }
           const res = this.sim.call(a.method ?? "", JSON.parse(a.args ?? "{}"), {
             predecessor: this.sim.contractId,
             depositYocto: a.amountYocto,
             promiseResults: deps,
           });
+          if (res.ok && res.promises.length > 0) nested.push(res);
           status = res.ok ? "success" : "failure";
           if (res.ok) lastValue = { SuccessValue: Buffer.from(res.raw ?? "").toString("base64") };
           else
@@ -373,7 +471,17 @@ export class SimChainServer {
           ? { SuccessValue: "" }
           : { Failure: { ActionError: { kind: "TransferFailed" } } };
       if (callbacks && lastValue) receipt.status = lastValue;
+      if (externalStatus) receipt.status = externalStatus;
       tx.receipts.push(receipt);
+      if (externalRefund !== null)
+        tx.receipts.push({
+          receipt_id: this.rid(`${tx.hash}:refund:${p.index}`),
+          predecessor_id: "system",
+          receiver_id: this.sim.contractId,
+          actions: [{ Transfer: { deposit: String(externalRefund) } }],
+          status: { SuccessValue: "" },
+        });
+      for (const n of nested) this.runNested(tx, n);
       if (status === "failure" && !callbacks)
         tx.receipts.push({
           receipt_id: this.rid(`${tx.hash}:refund:${p.index}`),
@@ -390,6 +498,30 @@ export class SimChainServer {
       tx.status = lastValue;
       tx.final = true;
       tx.receipts.push(this.gasRefund(tx.hash, tx.env.signerId));
+    }
+  }
+
+  /** Transfers a callback scheduled itself (for example returning an adapter deposit). */
+  private runNested(tx: StoredTx, r: CallResult): void {
+    for (const p of r.promises) {
+      const receipt: SimReceipt = {
+        receipt_id: this.rid(`${tx.hash}:${tx.receipts.length}`),
+        predecessor_id: this.sim.contractId,
+        receiver_id: p.receiver,
+        actions: [],
+        status: { SuccessValue: "" },
+      };
+      for (const a of p.actions) {
+        if (a.kind !== "transfer") continue;
+        receipt.actions.push({ Transfer: { deposit: String(a.amountYocto) } });
+        if (this.sim.missing.has(p.receiver) || this.sim.balance(this.sim.contractId) < a.amountYocto) {
+          receipt.status = { Failure: { ActionError: { kind: "TransferFailed" } } };
+          continue;
+        }
+        this.sim.credit(this.sim.contractId, -a.amountYocto);
+        this.sim.credit(p.receiver, a.amountYocto);
+      }
+      tx.receipts.push(receipt);
     }
   }
 

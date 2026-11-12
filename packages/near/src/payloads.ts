@@ -406,3 +406,115 @@ export function refundAuthorizePayload(
 ): CanonicalValue {
   return { ...header(b), ...r, authorizerRole: "RISK_RESOLVER" };
 }
+
+/* ----------------------- unexpected-asset recovery (M11) ----------------------- */
+
+/** The separate UNEXPECTED_ASSET_RECOVERY row of `dockside-refund-v1` revision 1. */
+export const ASSET_RECOVERY_REASON = "UNEXPECTED_ASSET_RECOVERY";
+/** The compiled NEP-141 recovery adapter (`ft_transfer`, one yoctoNEAR from the executor). */
+export const NEP141_RECOVERY_CAPABILITY = "NEP141_FT_TRANSFER";
+export const ASSET_RECOVERY_CHALLENGE_MS = 72 * 3600_000;
+
+export interface AssetIdentity {
+  readonly assetIndex: number;
+  readonly standard: string;
+  readonly assetContract: string;
+  readonly tokenId: string | null;
+  readonly amount: string;
+  readonly claimedSender: string;
+}
+
+/** Submitted by the claimed sender's own account; the recipient is always that sender. */
+export function assetRecoveryRequestPayload(
+  b: TradeBinding,
+  r: AssetIdentity & { recoveryId: string; evidenceDigest: string } & Window,
+): CanonicalValue {
+  return {
+    ...header(b),
+    recoveryId: r.recoveryId,
+    policyId: REFUND_POLICY_ID,
+    policyRevision: 1,
+    reason: ASSET_RECOVERY_REASON,
+    assetIndex: r.assetIndex,
+    standard: r.standard,
+    assetContract: r.assetContract,
+    tokenId: r.tokenId,
+    amount: r.amount,
+    claimedSender: r.claimedSender,
+    recipient: r.claimedSender,
+    evidenceDigest: r.evidenceDigest,
+    issuedAt: r.issuedAt,
+    expiresAt: r.expiresAt,
+    nonce: r.nonce,
+  };
+}
+
+export function assetRecoveryApprovalPayload(
+  b: TradeBinding,
+  r: {
+    recoveryId: string;
+    requestDigest: string;
+    assetIndex: number;
+    amount: string;
+    recipient: string;
+    recoveryCapability: string;
+    validationDigest: string;
+  } & Window,
+): CanonicalValue {
+  return {
+    ...header(b),
+    recoveryId: r.recoveryId,
+    requestDigest: r.requestDigest,
+    assetIndex: r.assetIndex,
+    amount: r.amount,
+    recipient: r.recipient,
+    recoveryCapability: r.recoveryCapability,
+    validationDigest: r.validationDigest,
+    approverRole: "RISK_RESOLVER",
+    issuedAt: r.issuedAt,
+    expiresAt: r.expiresAt,
+    nonce: r.nonce,
+  };
+}
+
+export type AssetChallengerRole = "BUYER" | "SUPPLIER" | "RISK_RESOLVER" | "CLAIMANT";
+
+export function assetRecoveryChallengePayload(
+  b: TradeBinding,
+  r: {
+    recoveryId: string;
+    requestDigest: string;
+    challengerRole: AssetChallengerRole;
+    challengerAccount: string | null;
+    reasonCode: string;
+    evidenceDigest: string;
+  } & Window,
+): CanonicalValue {
+  return {
+    ...header(b),
+    recoveryId: r.recoveryId,
+    requestDigest: r.requestDigest,
+    challengerRole: r.challengerRole,
+    challengerAccount: r.challengerAccount,
+    reasonCode: r.reasonCode,
+    evidenceDigest: r.evidenceDigest,
+    issuedAt: r.issuedAt,
+    expiresAt: r.expiresAt,
+    nonce: r.nonce,
+  };
+}
+
+export function assetRecoveryRevokePayload(
+  b: TradeBinding,
+  r: { recoveryId: string; requestDigest: string; revokerRole: "CLAIMED_SENDER" | "RISK_RESOLVER" } & Window,
+): CanonicalValue {
+  return {
+    ...header(b),
+    recoveryId: r.recoveryId,
+    requestDigest: r.requestDigest,
+    revokerRole: r.revokerRole,
+    issuedAt: r.issuedAt,
+    expiresAt: r.expiresAt,
+    nonce: r.nonce,
+  };
+}

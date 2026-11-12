@@ -159,7 +159,8 @@ function Activation({
     setBound(
       `Revision r${out.data.revision} is bound for evidence and holds (digest ${out.data.tradeDigest}).`,
     );
-    t.busy("dest-activate")(false);
+    // Stay pinned (as SignedAction does for finished flows): unpinning here let the refresh below
+    // unmount the section before its outcome could be read.
     onChange();
   };
   return (

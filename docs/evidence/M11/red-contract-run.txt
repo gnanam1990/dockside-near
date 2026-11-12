@@ -1,0 +1,366 @@
+   Compiling dockside-escrow-core v0.1.0 (<home>\Documents\Codex\Projects\wt\dockside-m11\contract\crates\dockside-escrow-core)
+error[E0432]: unresolved import `dockside_escrow_core::assets::CHALLENGE_72H_MS`
+  --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:12:59
+   |
+12 | use dockside_escrow_core::assets::{self, UnexpectedAsset, CHALLENGE_72H_MS};
+   |                                                           ^^^^^^^^^^^^^^^^ no `CHALLENGE_72H_MS` in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:112:13
+    |
+112 |     assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &p).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:114:13
+    |
+114 |     assets::approve_recovery(&mut a, &mut rec, &w.as_caller("relayer.testnet").ctx(), &ap, &sign("risk", APR, &ap)).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:128:29
+    |
+128 |     assert_eq!(code(assets::begin_recovery(&mut a, &w.as_caller("relayer.testnet").ctx(), &r.id, 1)), "DELAY_NOT_ELAPSED");
+    |                             ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:131:29
+    |
+131 |     assert_eq!(code(assets::begin_recovery(&mut a, &w.as_caller("relayer.testnet").ctx(), &r.id, 0)), "INVALID_AMOUNT");
+    |                             ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:132:42
+    |
+132 |     let (contract, to, amount) = assets::begin_recovery(&mut a, &w.as_caller("relayer.testnet").ctx(), &r.id, 1).unwrap();
+    |                                          ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:136:29
+    |
+136 |     assert_eq!(code(assets::begin_recovery(&mut a, &w.ctx(), &r.id, 1)), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:139:29
+    |
+139 |     assert_eq!(code(assets::revoke_recovery(&mut a, &mut rec2, &w.ctx(), &rv, Some(&sign("risk", RVK, &rv)))), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `complete_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:140:28
+    |
+140 |     let executor = assets::complete_recovery(&mut a, &w.ctx(), &r.id, true).unwrap();
+    |                            ^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `complete_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:144:29
+    |
+144 |     assert_eq!(code(assets::complete_recovery(&mut a, &w.ctx(), &r.id, true)), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:147:29
+    |
+147 |     assert_eq!(code(assets::request_recovery(&mut a, &mut rec2, &w.as_caller(SENDER).ctx(), &p)), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:158:13
+    |
+158 |     assets::begin_recovery(&mut a, &w.as_caller("relayer.testnet").ctx(), &id1, 1).unwrap();
+    |             ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `complete_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:159:13
+    |
+159 |     assets::complete_recovery(&mut a, &w.ctx(), &id1, false).unwrap();
+    |             ^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:163:29
+    |
+163 |     assert_eq!(code(assets::begin_recovery(&mut a, &w.ctx(), &id1, 1)), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:169:13
+    |
+169 |     assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &p).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:180:29
+    |
+180 |     assert_eq!(code(assets::request_recovery(&mut a, &mut rec, &w.as_caller(BUYER_ACCT).ctx(), &ok)), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:181:29
+    |
+181 |     assert_eq!(code(assets::request_recovery(&mut a, &mut rec, &w.as_caller(CLAIMANT).ctx(), &ok)), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:200:33
+    |
+200 |         assert_eq!(code(assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &p)), want, "{field}");
+    |                                 ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:204:29
+    |
+204 |     assert_eq!(code(assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &extra)), "UNKNOWN_FIELD");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:210:29
+    |
+210 |     assert_eq!(code(assets::request_recovery(&mut nft, &mut rec, &w.as_caller(SENDER).ctx(), &p)), "ADAPTER_UNSAFE");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:212:13
+    |
+212 |     assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &ok).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:215:29
+    |
+215 |     assert_eq!(code(assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &again)), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:223:13
+    |
+223 |     assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &p).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:226:33
+    |
+226 | ...   assert_eq!(code(assets::approve_recovery(&mut a, &mut rec, &w.ctx(), &ap, &sign(wrong, APR, &ap))), "SIGNATURE_INVALID", "{wr...
+    |                               ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:229:29
+    |
+229 |     assert_eq!(code(assets::approve_recovery(&mut a, &mut rec, &w.ctx(), &ap, &sign("risk", "dockside/refund-authorize", &ap))), "S...
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:240:33
+    |
+240 |         assert_eq!(code(assets::approve_recovery(&mut a, &mut rec, &w.ctx(), &x, &sign("risk", APR, &x))), want, "{field}");
+    |                                 ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:243:13
+    |
+243 |     assets::approve_recovery(&mut a, &mut rec, &w.ctx(), &ap, &sign("risk", APR, &ap)).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:244:29
+    |
+244 |     assert_eq!(code(assets::approve_recovery(&mut a, &mut rec, &w.ctx(), &ap, &sign("risk", APR, &ap))), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:249:13
+    |
+249 |     assets::request_recovery(&mut b, &mut rec2, &w2.as_caller(SENDER).ctx(), &p).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:252:29
+    |
+252 |     assert_eq!(code(assets::approve_recovery(&mut b, &mut rec2, &w2.ctx(), &ap, &sign("risk", APR, &ap))), "KEY_REVOKED");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:268:17
+    |
+268 |         assets::challenge_recovery(&mut a, &mut rec, &w.as_caller(caller).ctx(), &c, sig.as_deref()).unwrap();
+    |                 ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `begin_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:274:33
+    |
+274 |         assert_eq!(code(assets::begin_recovery(&mut a, &w.ctx(), &r.id.clone(), 1)), "INVALID_STATE", "{who}");
+    |                                 ^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:284:29
+    |
+284 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec, &w.ctx(), &c, Some(&sign("inspector", CHL, &c)))), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:286:29
+    |
+286 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec, &w.ctx(), &c, None)), "SIGNATURE_INVALID");
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:288:29
+    |
+288 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec, &w.ctx(), &c, Some(&sign("supplier", CHL, &c)))), "SIGNATURE_INVAL...
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:291:29
+    |
+291 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec, &w.as_caller("someone.testnet").ctx(), &c, None)), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:293:29
+    |
+293 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &c, None)), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:296:29
+    |
+296 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec, &w.ctx(), &c, Some(&sign("buyer", CHL, &c)))), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:306:29
+    |
+306 |     assert_eq!(code(assets::revoke_recovery(&mut a, &mut rec, &w.as_caller(BUYER_ACCT).ctx(), &rv, None)), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:307:13
+    |
+307 |     assets::revoke_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &rv, None).unwrap();
+    |             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:314:29
+    |
+314 |     assert_eq!(code(assets::revoke_recovery(&mut a, &mut rec, &w.ctx(), &rv, Some(&sign("buyer", RVK, &rv)))), "FORBIDDEN");
+    |                             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:316:29
+    |
+316 |     assert_eq!(code(assets::revoke_recovery(&mut a, &mut rec, &w.ctx(), &rv, Some(&sign("buyer", RVK, &rv)))), "SIGNATURE_INVALID");
+    |                             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:317:13
+    |
+317 |     assets::revoke_recovery(&mut a, &mut rec, &w.ctx(), &rv, Some(&sign("risk", RVK, &rv))).unwrap();
+    |             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `revoke_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:320:29
+    |
+320 |     assert_eq!(code(assets::revoke_recovery(&mut a, &mut rec, &w.ctx(), &rv, Some(&sign("risk", RVK, &rv)))), "INVALID_STATE");
+    |                             ^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `request_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:330:13
+    |
+330 |     assets::request_recovery(&mut a, &mut rec, &w.as_caller(SENDER).ctx(), &p).unwrap();
+    |             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `approve_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:337:29
+    |
+337 |     assert_eq!(code(assets::approve_recovery(&mut a, &mut rec2, &w.ctx(), &ap, &sign("risk", APR, &ap))), "SCOPE_MISMATCH");
+    |                             ^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0425]: cannot find function `challenge_recovery` in module `assets`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:339:29
+    |
+339 |     assert_eq!(code(assets::challenge_recovery(&mut a, &mut rec2, &w.ctx(), &c, Some(&sign("buyer", CHL, &c)))), "SCOPE_MISMATCH");
+    |                             ^^^^^^^^^^^^^^^^^^ not found in `assets`
+
+error[E0609]: no field `recoveries` on type `&UnexpectedAsset`
+  --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:49:15
+   |
+49 |     let r = a.recoveries.last().expect("recovery");
+   |               ^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `&UnexpectedAsset`
+  --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:69:15
+   |
+69 |     let r = a.recoveries.last().expect("recovery");
+   |               ^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `&UnexpectedAsset`
+  --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:87:15
+   |
+87 |     let r = a.recoveries.last().expect("recovery");
+   |               ^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:123:15
+    |
+123 |     let r = a.recoveries.last().unwrap().clone();
+    |               ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:143:18
+    |
+143 |     assert_eq!(a.recoveries.last().unwrap().state.as_str(), "RECOVERED");
+    |                  ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:157:17
+    |
+157 |     let id1 = a.recoveries.last().unwrap().id.clone();
+    |                 ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:161:18
+    |
+161 |     assert_eq!(a.recoveries.last().unwrap().state.as_str(), "FAILED");
+    |                  ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:171:18
+    |
+171 |     assert_eq!(a.recoveries.len(), 2);
+    |                  ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:270:19
+    |
+270 |         let r = a.recoveries.last().unwrap();
+    |                   ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+error[E0609]: no field `recoveries` on type `UnexpectedAsset`
+   --> crates\dockside-escrow-core\tests\t051_asset_recovery.rs:309:18
+    |
+309 |     assert_eq!(a.recoveries.last().unwrap().state.as_str(), "REVOKED");
+    |                  ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `index`, `standard`, `asset_contract`, `token_id`, `observed_amount` ... and 4 others
+
+Some errors have detailed explanations: E0425, E0432, E0609.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `dockside-escrow-core` (test "t051_asset_recovery") due to 57 previous errors
