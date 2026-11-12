@@ -11,6 +11,7 @@
     { "path": "../../packages/store" },
     { "path": "../../packages/authority" },
     { "path": "../../packages/near" },
+    { "path": "../../packages/payout" },
     { "path": "../../packages/evidence" },
     { "path": "../../packages/release" },
     { "path": "../../packages/journal" }

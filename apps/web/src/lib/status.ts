@@ -73,7 +73,10 @@ export type Dimension =
   | "attestorCoverage"
   | "assetRecord"
   | "assetRecovery"
-  | "assetOperation";
+  | "assetOperation"
+  | "retentionState"
+  | "exportKeyStatus"
+  | "nearAccountLink";
 
 const LOCK = "Value stays reserved. No retry, exit or terminal override is available.";
 
@@ -95,6 +98,9 @@ export const VOCABULARY: Record<
     | "assetRecord"
     | "assetRecovery"
     | "assetOperation"
+    | "retentionState"
+    | "exportKeyStatus"
+    | "nearAccountLink"
   >,
   Record<string, StatusMeaning>
 > = {
@@ -876,7 +882,87 @@ const ASSET_OPERATION: Record<string, StatusMeaning> = {
   },
 };
 
+/* M17: retention eligibility, audit-export keys and NEAR account ownership. */
+const RETENTION_STATE: Record<string, StatusMeaning> = {
+  NOT_SETTLED: {
+    label: "Not settled",
+    tone: "neutral",
+    icon: "pending",
+    sentence: "No PAID release or REFUNDED refund is recorded; evidence is retained.",
+  },
+  OPEN_OPERATION: {
+    label: "Operation open",
+    tone: "warning",
+    icon: "locked",
+    sentence: "An economic operation is still open; evidence is retained.",
+  },
+  UNRESOLVED_HOLD: {
+    label: "Unresolved hold",
+    tone: "warning",
+    icon: "hold",
+    sentence: "A hold is not resolved; evidence is retained.",
+  },
+  FROZEN: {
+    label: "Frozen",
+    tone: "negative",
+    icon: "blocked",
+    sentence: "The trade is frozen; evidence is retained.",
+  },
+  RETAINED: {
+    label: "Within retention",
+    tone: "neutral",
+    icon: "active",
+    sentence: "Settled; the retention period has not elapsed.",
+  },
+  ELIGIBLE: {
+    label: "Eligible for deletion",
+    tone: "warning",
+    icon: "expired",
+    sentence: "Settled and the retention period elapsed; no deletion runs in this build.",
+  },
+};
+
+const EXPORT_KEY_STATUS: Record<string, StatusMeaning> = {
+  ACTIVE: { label: "Active", tone: "neutral", icon: "active", sentence: "Signs new audit exports." },
+  RETIRED: {
+    label: "Retired",
+    tone: "neutral",
+    icon: "superseded",
+    sentence: "Replaced by a newer key; exports it signed before retirement still verify.",
+  },
+  REVOKED: {
+    label: "Revoked",
+    tone: "negative",
+    icon: "revoked",
+    sentence: "Compromised or withdrawn; no export signed by it verifies.",
+  },
+};
+
+const NEAR_ACCOUNT_LINK: Record<string, StatusMeaning> = {
+  VERIFIED: {
+    label: "Full-access key on chain",
+    tone: "neutral",
+    icon: "complete",
+    sentence: "The chain answered that this key is a full-access key of the account.",
+  },
+  KEY_NOT_FOUND: {
+    label: "Key not on account",
+    tone: "negative",
+    icon: "revoked",
+    sentence: "The chain answered that this key is not an access key of the account.",
+  },
+  NOT_FULL_ACCESS: {
+    label: "Function-call key only",
+    tone: "warning",
+    icon: "blocked",
+    sentence: "The key is a function-call key; it does not prove ownership.",
+  },
+};
+
 const EXTRA: Partial<Record<Dimension, Record<string, StatusMeaning>>> = {
+  retentionState: RETENTION_STATE,
+  exportKeyStatus: EXPORT_KEY_STATUS,
+  nearAccountLink: NEAR_ACCOUNT_LINK,
   assetRecord: ASSET_RECORD,
   assetRecovery: ASSET_RECOVERY,
   assetOperation: ASSET_OPERATION,

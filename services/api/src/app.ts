@@ -16,13 +16,35 @@ import {
 } from "@dockside/core";
 import { AuditLog, type Database, isUniqueViolation, loadMigrations, type SqlValue } from "@dockside/store";
 import { z } from "zod";
+import type { NearRpc } from "@dockside/near";
 import { assetRoutes } from "./assets.js";
+import { type ExportKeySigner, exportKeyList } from "./export-signing.js";
 import { addressKey, RateLimiter, sessionKey } from "./limits.js";
+import { nearAccountRoutes } from "./near-accounts.js";
 import { refundRoutes } from "./refunds.js";
 import { type HandlerInput, type Route, route } from "./routing.js";
+import { settingsRoutes } from "./settings.js";
 import { type TradeModules, tradeRoutes } from "./trades.js";
 
 export { buildAuditExport, stableStringify, verifyAuditExport } from "./export.js";
+export {
+  type ExportKeySigner,
+  type ExportKeyView,
+  enrollExportKey,
+  exportKeyList,
+  listExportKeys,
+  revokeExportKey,
+  signAuditExport,
+} from "./export-signing.js";
+export { nearLinkMessage, normaliseWalletSignature } from "./near-accounts.js";
+export { claimPolicyOwnership, RETENTION_LIMITS } from "./settings.js";
+export {
+  parseTrustedKeys,
+  type SignedAuditExport,
+  SIGNED_AUDIT_EXPORT_SCHEMA,
+  type TrustedExportKey,
+  verifySignedAuditExport,
+} from "./verify-export.js";
 export { hardenServer, RateLimiter, SERVER_LIMITS } from "./limits.js";
 export { type Handler, type HandlerInput, type Route, route } from "./routing.js";
 export { relationsOf, type TradeModules } from "./trades.js";
@@ -49,6 +71,24 @@ export interface AppDeps {
   readonly modules?: TradeModules;
   /** Request limiter; one per process by default (M09). */
   readonly limiter?: RateLimiter;
+  /**
+   * The deployment's dedicated audit-export key in its isolated signer (M17, ADR-0018). Absent:
+   * the signed export answers INVALID_STATE EXPORT_KEY_NOT_CONFIGURED; the checksummed export works.
+   */
+  readonly exportSigner?: ExportKeySigner;
+  /**
+   * NEAR chain adapter for account ownership (`view_access_key`) and the RPC connection test (M17).
+   * Absent: those routes answer "no such endpoint" with reason CHAIN_NOT_CONFIGURED.
+   */
+  readonly chain?: {
+    readonly rpc: Pick<NearRpc, "viewAccessKey">;
+    readonly tx: { latestBlock(): Promise<{ height: number; hash: string }> };
+  };
+  /** The optional 1Click dry adapter (M06; blocked in this build). */
+  readonly oneClick?: {
+    readonly id: string;
+    dryProbe(): Promise<{ kind: string; reason?: string }>;
+  };
 }
 
 /* ------------------------------ schemas ------------------------------ */
@@ -340,9 +380,16 @@ export function buildRoutes(d: AppDeps): Route[] {
       const limit = Math.min(Number(query.get("limit") ?? "200") || 200, 1000);
       return { events: new AuditLog(d.db, d.clock, d.ids).list({ organizationId: c.organizationId }, limit) };
     }),
+    /** Published trust anchor for offline verification of signed audit exports (ADR-0018). */
+    r("GET", "/v1/audit-export-keys", true, undefined, ({ ctx }) => {
+      requireAction(ctx, "EXPORT_AUDIT");
+      return exportKeyList(d.db, d.config.DOCKSIDE_ORIGIN);
+    }),
     ...tradeRoutes(d),
     ...refundRoutes(d),
     ...assetRoutes(d),
+    ...settingsRoutes(d),
+    ...nearAccountRoutes(d),
   ];
 }
 

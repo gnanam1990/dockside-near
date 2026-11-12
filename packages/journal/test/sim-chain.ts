@@ -109,6 +109,13 @@ export class SimChainServer {
   readonly nonces = new Map<string, bigint>();
   readonly sendCount = new Map<string, number>();
   readonly executions = new Map<string, number>();
+  /**
+   * Access keys added to simulated accounts (M17), as `account -> publicKey -> permission`. Stands in
+   * for AddKey/DeleteKey transactions. `view_access_key` answers from this registry, and otherwise
+   * only for an account's own keyless relayer key (`SimTxSigner`); any other key gets the answer a
+   * nearcore 2.13 node gives for a key the account does not have ("... does not exist while viewing").
+   */
+  readonly accessKeys = new Map<string, Map<string, "FullAccess" | "FunctionCall">>();
   readonly faults: Faults = {
     down: false,
     dropSendResponses: 0,
@@ -140,6 +147,19 @@ export class SimChainServer {
 
   advanceBlocks(n: number): void {
     this.height += n;
+  }
+
+  addAccessKey(accountId: string, publicKey: string, permission: "FullAccess" | "FunctionCall"): void {
+    const keys = this.accessKeys.get(accountId) ?? new Map<string, "FullAccess" | "FunctionCall">();
+    keys.set(publicKey, permission);
+    this.accessKeys.set(accountId, keys);
+    this.height += 1;
+  }
+
+  deleteAccessKey(accountId: string, publicKey: string): boolean {
+    const removed = this.accessKeys.get(accountId)?.delete(publicKey) ?? false;
+    if (removed) this.height += 1;
+    return removed;
   }
 
   async start(): Promise<string> {
@@ -246,8 +266,21 @@ export class SimChainServer {
       return;
     }
     if (p["request_type"] === "view_access_key") {
-      const k = `${String(p["account_id"])}:${String(p["public_key"])}`;
-      reply({ result: { ...base, nonce: Number(this.nonces.get(k) ?? 0n), permission: "FullAccess" } });
+      const account = String(p["account_id"]);
+      const pk = String(p["public_key"]);
+      const k = `${account}:${pk}`;
+      const added = this.accessKeys.get(account)?.get(pk);
+      const relayer = new SimTxSigner(account).publicKey === pk;
+      if (!added && !relayer) {
+        // nearcore 2.13 answers a missing key with a result carrying an error string (M17 sandbox run).
+        reply({ result: { ...base, error: `access key ${pk} does not exist while viewing`, logs: [] } });
+        return;
+      }
+      const permission =
+        added === "FunctionCall"
+          ? { FunctionCall: { allowance: null, receiver_id: this.sim.contractId, method_names: [] } }
+          : "FullAccess";
+      reply({ result: { ...base, nonce: Number(this.nonces.get(k) ?? 0n), permission } });
       return;
     }
     error("UNSUPPORTED_REQUEST");

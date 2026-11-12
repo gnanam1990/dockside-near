@@ -24,7 +24,7 @@ import { expect } from "vitest";
 import { type Actor, bootstrap, enrollHuman, ORIGIN } from "../../../packages/authority/test/helpers.js";
 import { fillAll } from "../../../packages/evidence/test/world.js";
 import { type JWorld, jworld, rpcFor, run } from "../../../packages/journal/test/world.js";
-import { createApp } from "../src/app.js";
+import { type AppDeps, createApp } from "../src/app.js";
 
 export interface Res {
   status: number;
@@ -69,7 +69,12 @@ export interface ApiWorld {
 }
 
 export async function apiWorld(
-  opts: { funded?: boolean; evidence?: boolean; policy?: EvidencePolicyInput } = {},
+  opts: {
+    funded?: boolean;
+    evidence?: boolean;
+    policy?: EvidencePolicyInput;
+    extra?: (w: JWorld) => Partial<AppDeps>;
+  } = {},
 ): Promise<ApiWorld> {
   const w = await jworld(opts);
   const c = w.c;
@@ -101,6 +106,7 @@ export async function apiWorld(
           tx: new NearTxClient(rpcFor(w.url)),
         },
       },
+      ...(opts.extra ? opts.extra(w) : {}),
     }),
   );
   const base = await new Promise<string>((resolve) =>
