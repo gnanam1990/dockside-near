@@ -1,0 +1,6 @@
+# pnpm run check after merging main 294bab3 (summary lines)
+ Test Files  48 passed | 1 skipped (49)
+      Tests  533 passed | 3 skipped (536)
+secret-scan: 411 files clean
+real	0m56.164s
+exit=0
