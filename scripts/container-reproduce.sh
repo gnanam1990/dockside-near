@@ -21,6 +21,10 @@ set -eu
 REF="${1:?usage: container-reproduce.sh <commit> [--e2e]}"
 E2E="${2:-}"
 export DEBIAN_FRONTEND=noninteractive
+# A stalled mirror connection must time out and retry, not hang the job (seen once in M18); the
+# setting also covers the apt-get runs of `playwright install --with-deps`.
+printf '%s\n' 'Acquire::http::Timeout "60";' 'Acquire::https::Timeout "60";' 'Acquire::Retries "5";' \
+  >/etc/apt/apt.conf.d/80-dockside-network
 apt-get update -qq >/dev/null
 apt-get install -y -qq --no-install-recommends git curl ca-certificates build-essential >/dev/null
 if [ ! -x "${CARGO_HOME:-/root/.cargo}/bin/rustup" ]; then

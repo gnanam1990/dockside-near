@@ -27,6 +27,9 @@ NEAR_SANDBOX_SHA256=a0ba004218b218bd74351795e7ce2eda4a2b6af5cd3e252bd5e8bfe3c8f2
 NEAR_CLI_VERSION=0.31.1
 NEAR_CLI_SHA256=8b92f4f79f324a882ad79b58d61b91dccc676dd653dc72a1f23693aa5db99e21
 export DEBIAN_FRONTEND=noninteractive
+# A stalled mirror connection must time out and retry, not hang the job (seen once in M18).
+printf '%s\n' 'Acquire::http::Timeout "60";' 'Acquire::https::Timeout "60";' 'Acquire::Retries "5";' \
+  >/etc/apt/apt.conf.d/80-dockside-network
 apt-get update -qq >/dev/null
 apt-get install -y -qq --no-install-recommends git curl ca-certificates build-essential pkg-config libssl-dev >/dev/null
 if [ ! -x "${CARGO_HOME:-/root/.cargo}/bin/rustup" ]; then

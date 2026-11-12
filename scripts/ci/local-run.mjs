@@ -139,7 +139,7 @@ const report = opt("report");
 if (report) {
   const out = {
     schema: "dockside/local-ci-run@1",
-    workflow: redact(file),
+    workflow: redact(file).split("\\").join("/"),
     job: jobId,
     host: `${process.platform}-${process.arch}`,
     node: process.version,
