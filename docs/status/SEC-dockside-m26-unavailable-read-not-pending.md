@@ -54,4 +54,8 @@ Authoritative evidence is unaffected: the same test file shows a real late execu
 | `pnpm run check` (format, lint, typecheck, build, contract build, all vitest suites, secret scan) | 0 | 56 files passed, 1 skipped; 590 tests passed, 3 skipped; secret-scan clean |
 | `pnpm run contract:test` | 0 | 103 passed, 0 failed |
 
+After merging main (`9d0a680`, sibling m28 asset-recovery fix) the suite was rerun: `pnpm run check` exit 0
+(57 files passed, 1 skipped; 591 tests passed, 3 skipped; secret-scan clean) and `pnpm run contract:test` exit 0
+(103 passed).
+
 Web e2e and sandbox suites were not touched by this change and were not run.
