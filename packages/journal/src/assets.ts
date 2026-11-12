@@ -484,7 +484,18 @@ export class AssetRecoveryEngine {
     this.boundary("asset.reconcile.observed", op.operationId);
     const state = rec?.state ?? null;
     if (state === "RECOVERED") {
-      const after = await this.ports.token(op.assetContract).balanceOf(this.ports.escrow.contractId);
+      // The asset contract is sender-chosen: a failing view stays on this operation (open, with a
+      // reason and backoff) and never aborts the pass over every other due operation.
+      let after: bigint;
+      try {
+        after = await this.ports.token(op.assetContract).balanceOf(this.ports.escrow.contractId);
+      } catch (e) {
+        return this.move(lease, op, {
+          ...(op.state === "SUBMITTING" ? { state: "UNKNOWN" as const } : {}),
+          reason: `POST_SETTLEMENT_TOKEN_UNAVAILABLE:${code(e)}`,
+          nextCheckAt: this.later(op),
+        });
+      }
       this.journal.observe(lease, op.operationId, "TOKEN", {
         escrowBalance: after,
         phase: "post-settlement",
