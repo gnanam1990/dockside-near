@@ -178,7 +178,7 @@ describe("JsonRpcNearClient", () => {
     let header: Record<string, unknown> = {
       height: 7,
       hash: "h",
-      timestamp: 1_800_000_000_123_456_789,
+      timestamp: 0,
       timestamp_nanosec: "1800000000123456789",
     };
     // A real node sends `timestamp` as a JSON number past 2^53; the raw text carries it exactly.
