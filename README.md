@@ -12,14 +12,17 @@ The authoritative specification is the sealed pack in [`docs/spec/`](docs/spec/S
 
 ## Current truth
 
-**Claim level: `IMPLEMENTED_UNVERIFIED`.** The whole product path runs and is tested, but only against a
-**simulated** NEAR chain: the compiled contract runs in a local host emulator served over JSON-RPC. Nothing has been
-deployed to NEAR testnet, no real wallet has signed, no testnet NEAR has moved, and no separate people on separate
-devices have run the flow. 1Click is not integrated (optional, `NOT_RUN`), and the funded mainnet rail is
-`BLOCKED`.
+**Claim level: `IMPLEMENTED_UNVERIFIED`.** The whole product path runs and is tested against a **simulated** NEAR
+chain (the compiled contract in a local host emulator served over JSON-RPC), and the deployable contract also runs
+with real transactions on a **local nearcore node** (near-sandbox in a container: deploy, funding, release, refunds,
+destination change, a runtime-refunded transfer, NEP-141 recovery and the one-command testnet script end to end).
+Nothing has been deployed to NEAR testnet, no testnet NEAR has moved, no separate people on separate devices have
+run the flow, and the CI workflow has never run on GitHub because nothing was pushed. 1Click is not integrated
+(optional, `NOT_RUN`), and the funded mainnet rail is `BLOCKED`.
 
 - Item-by-item gate evidence and every test ID: [BUILD-STATUS.md](BUILD-STATUS.md)
-- What you must do to reach `WORKING_TESTNET`: [docs/USER-NEXT-STEPS.md](docs/USER-NEXT-STEPS.md)
+- What you must do to reach `WORKING_TESTNET`, starting with the single testnet command
+  `scripts/testnet-deploy/run-all --network testnet`: [docs/USER-NEXT-STEPS.md](docs/USER-NEXT-STEPS.md)
 - Per-module detail: [`docs/status/`](docs/status/); decisions: [`docs/adr/`](docs/adr/); retained run output:
   [`docs/evidence/`](docs/evidence/)
 
@@ -29,8 +32,9 @@ devices have run the flow. 1Click is not integrated (optional, `NOT_RUN`), and t
 - pnpm 10 (developed on 10.34.9)
 - Rust stable with cargo (developed on 1.97.1) and the wasm target: `rustup target add wasm32-unknown-unknown`
 - For browser tests: a Playwright Chromium build (see apps/web/README.md)
-- For the Linux reproduction and the deployable wasm: a Docker Engine (for example inside WSL 2); nothing else is
-  installed on the host
+- For the Linux reproduction, the deployable wasm and the local nearcore suites: a Docker Engine (for example inside
+  WSL 2); nothing else is installed on the host
+- For the testnet run: [near-cli-rs](https://github.com/near/near-cli-rs) 0.31 and your own testnet accounts
 
 ## Setup, build and test
 
@@ -39,34 +43,58 @@ pnpm install --frozen-lockfile
 pnpm test                 # builds TypeScript and the contract wasm, then runs every vitest suite
 pnpm run check            # format + lint + typecheck (incl. web) + test + secret scan
 pnpm run contract:test    # cargo host tests of the contract core (incl. the T-041 generated sequences)
-pnpm run web:e2e          # production web build + both Playwright suites, each on its own local stack
+pnpm run web:e2e          # production web build + the four Playwright suites, each on its own local stack
 node scripts/clean-checkout.mjs [--e2e]     # fresh clone into a temp dir, install, build, full test (T-043)
 node scripts/build-manifest.mjs --out m.json  # exact-build identities incl. the NEAR code hash (T-045)
 node scripts/build-manifest.mjs --verify m.json
+pnpm run contract:reproduce [--e2e]   # Linux container clean checkout; exports the deployable wasm to .data/repro
+pnpm run contract:sandbox             # near-sdk unit-testing + near-workspaces on near-sandbox + run-all validation
+pnpm run build && pnpm run test:sandbox   # NEAR account ownership against a local nearcore node
+pnpm run ci:policy                    # check .github/workflows/ci.yml against the CI rules (also in `check`)
+pnpm run ci:local --list              # every CI job, step and command; `--job test|chain` replays one
 ```
 
-`pnpm run web:e2e` runs `apps/web/playwright.config.ts` (ports 8791, 8792, 4391; overridable with
-`DOCKSIDE_E2E_API_PORT`, `DOCKSIDE_E2E_CONTROL_PORT`, `DOCKSIDE_E2E_WEB_PORT`) and then
-`apps/web/playwright.assets.config.ts`, which moves the simulated chain clock 73 hours and therefore runs on its own
-stack (ports 8795, 8796, 4393; `DOCKSIDE_E2E_ASSETS_*_PORT`).
+`pnpm run web:e2e` runs four Playwright configurations in turn, each with its own stack because some move the
+simulated clocks: `apps/web/playwright.config.ts` (ports 8791, 8792, 4391; `DOCKSIDE_E2E_API_PORT`,
+`DOCKSIDE_E2E_CONTROL_PORT`, `DOCKSIDE_E2E_WEB_PORT`), `playwright.assets.config.ts` (chain clock +73 h; 8795, 8796,
+4393; `DOCKSIDE_E2E_ASSETS_*_PORT`), `playwright.reasons.config.ts` (refund reasons and the release/refund race,
+chain clock +25 h and +24 h; 8797, 8798, 4395; `DOCKSIDE_E2E_REASONS_*_PORT`) and `playwright.clock.config.ts`
+(STALE evidence, trade and chain clocks +7 days; 8799, 8800, 4396; `DOCKSIDE_E2E_CLOCK_*_PORT`).
 
 Linux reproduction in an official container (ADR-0015). The wasm built there is the deployable artifact: a wasm built
 on a developer machine embeds that machine's cargo-home path, so its digest differs per machine.
+`pnpm run contract:reproduce` runs `scripts/container-reproduce.sh` in `node:22-bookworm-slim`; set
+`DOCKSIDE_DOCKER="wsl.exe -d <distro> -u root -- docker"` on Windows when the Docker Engine runs in WSL. The same
+script can be run by hand:
 
 ```sh
 docker run --rm -v "$PWD":/repo:ro -v "$PWD/.data/repro":/out \
   -v dockside-cargo:/root/.cargo -v dockside-rustup:/root/.rustup \
   -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
   node:22-bookworm-slim sh /repo/scripts/container-reproduce.sh "$(git rev-parse HEAD)" --e2e
-# On Windows: wsl.exe -d <distro> -u root -- docker run ... with the repository under /mnt/c/...
 ```
+
+`pnpm run contract:sandbox` (ADR-0019) takes that wasm and manifest, checks the wasm against the manifest, rebuilds it
+from the commit in `node:22-trixie-slim` and requires the same digest, then runs the escrow on a local near-sandbox
+2.14.0 node with real transactions (binaries pinned by SHA-256). Nothing in either container talks to testnet or
+mainnet.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` (ADR-0020) runs on pushes to `main` and on pull requests, with `contents: read`, no
+secrets, actions pinned to full commit SHAs and per-ref cancellation. The `test` job runs on `ubuntu-24.04` and
+`windows-2022`: frozen install, Rust 1.97.1 with wasm32, `pnpm run check`, `pnpm run contract:test`, the pinned
+Playwright Chromium and `pnpm run web:e2e`. The `chain` job (Linux) runs `contract:reproduce`, `contract:sandbox` and
+`test:sandbox` and keeps the reports and the deployable wasm as an artifact. The workflow has been policy-checked and
+replayed locally, never run on GitHub.
 
 `pnpm run contract:build` builds `contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm` and prints its
 SHA-256. `pnpm run vectors` regenerates the cross-language canonical vectors; regeneration must produce no diff.
 
 What the suites use: real on-disk SQLite, real Ed25519 keys, isolated signer child processes, real OS process kills,
 the production JSON-RPC clients over HTTP, and the compiled wasm on a **simulated** NEAR host (not nearcore: no gas,
-storage staking or transaction signature checks).
+storage staking or transaction signature checks). The opt-in container suites add nearcore itself: real receipts,
+promises, gas, access keys, block time and a NEP-141 token contract on a single local node.
 
 ## Run it locally
 
@@ -99,6 +127,8 @@ is provisioned.
 | `DOCKSIDE_OBJECT_STORE_DIR` | `.data/objects` | Content-addressed evidence objects (private directory). |
 | `DOCKSIDE_CHALLENGE_TTL_MS` / `DOCKSIDE_SESSION_TTL_MS` / `DOCKSIDE_INVITATION_TTL_MS` | 5 min / 8 h / 3 d | Proof-of-possession lifetimes. |
 | `DOCKSIDE_RECOVERY_DELAY_MS` | 48 h | Delay before a recovered key activates. |
+| `DOCKSIDE_RECOVERY_CHALLENGE_TTL_MS` | the challenge lifetime | Lifetime of a key-recovery challenge (10 s–24 h); an expired one is re-issued by a security administrator (M14). |
+| `DOCKSIDE_AUDIT_EXPORT_KEY_FILE` | unset | Seed file of the dedicated audit-export key (`pnpm run export-key generate --out <file>`); read only by an isolated signer process and enrolled at startup (M17). Without it the signed export answers `EXPORT_KEY_NOT_CONFIGURED`; the checksummed export still works. |
 | `DOCKSIDE_DESTINATION_CHANGE_DELAY_MS` | 1 day | Delay new destination-change proposals bind (minimum 1 minute); the contract enforces the signed value. |
 | `DOCKSIDE_REQUEST_PROOF_SKEW_MS` | 60 s | Allowed clock skew of per-request proofs. |
 | `DOCKSIDE_RATE_LIMIT_UNAUTH_PER_MIN` | 300 | Unauthenticated requests per client address per minute (M09). |
@@ -130,7 +160,12 @@ response carries CSP, nosniff, frame-deny and no-store headers.
 | Web UI (React + Vite), WebCrypto device keys, browser digest recomputation | `apps/web` | M08, ADR-0008/0010 |
 | Destination-change screen (Agreement tab), Refund tab, asset-recovery review panel | `apps/web/src/screens/trade/` | M10, M11 |
 | Key screens: own key rotation, directory, revocation, delayed recovery with veto, service enrollment through custody, trade impact | `apps/web/src/screens/org/`, `apps/web/src/screens/Recovery.tsx` | M12, ADR-0012 |
+| Key-rebinding revision (contract module, six API routes, Agreement-tab control; migration 0009), recovery challenge re-issue, STALE slot under simulated time | `contract/crates/dockside-escrow-core/src/rebinding.rs`, `services/api`, `apps/web/src/screens/trade/KeyRebinding.tsx` | M14, ADR-0017 |
+| Refunds on the contract clock, relayer nonce lease (migration 0008), process-kill boundaries of the asset engine and composed worker | `services/api/src/refunds.ts`, `packages/journal/src/relayer.ts` | M15, ADR-0016 |
+| Real-chain suites (near-sdk unit-testing, near-workspaces on near-sandbox, NEP-141 test token, contract mirror) and the one-command testnet run | `contract/integration/`, `scripts/sandbox/`, `scripts/testnet-deploy/run-all` | M16, ADR-0019 |
+| Policy, retention and integration settings; signed audit export with a dedicated export key and offline verifier; NEP-413 NEAR account ownership with a wallet-connector boundary (migration 0010) | `services/api/src/`, `services/api/src/cli/`, `apps/web/src/lib/wallet.ts`, `apps/web/src/screens/org/` | M17, ADR-0018 |
 | Local stack, testnet runbook, clean-checkout, container reproduction and build-manifest scripts | `scripts/` | M08, M09, M13 |
+| CI workflow, its policy check and local replay, `contract:reproduce` | `.github/workflows/ci.yml`, `scripts/ci/`, `scripts/container-reproduce.mjs` | M18, ADR-0020 |
 
 Contract entry points: `new` (testnet only), `register_trade`, payable `fund`, `register_evidence_policy`,
 `submit_manifest_attestation`, `submit_inspection`, `set_hold`, `resolve_hold`, `revoke_bound_key`,
@@ -139,40 +174,58 @@ Contract entry points: `new` (testnet only), `register_trade`, payable `fund`, `
 `request_refund`, `cosign_refund`, `revoke_refund`, `dispute_refund`, `authorize_refund`,
 `authorize_refund_signed`, `execute_refund` (+ `on_refund_transfer`), `ft_/nft_/mt_on_transfer` (recorded, never
 credited), `request_/approve_/challenge_/revoke_/execute_asset_recovery` (+ `on_asset_recovery_transfer`; NEP-141
-only, back to the proven sender after a 72-hour challenge window). There is no withdraw or sweep entry point. Views:
+only, back to the proven sender after a 72-hour challenge window),
+`propose_/consent_/revoke_/activate_key_rebinding` (key-only successor revisions, M14). There is no withdraw or sweep
+entry point. Views:
 `get_config`, `get_trade`, `get_ledger`, `get_refunds`, `get_holds`, `get_evidence`, `get_release`,
 `get_unexpected_assets`, `get_unexpected_asset`.
 
-### Destination change, refunds, asset recovery and keys (M10–M12)
+### Destination change, refunds, asset recovery, keys and settings (M10–M17)
 
 - The Agreement tab carries the dual-consent destination change: proposal by either bound party, consent by the
   other over the same TRADE_REVISION digest, the signed delay, activation and binding of the new revision, after
   which evidence, inspection and approval must be renewed.
 - The Refund tab shows per-funder buckets and the signed reason matrix, and offers request, cosign, revoke, dispute,
-  authorize and execute by bound role and contract state. Funder returns are submitted by the funder's own wallet;
-  this build has no wallet connector, so the page shows the exact call instead of a submit button.
+  authorize and execute by bound role and contract state, with deadlines counted on the contract clock (M15). Every
+  signed reason is driven above the contract: `EXCESS_FUNDING_RETURN`, `PARTIAL_FUNDING_RETURN`, `MUTUAL_CANCEL` and
+  disputes (M10), and `TRADE_EXPIRY`, `INSPECTION_FAIL` and `PERMANENT_HOLD` to REFUNDED in the API and the browser
+  (M15). Funder returns are submitted by the funder's own wallet transaction, so the page shows the exact call
+  instead of a submit button.
 - The "Asset recovery review" panel in the Refund tab lists unexpected token deposits. Only the sender's own
   transaction can request a recovery; the trade's risk/policy key approves a read-only validation; buyer, supplier,
   risk/policy or another claimant can challenge; execution is journaled like a payout.
 - `/organization/keys`, `/organization/services` and `/recovery` cover key rotation in the browser, revocation,
-  delayed recovery with veto and service enrollment through a custody operator. A trade revision that binds a
-  rotated, revoked or recovered key shows "new trade revision required"; creating that revision is not built.
-- Browser tests: `apps/web/e2e/destination.spec.ts`, `refund.spec.ts`, `keys.spec.ts` and `asset-recovery.spec.ts`.
+  delayed recovery with veto (an expired recovery challenge can be re-issued) and service enrollment through a
+  custody operator. A trade bound to a rotated, revoked or recovered key shows "new trade revision required" and
+  links to the dual-signed key-rebinding control on the Agreement tab (M14). A revision that replaces a participant
+  or service is not built.
+- `/organization/policies`, `/organization/retention` and `/organization/integrations` hold the settings (readable by
+  security administrators and auditors, writable by security administrators, every change audited); retention is a
+  period and a preview, and no deletion job exists. `/organization/near-accounts` links a NEAR account by a NEP-413
+  signature from a wallet that announces itself on the page, then requires `view_access_key` to report a full-access
+  key; a link grants no capability. The Timeline tab prepares the signed audit export, re-verifies it in the browser
+  and downloads it for `pnpm run verify-export` (M17).
+- Browser tests: `apps/web/e2e/destination.spec.ts`, `refund.spec.ts`, `refund-reasons.spec.ts`, `keys.spec.ts`,
+  `rebinding.spec.ts`, `evidence-stale.spec.ts`, `asset-recovery.spec.ts`, `settings.spec.ts` and `wallet.spec.ts`.
 
 ## Layout
 
 ```text
 packages/core  store  authority  near  evidence  release  journal  payout
 services/api   services/worker   apps/web
-contract/      Rust workspace (canonical encoder, escrow core, near-sdk wasm contract)
-scripts/       build-contract, build-manifest, clean-checkout, container-reproduce, secret-scan, local-stack/,
-               testnet-deploy/
+contract/      Rust workspace (canonical encoder, escrow core, near-sdk wasm contract);
+               contract/integration/ is a separate workspace for the real-chain suites
+scripts/       build-contract, build-manifest, clean-checkout, container-reproduce, secret-scan, ci/, lib/,
+               local-stack/, near-sandbox/, sandbox/, testnet-deploy/
+.github/       workflows/ci.yml
 fixtures/      cross-language canonical vectors
 docs/          adr/, status/, evidence/, USER-NEXT-STEPS.md, spec/ (sealed)
 ```
 
 ## Safety boundaries
 
-Nothing in this repository pushes, deploys, signs with a real wallet, funds, calls 1Click or creates accounts.
-Testnet deployment and everything after it are yours to run (docs/USER-NEXT-STEPS.md). Mainnet and the funded payout
-profile are refused at startup until separately authorized.
+Nothing in this repository pushes, deploys, signs with a real wallet, funds, calls 1Click or creates accounts. The
+container suites run a local nearcore node only, and CI holds no secrets and only reads the repository. Testnet
+deployment (`scripts/testnet-deploy/run-all --network testnet`, with accounts you create) and everything after it
+are yours to run (docs/USER-NEXT-STEPS.md). Mainnet and the funded payout profile are refused at startup and by the
+contract until separately authorized.

@@ -1,0 +1,36 @@
+# M18 red run: packages/core/test/m18-ci-workflow.test.ts before .github/workflows/ci.yml, scripts/ci/workflow-policy.mjs and scripts/ci/local-run.mjs existed
+# command: npx vitest run packages/core/test/m18-ci-workflow.test.ts   exit 1
+      Tests  10 failed (10)
+     × refuses a missing concurrency cancel, a missing or long timeout and a floating runner image 0ms
+     × refuses a workflow that drops a required command or calls a script the repository does not have 0ms
+     × refuses an action not pinned to a full commit SHA with its version comment 0ms
+     × refuses privileged or extra triggers 1ms
+     × refuses secrets, persisted checkout credentials and expressions inside run scripts 0ms
+     × refuses write permissions at workflow or job level 0ms
+     × the committed workflow satisfies every rule 44ms
+     × the local runner lists every job and step without executing anything 41ms
+     × the local runner refuses an unknown job 42ms
+     × the local runner refuses to run a workflow that breaks the policy 1ms
+ Test Files  1 failed (1)
++ Error: Cannot find module '<worktree>\scripts\ci\workflow-policy.mjs'
+Error: Cannot find module '<worktree>\scripts\ci\local-run.mjs'
+Error: ENOENT: no such file or directory, open '<worktree>\.github\workflows\ci.yml'
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+# M18 finding from the first local replay of the test job (commit 066bd3c, Windows host)
+# command: node scripts/ci/local-run.mjs --job test   exit 101 at step 6 (pnpm run check)
+# cause: the workflow env set RUSTUP_TOOLCHAIN=1.97.1; with the setup step skipped locally, rustup resolved it
+# for the host's default triple (x86_64-pc-windows-msvc), which has no wasm32 target, while the developer
+# default is 1.97.1-x86_64-pc-windows-gnu. Fix: the setup step runs rustup default 1.97.1; rule TOOLCHAIN.
+  = note: the `wasm32-unknown-unknown` target may not be installed
+=== [1] Check out: uses actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 (skipped locally)
+=== [2] Node.js 22: uses actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af (skipped locally)
+=== [3] pnpm from the packageManager field: runner setup (skipped; --with-setup runs it)
+=== [4] Rust 1.97.1 with the wasm32 target: runner setup (skipped; --with-setup runs it)
+=== [5] Install (frozen lockfile)
+=== [5] exit 0 in 1 s
+=== [6] Check (format, lint, typecheck, unit and integration tests, secret scan)
+=== [6] exit 101 in 13 s
+error[E0463]: can't find crate for `core`
+error[E0463]: can't find crate for `std`
+local-run: job test FAIL (exit 101)

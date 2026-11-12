@@ -1,0 +1,136 @@
+# Dockside continuous integration (ADR-0020).
+#
+# Read-only by construction: no pull_request_target, no secrets, `contents: read` only, checkout
+# without persisted credentials, every action pinned to a full commit SHA (version in the comment),
+# and no ${{ }} expression inside a run script. scripts/ci/workflow-policy.mjs enforces these rules
+# (part of `pnpm run check`), and scripts/ci/local-run.mjs replays the run steps on a developer
+# machine. Nothing here deploys, signs, funds or talks to NEAR testnet or mainnet: the chain job
+# runs a local near-sandbox node inside a container.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+# The Rust toolchain is chosen by `rustup default` in the setup step, not by RUSTUP_TOOLCHAIN: on a
+# developer machine the variable would select the host's default triple (for example msvc on a
+# windows-gnu setup) without the wasm32 target, so the local replay could not use it.
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  CARGO_TERM_COLOR: never
+
+jobs:
+  test:
+    name: check, contract tests and browser suites (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Node.js 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "22.23.1"
+
+      - name: pnpm from the packageManager field
+        id: setup-pnpm
+        run: |
+          corepack enable
+          pnpm --version
+
+      - name: Rust 1.97.1 with the wasm32 target
+        id: setup-rust
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal --target wasm32-unknown-unknown
+          rustup default 1.97.1
+          rustc --version
+          cargo --version
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Check (format, lint, typecheck, unit and integration tests, secret scan)
+        run: pnpm run check
+
+      - name: Contract host tests
+        run: pnpm run contract:test
+
+      - name: Playwright Chromium (version pinned by apps/web)
+        run: pnpm --filter @dockside/web exec playwright install --with-deps chromium
+
+      - name: Browser suites (four local stacks over the simulated chain)
+        run: pnpm run web:e2e
+
+  chain:
+    name: Linux container reproduction and near-sandbox suites
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Node.js 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "22.23.1"
+
+      - name: pnpm from the packageManager field
+        id: setup-pnpm
+        run: |
+          corepack enable
+          pnpm --version
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeScript
+        run: pnpm run build
+
+      - name: Docker Engine
+        run: ${DOCKSIDE_DOCKER:-docker} version --format '{{.Server.Version}}'
+
+      - name: Linux clean-checkout reproduction and deployable wasm (node:22-bookworm-slim)
+        run: pnpm run contract:reproduce
+
+      - name: Escrow on a local near-sandbox node and run-all validation (node:22-trixie-slim)
+        run: pnpm run contract:sandbox
+
+      - name: NEAR account ownership against a local nearcore sandbox
+        run: pnpm run test:sandbox
+
+      - name: Keep the reproduction and sandbox reports
+        if: always()
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: dockside-linux-reproduction
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .data/repro/clean-checkout-report.json
+            .data/repro/build-manifest.json
+            .data/repro/dockside_escrow.wasm
+            .data/sandbox/sandbox-report.json
+            .data/sandbox/sandbox-tests.log
+            .data/sandbox/run-all-validation.log
