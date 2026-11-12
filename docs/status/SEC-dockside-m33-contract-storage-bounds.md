@@ -79,11 +79,33 @@ borsh layout change.
 
 ## Verification (green)
 
-RESULTS_PLACEHOLDER
+Commands were run from the worktree after merging main (`c138f87`). The `.data/` logs are local
+evidence and are not tracked.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo test --locked -p dockside-escrow-core --test sec_storage_bounds` | 0 | 10 passed |
+| `npx vitest run packages/near/test/m33-storage-bounds-wasm.test.ts` (after `pnpm run contract:build`) | 0 | 3 passed |
+| `pnpm run contract:test` | 0 | every host suite ok (20 result lines), including the existing T-051, funding, refund and conservation suites, which are unchanged |
+| `pnpm run check` (format, lint, typecheck, all vitest suites, secret scan) | 0 | 64 files passed, 1 skipped; 629 tests passed, 3 skipped |
+| `pnpm run contract:reproduce` (`DOCKSIDE_DOCKER="wsl.exe -d Ubuntu-24.04 -u root -- docker"`, `MSYS_NO_PATHCONV=1`) | 0 | clean checkout PASS at `223fc2f` and again at `c138f87`; the two wasm builds are identical |
+| `pnpm run contract:sandbox` (same environment) | 0 | sandbox suite PASS at `223fc2f` and again at `c138f87`: `m33_receivers_recovery_attempts_and_deposits_are_bounded_on_chain` ok, near-sdk unit 7 passed, near-workspaces 6 passed, run-all validation 1 passed |
+
+An earlier run of `pnpm run check` had one failure: `m17-settings-export-wallet` failed with
+ECONNRESET on a loopback fetch. That suite passes on its own (16 of 16) and passed in the full run
+above. A reproduction run made while the local check was running concurrently hit hook timeouts
+from host load. The rerun on its own passed.
 
 ## Deployable wasm
 
-WASM_PLACEHOLDER
+| | Before (main `49fbaf7`) | After (this branch) |
+|---|---|---|
+| wasm SHA-256 | (testnet deployment below) | `cbd76a37f29bda0559410b93c04055357d25ddc0bd06ff1da2fc6cd3ab479191` |
+| NEAR code hash | `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` (testnet escrow) | `EiiH3nRtZyEo48wE75tAbHQzRtEghEXKB6bAAAvT1wVa` |
+| bytes | | 810,054 |
+
+Built by `pnpm run contract:reproduce` (ADR-0015 Linux container). The output is in
+`.data/repro/build-manifest.json`.
 
 The testnet escrow `gnanam1990-dock-escrow.testnet` runs the **old** code hash
 `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` and must be redeployed by the owner. The state layout
