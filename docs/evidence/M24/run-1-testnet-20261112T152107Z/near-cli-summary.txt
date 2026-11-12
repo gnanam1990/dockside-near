@@ -1,0 +1,37 @@
+Summary of the near-cli-rs 0.31.1 output files of run 1 (deploy.txt, relayer-key.txt). The raw files stay
+out of the repository: they hold local paths (the near-cli-rs install and the key-file location in the
+owner's home directory). They hold no private key. Values below were copied from them and re-checked on
+chain (onchain-reverify.json).
+
+deploy.txt (step 3, `near contract deploy ... with-init-call new ... sign-with-keychain send`)
+  signer / receiver      gnanam1990-dock-escrow.testnet / gnanam1990-dock-escrow.testnet
+  actions                deploy code 5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM, function call
+                         new {"min_deposit_yocto": null, "network": "near-testnet"}, 30.0 Tgas, 0 NEAR
+  signing key            the escrow account's own full-access key (ml-dsa-65), found in the legacy keychain
+                         after "no access keys found in keychain"
+  gas used / fee         60.8 Tgas / 0.0060478577036984 NEAR
+  transaction id         7KExSVdWHAVXXDjjAme1m1zQBW4hBSgXgsMEQt2K9dyY (deploy-tx.txt)
+  result                 "Contract code has been successfully deployed." and the `new` call succeeded,
+                         empty return value
+
+relayer-key.txt (step 5, `near account add-key ... grant-function-call-access ... autogenerate-new-keypair
+save-to-legacy-keychain ...`)
+  prompt                 near-cli-rs asked "Which signature scheme should the new key pair use?"
+                         (ed25519 / ml-dsa-65). run-all redirected the output to this file, so the question
+                         was invisible and the run appeared to hang until the owner pressed Enter (default
+                         ed25519). Fixed in M24: --signature-scheme ed25519 and every near-cli-rs command
+                         stopped at a prompt.
+  signer / receiver      gnanam1990-dock-relayer.testnet / gnanam1990-dock-relayer.testnet
+  action                 add access key ed25519:J9RvmdzWNiXQZeyJPmhobxH56MwzzyekCdngQg43aidN, nonce 0,
+                         FunctionCall { allowance 1 NEAR, receiver gnanam1990-dock-escrow.testnet,
+                         method_names [] (any method) }
+  signing key            the relayer account's own full-access key (ml-dsa-65), legacy keychain
+  gas used / fee         0.744 Tgas / 0.000052055425 NEAR
+  transaction id         CBamyhdUBTp7DxjB53gPdoHMKQzfmpJVWyXtyRhuDjfu
+  key file               written by near-cli-rs into the owner's legacy keychain directory; not copied,
+                         and run-all reads only its public_key
+
+Step 6 (journey) then stopped with `run-all: NEAR_CLI_MISSING: cannot run near: spawnSync near ENOENT`:
+the Node helper spawned `near` without a shell, and on Windows npm installs only near/near.cmd/near.ps1
+shims. args/1-register_trade.json was built but never submitted; journey-checks.json is empty. Fixed in
+M24: NEAR_CLI resolves to the real near.exe.

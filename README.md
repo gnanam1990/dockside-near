@@ -16,13 +16,13 @@ The authoritative specification is the sealed pack in [`docs/spec/`](docs/spec/S
 chain (the compiled contract in a local host emulator served over JSON-RPC), and the deployable contract also runs
 with real transactions on a **local nearcore node** (near-sandbox in a container: deploy, funding, release, refunds,
 destination change, a runtime-refunded transfer, NEP-141 recovery and the one-command testnet script end to end).
-Nothing has been deployed to NEAR testnet, no testnet NEAR has moved, no separate people on separate devices have
-run the flow, and the CI workflow has never run on GitHub because nothing was pushed. 1Click is not integrated
+On **NEAR testnet** the repository owner deployed the escrow with run-all and ran one technical trade to PAID
+(funding from the buyer, exact release to the bound supplier; docs/status/M24.md). No separate people on separate
+devices have run the product flow, nothing above the contract (API, worker, web app) has run against testnet, and the CI workflow has never run on GitHub because nothing was pushed. 1Click is not integrated
 (optional, `NOT_RUN`), and the funded mainnet rail is `BLOCKED`.
 
 - Item-by-item gate evidence and every test ID: [BUILD-STATUS.md](BUILD-STATUS.md)
-- What you must do to reach `WORKING_TESTNET`, starting with the single testnet command
-  `scripts/testnet-deploy/run-all --network testnet`: [docs/USER-NEXT-STEPS.md](docs/USER-NEXT-STEPS.md)
+- What you must do to reach `WORKING_TESTNET` (the one-command testnet deployment is done): [docs/USER-NEXT-STEPS.md](docs/USER-NEXT-STEPS.md)
 - Per-module detail: [`docs/status/`](docs/status/); decisions: [`docs/adr/`](docs/adr/); retained run output:
   [`docs/evidence/`](docs/evidence/)
 
