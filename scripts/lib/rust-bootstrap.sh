@@ -3,9 +3,12 @@
 # SHA-256, refused on mismatch, in the same style as the near-sandbox and near-cli-rs pins
 # (ADR-0021). No installer script is piped to a shell.
 #
-# rustup-init copies itself to $CARGO_HOME/bin/rustup, so a rustup already in the cargo volume is
-# kept only when its digest equals the pinned rustup-init's; anything else (an older install, a
-# self-update, a changed file) is replaced by the verified installer.
+# The toolchain is installed fresh on every run, into an empty $CARGO_HOME and $RUSTUP_HOME that
+# live only as long as the --rm container. A home that already holds anything (a cached volume
+# from an earlier run, whose code under test ran as root with it writable) is refused: a digest
+# match of bin/rustup would say nothing about the env script, the cargo/rustc proxies, the
+# installed toolchain or the registry cache beside it. Nothing is sourced from the homes; PATH is
+# set here.
 #
 # The toolchain components that rustup then downloads are checked by rustup itself against the
 # SHA-256 values in the release channel manifest for 1.97.1 from static.rust-lang.org.
@@ -23,23 +26,29 @@ case "$(uname -m)" in
     ;;
 esac
 
-RUSTUP_BIN="${CARGO_HOME:-/root/.cargo}/bin/rustup"
-if [ ! -x "$RUSTUP_BIN" ] || ! echo "$RUSTUP_INIT_SHA256  $RUSTUP_BIN" | sha256sum -c - >/dev/null 2>&1; then
-  # rustup-init picks its mode from its file name, so it keeps that name in a private directory.
-  RUSTUP_INIT_DIR=$(mktemp -d)
-  RUSTUP_INIT="$RUSTUP_INIT_DIR/rustup-init"
-  curl -sSf --proto '=https' --tlsv1.2 -o "$RUSTUP_INIT" \
-    "https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/$RUSTUP_TRIPLE/rustup-init"
-  if ! echo "$RUSTUP_INIT_SHA256  $RUSTUP_INIT" | sha256sum -c - >/dev/null 2>&1; then
-    echo "rust-bootstrap: rustup-init $RUSTUP_VERSION ($RUSTUP_TRIPLE) does not match its pinned SHA-256; refusing to run it" >&2
-    rm -rf "$RUSTUP_INIT_DIR"
+CARGO_HOME="${CARGO_HOME:-/root/.cargo}"
+RUSTUP_HOME="${RUSTUP_HOME:-/root/.rustup}"
+export CARGO_HOME RUSTUP_HOME
+for RUST_HOME_DIR in "$CARGO_HOME" "$RUSTUP_HOME"; do
+  if [ -n "$(ls -A "$RUST_HOME_DIR" 2>/dev/null)" ]; then
+    echo "rust-bootstrap: $RUST_HOME_DIR is not empty; refusing to reuse a cached toolchain (mount no cargo/rustup volume)" >&2
     exit 1
   fi
-  chmod +x "$RUSTUP_INIT"
-  "$RUSTUP_INIT" -y -q --profile minimal --default-toolchain "$RUST_TOOLCHAIN" >/dev/null
+done
+# rustup-init picks its mode from its file name, so it keeps that name in a private directory.
+RUSTUP_INIT_DIR=$(mktemp -d)
+RUSTUP_INIT="$RUSTUP_INIT_DIR/rustup-init"
+curl -sSf --proto '=https' --tlsv1.2 -o "$RUSTUP_INIT" \
+  "https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/$RUSTUP_TRIPLE/rustup-init"
+if ! echo "$RUSTUP_INIT_SHA256  $RUSTUP_INIT" | sha256sum -c - >/dev/null 2>&1; then
+  echo "rust-bootstrap: rustup-init $RUSTUP_VERSION ($RUSTUP_TRIPLE) does not match its pinned SHA-256; refusing to run it" >&2
   rm -rf "$RUSTUP_INIT_DIR"
+  exit 1
 fi
-. "${CARGO_HOME:-/root/.cargo}/env"
+chmod +x "$RUSTUP_INIT"
+"$RUSTUP_INIT" -y -q --no-modify-path --profile minimal --default-toolchain "$RUST_TOOLCHAIN" >/dev/null
+rm -rf "$RUSTUP_INIT_DIR"
+export PATH="$CARGO_HOME/bin:$PATH"
 # Keep the verified rustup binary: no self-update to an unpinned release.
 rustup set auto-self-update disable >/dev/null 2>&1
 rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal >/dev/null 2>&1

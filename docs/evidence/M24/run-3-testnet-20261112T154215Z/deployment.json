@@ -1,0 +1,16 @@
+{
+  "contractId": "gnanam1990-dock-escrow.testnet",
+  "onChainCodeHash": "5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM",
+  "match": true,
+  "blockHeight": 277382908,
+  "config": {
+    "network": "near-testnet",
+    "minDepositYocto": "1000000000000000000000",
+    "trades": 1,
+    "unexpectedAssets": 0,
+    "refundPolicy": {
+      "id": "dockside-refund-v1",
+      "revision": 1
+    }
+  }
+}

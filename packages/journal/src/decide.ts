@@ -332,12 +332,13 @@ export function decide(i: DecisionInput): Decision {
 /**
  * Evidence about an operation that already reached a terminal state. Anything that contradicts the
  * disposition is a conservation incident: it freezes the trade and any successor; the terminal
- * state itself never changes.
+ * state itself never changes. `contract` is null when the contract read was UNAVAILABLE: a failed
+ * read is no evidence either way, so only the receipt history is judged and the watch continues.
  */
 export function postTerminalIncident(
   outcome: "PAID" | "REFUNDED" | "FAILED" | "WITHDRAWN",
   basis: string,
-  contract: ContractStatus,
+  contract: ContractStatus | null,
   receiptHistory: readonly ReceiptClass[],
 ): { kind: IncidentKind; detail: string } | null {
   if (contradictory(receiptHistory))
@@ -345,11 +346,12 @@ export function postTerminalIncident(
   if (outcome === "FAILED" || outcome === "WITHDRAWN") {
     if (receiptHistory.includes("CONFIRMED"))
       return { kind: "POST_FAILED_EVIDENCE", detail: "recipient credited after FAILED" };
+    if (contract === null) return null;
     if (contract === "PENDING" || contract === "PAID" || contract === "REFUNDED")
       return { kind: "POST_FAILED_EVIDENCE", detail: `contract ${contract} after ${outcome} (${basis})` };
     if (basis === "TRANSFER_RETURNED" && contract !== "FAILED")
       return { kind: "POST_FAILED_EVIDENCE", detail: `contract ${contract} after FAILED` };
-  } else if (contract !== outcome) {
+  } else if (contract !== null && contract !== outcome) {
     return { kind: "CONTRADICTION", detail: `contract ${contract} after ${outcome}` };
   }
   return null;
