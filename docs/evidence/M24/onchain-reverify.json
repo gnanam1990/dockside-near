@@ -1,0 +1,312 @@
+{
+  "queriedAt": "2026-11-12T15:49:36.693Z",
+  "rpc": "https://rpc.testnet.near.org",
+  "finality": "final",
+  "escrowAccount": {
+    "codeHash": "5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM",
+    "amount": "10043952142296301600000000",
+    "storageUsage": 819400,
+    "blockHeight": 277383679
+  },
+  "getConfig": {
+    "blockHeight": 277383684,
+    "value": {
+      "network": "near-testnet",
+      "minDepositYocto": "1000000000000000000000",
+      "trades": 2,
+      "unexpectedAssets": 0,
+      "refundPolicy": {
+        "id": "dockside-refund-v1",
+        "revision": 1
+      }
+    }
+  },
+  "relayerKey": {
+    "permission": {
+      "FunctionCall": {
+        "allowance": "993251276069112000000000",
+        "method_names": [],
+        "receiver_id": "gnanam1990-dock-escrow.testnet"
+      }
+    },
+    "blockHeight": 277383689
+  },
+  "transactions": [
+    {
+      "label": "deploy+new",
+      "txHash": "7KExSVdWHAVXXDjjAme1m1zQBW4hBSgXgsMEQt2K9dyY",
+      "signer": "gnanam1990-dock-escrow.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ml-dsa-65",
+      "actions": [
+        "DeployContract",
+        "FunctionCall:new"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "add_key relayer",
+      "txHash": "CBamyhdUBTp7DxjB53gPdoHMKQzfmpJVWyXtyRhuDjfu",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-relayer.testnet",
+      "signerKeyType": "ml-dsa-65",
+      "actions": [
+        "AddKey"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "register_trade",
+      "txHash": "EXJUH59wfz7fxYMDT2XUCyMkS7cgXu6Wt91RyFAzc71N",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:register_trade"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "register_evidence_policy",
+      "txHash": "DDYArQXFSfVDtaceXZeufEHSj3y9t15mfsa83bMzxhC4",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:register_evidence_policy"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "fund",
+      "txHash": "516vpRsRCHdPsCtSbVJNHjeVeK1eXzNkojZowWkDuByV",
+      "signer": "gnanam1990-dock-buyer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ml-dsa-65",
+      "actions": [
+        "FunctionCall:fund"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "submit_manifest_attestation",
+      "txHash": "mLPLZ471DZN1hUM9Z8nNH7j8rdqi3JCLuxzGKwfiMfY",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:submit_manifest_attestation"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "submit_inspection",
+      "txHash": "4pUNbTGTL7NJidhKSdB1CYWETy8FpersvV55MUhXF7Yt",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:submit_inspection"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "create_release_intent",
+      "txHash": "FDvXSTHtH4d6gPFNXPkWc6TuEF8VhVSfpScYKFkqyFm8",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:create_release_intent"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "approve_release",
+      "txHash": "9VF8tnBgmcStrkVjsVi4WC37Gu9NcCCJMTk9CESm3BV5",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:approve_release"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": []
+    },
+    {
+      "label": "execute_release",
+      "txHash": "Hixw372qTfqEUmXAuxmxuttN7W2pBBVxpYw2ognLEmeD",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-escrow.testnet",
+      "signerKeyType": "ed25519",
+      "actions": [
+        "FunctionCall:execute_release"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "failedReceipts": 0,
+      "transfersFromEscrow": [
+        {
+          "to": "gnanam1990-dock-supplier.testnet",
+          "deposit": "50000000000000000000000"
+        }
+      ]
+    }
+  ],
+  "trd_563c174f39144ac1543b9e3e61eb4d21": {
+    "ledger": {
+      "asset": {
+        "kind": "NEAR_NATIVE",
+        "network": "near-testnet"
+      },
+      "required": "50000000000000000000000",
+      "committed": "50000000000000000000000",
+      "fullyFunded": true,
+      "totals": {
+        "funded": "50000000000000000000000",
+        "partial": "0",
+        "available": "0",
+        "reserved": "0",
+        "released": "50000000000000000000000",
+        "refundLocked": "0",
+        "refunded": "0",
+        "quarantined": "0",
+        "fees": "0",
+        "excessDetectedAt": null
+      },
+      "funders": {
+        "gnanam1990-dock-buyer.testnet": {
+          "funded": "50000000000000000000000",
+          "partial": "0",
+          "available": "0",
+          "reserved": "0",
+          "released": "50000000000000000000000",
+          "refundLocked": "0",
+          "refunded": "0",
+          "quarantined": "0",
+          "fees": "0",
+          "excessDetectedAt": null
+        }
+      },
+      "deposits": [
+        {
+          "index": 0,
+          "funder": "gnanam1990-dock-buyer.testnet",
+          "amount": "50000000000000000000000",
+          "accepted": "50000000000000000000000",
+          "quarantined": "0",
+          "atMs": 1794498205961
+        }
+      ],
+      "conservation": true
+    },
+    "releaseIntents": [
+      {
+        "id": "rli_2f2c7d7e9e96af8ed7a5b4b9fe86a7dd",
+        "state": "PAID",
+        "amount": "50000000000000000000000",
+        "destination": "gnanam1990-dock-supplier.testnet",
+        "approved": true,
+        "attempts": [
+          "rla_1f3a887b9e9b110950038ae9674b1949"
+        ]
+      }
+    ],
+    "blockers": [
+      "MANIFEST_CONSUMED",
+      "NO_RELEASE_INTENT"
+    ],
+    "payoutDestination": "gnanam1990-dock-supplier.testnet",
+    "blockHeight": 277383749
+  },
+  "trd_9aced7e741a0462ac88ef4de0e67ba81": {
+    "ledger": {
+      "asset": {
+        "kind": "NEAR_NATIVE",
+        "network": "near-testnet"
+      },
+      "required": "50000000000000000000000",
+      "committed": "50000000000000000000000",
+      "fullyFunded": true,
+      "totals": {
+        "funded": "50000000000000000000000",
+        "partial": "0",
+        "available": "0",
+        "reserved": "50000000000000000000000",
+        "released": "0",
+        "refundLocked": "0",
+        "refunded": "0",
+        "quarantined": "0",
+        "fees": "0",
+        "excessDetectedAt": null
+      },
+      "funders": {
+        "gnanam1990-dock-buyer.testnet": {
+          "funded": "50000000000000000000000",
+          "partial": "0",
+          "available": "0",
+          "reserved": "50000000000000000000000",
+          "released": "0",
+          "refundLocked": "0",
+          "refunded": "0",
+          "quarantined": "0",
+          "fees": "0",
+          "excessDetectedAt": null
+        }
+      },
+      "deposits": [
+        {
+          "index": 0,
+          "funder": "gnanam1990-dock-buyer.testnet",
+          "amount": "50000000000000000000000",
+          "accepted": "50000000000000000000000",
+          "quarantined": "0",
+          "atMs": 1794497915750
+        }
+      ],
+      "conservation": true
+    },
+    "releaseIntents": [
+      {
+        "id": "rli_7781d4f0bb0b6aa6461935a154614c02",
+        "state": "VALUE_LOCKED",
+        "amount": "50000000000000000000000",
+        "destination": "gnanam1990-dock-supplier.testnet",
+        "approved": false,
+        "attempts": []
+      }
+    ],
+    "blockers": [
+      "APPROVAL_MISSING"
+    ],
+    "payoutDestination": "gnanam1990-dock-supplier.testnet",
+    "blockHeight": 277383759
+  },
+  "supplierBalanceYocto": "10050000000000000000000000"
+}

@@ -1,8 +1,14 @@
 // Steps of scripts/testnet-deploy/run-all that need JSON, hashing or RPC. Each subcommand prints
 // one JSON document (or one value for `profile`) and exits 0, or prints `run-all: <CODE>: ...`
 // to stderr and exits 2. Read-only except `journey`, which submits transactions through
-// near-cli-rs (signed from the user's keychain and the relayer's function-call key file).
+// near-cli-rs (signed from the user's keychain and the relayer's function-call key file), and
+// `near-run`, which runs one near-cli-rs command for the shell script.
 //
+// Every subcommand that reads the chain takes the RPC URL from --rpc-url and, as fallbacks for
+// read-only calls, the comma-separated --fallback-rpc-urls or DOCKSIDE_FALLBACK_RPC_URLS.
+//
+//   node tool.mjs near-cli                      the near-cli-rs binary to spawn (NEAR_CLI resolved)
+//   node tool.mjs near-run --near <bin> --out <file> [--attempts <n>] -- <near-cli-rs arguments>
 //   node tool.mjs profile --network <testnet|sandbox> [--rpc-url <url>] --field <cliNetwork|rpcUrl>
 //   node tool.mjs accounts
 //   node tool.mjs verify-artifact --wasm <file> --manifest <file>
@@ -18,11 +24,15 @@ import { nearRunner, runJourney } from "./lib/journey.mjs";
 import {
   accountsFromEnv,
   CONTRACT_NETWORK,
+  describeNearFailure,
   networkProfile,
   parseAddedKey,
+  parseFallbackRpcUrls,
   parseSavedKeyFile,
   parseTxHash,
   Rpc,
+  resolveNearCli,
+  runNear,
   ToolError,
   verifyArtifact,
   wasmDigest,
@@ -58,10 +68,40 @@ function amount(f) {
 const print = (v) => process.stdout.write(`${typeof v === "string" ? v : JSON.stringify(v, null, 2)}\n`);
 
 async function main() {
-  const [cmd, ...rest] = process.argv.slice(2);
+  const [cmd, ...all] = process.argv.slice(2);
+  // `near-run` passes everything after `--` to near-cli-rs untouched.
+  const dashes = all.indexOf("--");
+  const rest = dashes < 0 ? all : all.slice(0, dashes);
+  const passThrough = dashes < 0 ? [] : all.slice(dashes + 1);
   const f = flags(rest);
-  const profile = () => networkProfile(f.network, f["rpc-url"]);
+  const profile = () =>
+    networkProfile(
+      f.network,
+      f["rpc-url"],
+      parseFallbackRpcUrls(f["fallback-rpc-urls"] ?? process.env.DOCKSIDE_FALLBACK_RPC_URLS),
+    );
   switch (cmd) {
+    case "near-cli":
+      return print(resolveNearCli());
+    case "near-run": {
+      const bin = need(f, "near");
+      const out = need(f, "out");
+      const attempts = Number(f.attempts ?? 3);
+      if (!Number.isInteger(attempts) || attempts < 1 || attempts > 5)
+        throw new ToolError("USAGE", "--attempts must be 1 to 5");
+      if (passThrough.length === 0) throw new ToolError("USAGE", "near-run needs -- <near-cli-rs arguments>");
+      const r = await runNear(bin, passThrough, {
+        attempts,
+        log: (m) => process.stderr.write(`run-all:     ${m}\n`),
+      });
+      writeFileSync(out, r.log);
+      if (r.status !== 0) {
+        process.stderr.write(`run-all: NEAR_CLI_FAILED: ${describeNearFailure(r)}
+`);
+        process.exit(1);
+      }
+      return print({ txHash: r.txHash, attempts: r.attempts });
+    }
     case "profile": {
       const p = profile();
       const field = need(f, "field");
@@ -88,7 +128,7 @@ async function main() {
       const amt = amount(f);
       const p = profile();
       const accts = accountsFromEnv(process.env);
-      const rpc = new Rpc(p.rpcUrl);
+      const rpc = new Rpc(p.rpcUrls);
       const views = {};
       for (const [role, id] of Object.entries(accts)) {
         try {
@@ -146,7 +186,7 @@ async function main() {
     case "verify-deployment": {
       const p = profile();
       const accts = accountsFromEnv(process.env);
-      const rpc = new Rpc(p.rpcUrl);
+      const rpc = new Rpc(p.rpcUrls);
       const want = need(f, "code-hash");
       const account = await rpc.viewAccount(accts.escrow);
       if (account.code_hash !== want) {
@@ -169,7 +209,7 @@ async function main() {
     case "verify-relayer-key": {
       const p = profile();
       const accts = accountsFromEnv(process.env);
-      const rpc = new Rpc(p.rpcUrl);
+      const rpc = new Rpc(p.rpcUrls);
       // Only the public half of the key file is read here.
       const publicKey = JSON.parse(readFileSync(need(f, "key-file"), "utf8")).public_key;
       if (typeof publicKey !== "string") throw new ToolError("NO_KEY", "key file has no public_key");
@@ -192,14 +232,16 @@ async function main() {
     case "journey": {
       const p = profile();
       const accts = accountsFromEnv(process.env);
-      const rpc = new Rpc(p.rpcUrl);
+      const rpc = new Rpc(p.rpcUrls);
       const out = need(f, "out");
       const config = await rpc.view(accts.escrow, "get_config", {});
       const result = await runJourney({
         rpc,
         profile: p,
         accounts: accts,
-        near: nearRunner(need(f, "near")),
+        near: nearRunner(need(f, "near"), {
+          log: (m) => process.stderr.write(`run-all:     ${m}\n`),
+        }),
         relayerKeyFile: need(f, "key-file"),
         mirrorBin: need(f, "mirror"),
         outDir: out,
