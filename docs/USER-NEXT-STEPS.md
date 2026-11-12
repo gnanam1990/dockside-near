@@ -178,6 +178,8 @@ recovered key is rebound with the dual-signed key-rebinding revision on its Agre
 replaces a participant or service is not built: if a role lost its capability or its enrollment was revoked, start a
 new trade.
 
+Reviewer kit for §6–§7 with separate people: [review-kits/inv13-acceptance.md](review-kits/inv13-acceptance.md).
+
 ## 7. Run the trade on testnet and keep the evidence
 
 Use the web app throughout and submit every relay from §4. Keep each transaction hash and receipt.
@@ -217,6 +219,7 @@ Use the web app throughout and submit every relay from §4. Keep each transactio
 - T-039: a manual keyboard-only and screen-reader pass (for example NVDA with Firefox, VoiceOver with Safari) through
   the critical flow. Record the problems you find and fix them.
 - T-040: true browser zoom at 200%, landscape on a phone, and long translated strings.
+- Reviewer kit: [review-kits/accessibility-review.md](review-kits/accessibility-review.md).
 
 ## 9. Optional: 1Click dry compatibility (M06)
 
@@ -230,6 +233,10 @@ run T-024 and T-048 with redacted evidence. Only `PASS` supports `DRY_COMPATIBLE
 and the contract's `new` accepts only `near-testnet`. A funded corridor first needs a contract entry point that
 consumes a FundedPayoutAuthorization atomically, a verified corridor, an exposure cap and your explicit authorization
 of network, wallet, amount, signer and executor (REAL-PRODUCT-GATE "Separate funded-mainnet gate").
+
+## Independent security review
+
+Reviewer kit: [review-kits/security-review.md](review-kits/security-review.md) (index of all kits: [review-kits/README.md](review-kits/README.md)).
 
 ## When you are done
 
