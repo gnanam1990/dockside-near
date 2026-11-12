@@ -215,6 +215,10 @@ impl Mirror {
                 let (d, role, sig) = (arg_str(a, "successor_digest")?, arg_str(a, "role")?, arg_str(a, "signature")?);
                 self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.consent_destination_change(ctx, &d, &role, &sig)).map(|x| json!(x))
             }
+            "revoke_destination_change" => {
+                let (payload, sig) = (arg(a, "payload")?, arg_str(a, "signature")?);
+                self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.revoke_destination_change(ctx, &payload, &sig)).map(|_| J::Null)
+            }
             "activate_destination_change" => {
                 let d = arg_str(a, "successor_digest")?;
                 let (digest, succ) = self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.activate_destination_change(ctx, &d))?;

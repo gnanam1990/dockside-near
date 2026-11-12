@@ -9,7 +9,8 @@
 //! its return), T-009 (refund reasons to the original funder), T-019/T-022 (direct release of the
 //! exact locked value to the bound supplier, once), T-020/T-021/T-042 (unilateral destination
 //! change refused, dual-consent delayed change redirects the release), T-051 (unexpected NEP-141
-//! recovery to the proven sender after the 72-hour window), T-031 (a transfer the runtime refunds
+//! recovery to the proven sender after the 72-hour window), m31 (a revoked destination consent
+//! cannot be replayed from its public arguments), T-031 (a transfer the runtime refunds
 //! is the authoritative no-transfer proof: FAILED, value restored), T-045 (on-chain code hash).
 
 use anyhow::Result;
@@ -251,6 +252,31 @@ async fn t020_t021_t042_dual_consent_delayed_destination_change_redirects_the_re
     assert_eq!(sent.value["settled"], json!(true));
     assert_eq!(d.net.balance(d.alt.id()).await? - alt_before, 5 * NEAR);
     assert_eq!(d.net.balance(d.supplier.id()).await?, supplier_before);
+    Ok(())
+}
+
+#[tokio::test]
+async fn m31_a_revoked_destination_consent_cannot_be_replayed_from_public_arguments() -> Result<()> {
+    // External security audit m31: the consent signatures are public transaction arguments.
+    let mut d = Dock::start("dest-replay", 5 * NEAR, HOUR).await?;
+    funded_and_inspected(&mut d).await?;
+    let relayer = d.relayer.clone();
+    let alt = d.alt.id().to_string();
+    let propose = propose_destination_args(&d.fx, d.rec(), &alt, "SUPPLIER", "supplier");
+    let consent = consent_destination_args(&d.fx, d.rec(), &alt, "BUYER", "buyer");
+    let act = activate_destination_args(&d.fx, d.rec(), &alt);
+    d.ok(&relayer, "propose_destination_change", propose.clone(), 0).await?;
+    d.ok(&relayer, "consent_destination_change", consent.clone(), 0).await?;
+    // The buyer withdraws its consent with a signed revocation.
+    let rv = revoke_destination_args(&d.fx, d.rec(), &alt, "BUYER", "buyer", d.now().await?, "rv");
+    d.ok(&relayer, "revoke_destination_change", rv, 0).await?;
+    // Anyone resubmits the same arguments: the proposal comes back, the withdrawn consent does not.
+    d.ok(&relayer, "propose_destination_change", propose, 0).await?;
+    assert_eq!(d.refused(&relayer, "consent_destination_change", consent, 0).await?, "NONCE_REPLAYED");
+    d.net.hours(1).await?;
+    assert_eq!(d.refused(&relayer, "activate_destination_change", act, 0).await?, "INVALID_STATE");
+    let trade = d.view("get_trade", json!({ "trade_id": d.trade_id() })).await?;
+    assert_eq!((trade["revision"].clone(), trade["payoutDestination"].clone()), (json!(1), json!(d.supplier.id().to_string())));
     Ok(())
 }
 

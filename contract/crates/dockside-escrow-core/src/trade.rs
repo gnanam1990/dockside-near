@@ -117,6 +117,22 @@ impl TradeRecord {
         self.nonces.contains(&format!("{domain}|{nonce}"))
     }
 
+    /// A successor-revision consent carries no nonce of its own (it is a signature over the
+    /// successor digest), so a party's withdrawal of it is recorded in the same replay set: once
+    /// `party` revokes a successor it had consented to, its signature over that digest never
+    /// counts again (TDD §7 step 10, "revoked consent fails closed").
+    pub(crate) fn withdraw_consent(&mut self, successor_digest: &str, party: &str) {
+        self.nonces.insert(format!("{}|withdrawn|{party}|{successor_digest}", domains::TRADE_REVISION));
+    }
+
+    pub(crate) fn ensure_consent_live(&self, successor_digest: &str, party: &str) -> R<()> {
+        ensure(
+            !self.nonces.contains(&format!("{}|withdrawn|{party}|{successor_digest}", domains::TRADE_REVISION)),
+            "NONCE_REPLAYED",
+            "this party revoked its consent to this successor revision; it cannot be replayed",
+        )
+    }
+
     /// Verify a signature by the key the signed terms bind to `role`, unless revoked on chain.
     pub fn verify_role(&self, ctx: &Ctx<'_>, role: &str, d: &[u8; 32], signature: &str) -> R<()> {
         if self.revoked_roles.contains(role) {
