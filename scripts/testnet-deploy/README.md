@@ -10,8 +10,9 @@ one trade to PAID with the supplier receiving exactly the trade amount
 T-019 positive path and REAL-PRODUCT-GATE item 2 are PASS on testnet for that build. The first deployment
 (M24, [docs/status/M24.md](../../docs/status/M24.md)) on `gnanam1990-dock-escrow.testnet` runs the superseded
 pre-audit contract `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM`; do not point new runs (`--skip-deploy`) or
-clients at it. Its stranded trade stays locked there. Mainnet is refused by the script and by the contract
-(`new` accepts only `near-testnet`).
+clients at it. Its stranded trade stays locked there. The escrow2 build accepts only `near-testnet`. The M50 build
+(on its branch, not deployed) adds a NEP-141 trade asset and a capped `near-mainnet` label; run-all reaches mainnet
+only with `--i-understand-real-funds` (see "USDC journeys and the real-funds path").
 
 The first runs on Windows found three problems, fixed in M24: near-cli-rs 0.31 asked an invisible
 question while adding the relayer key, the Node helpers could not start npm's `near` shim, and a
@@ -32,7 +33,7 @@ You create the accounts. `run-all` does everything after that in one command:
 |---|---|---|
 | 1 | The wasm's SHA-256 and NEAR code hash must equal the build manifest's (`verify-artifact`) | nothing |
 | 2 | Preflight: the four accounts exist; the escrow account has no code and holds enough for code storage (1 NEAR per 100 kB plus 1 NEAR); the buyer can pay the trade amount; the relayer holds 2 NEAR | nothing |
-| 3 | Deploy the wasm and call `new("near-testnet", null)` **in one transaction**, so nobody can initialise the contract between the two | escrow account (keychain) |
+| 3 | Deploy the wasm and call `new` **in one transaction**, so nobody can initialise the contract between the two. The arguments are the network label, the per-trade caps and the pinned token (`tool.mjs init-args`); for a plain testnet run that is the `near-testnet` label and nothing else | escrow account (keychain) |
 | 4 | The on-chain code hash (`view_account`) must equal the manifest's `contract.nearCodeHash`, and `get_config` must report `near-testnet` | nothing |
 | 5 | Add a function-call access key to the relayer, restricted to the escrow contract (any method, allowance `1 NEAR`). near-cli-rs generates it and saves it to `~/.near-credentials/<network>/<relayer>/ed25519_<key>.json`; the script checks the key's permission on chain | relayer account (keychain) |
 | 6 | The journey (below), checking the supplier's balance rose by exactly the trade amount | buyer (funding only), relayer function-call key (everything else) |
@@ -300,6 +301,55 @@ network-config testnet now` shows the relayer's keys; the file is the one near-c
 added the key (`relayer-key.txt` in that run's local record directory names it). Each run's `run-record.json`, `journey.json`
 and `deployment.json` are the evidence to keep, as for the paid journey.
 
+### USDC journeys and the real-funds path (M50)
+
+Status: **built and validated on a local near-sandbox node only. Not deployed on testnet or mainnet, and not merged:
+the contract change waits for an independent audit and the owner's approval**
+([docs/status/M50.md](../../docs/status/M50.md), [ADR-0028](../../docs/adr/0028-nep141-rail-and-mainnet-guard.md)).
+Everything in this section needs the M50 contract build; the deployed escrow2 runs the older native-only build.
+
+All four journeys run in a NEP-141 token with `--asset usdc --token <account>`:
+
+| What changes | Native NEAR | `--asset usdc` |
+|---|---|---|
+| Trade asset in the signed terms | `{kind: NEAR_NATIVE}` | `{kind: NEP141, tokenAccountId, decimals}` |
+| Funding | the buyer's `fund` with NEAR attached | the buyer's own `ft_transfer_call` on the token contract with `msg` `{"tradeId", "termsDigest"}` and one yoctoNEAR; the escrow's `ft_on_transfer` credits the buyer |
+| A funding the contract refuses | the call fails and the NEAR returns | the call succeeds, the escrow returns the whole amount to the token contract and logs the reason (`nep141_funding_returned`) |
+| Before the value is locked | nothing | `check_payee_storage`: the token contract must report the supplier as registered |
+| Release and refund | native transfer | the escrow's `ft_transfer` on the token contract, one yoctoNEAR from the escrow account |
+| Amount flags | `--amount-yocto`, `--excess-yocto` | `--amount-units` (default 5000000), `--excess-units` (default 1000000) |
+
+Before the journey run-all registers the escrow and, for a release, the supplier with the token (NEP-145
+`storage_deposit`, paid in NEAR by the escrow account; 0.00125 NEAR each for USDC). The buyer must already be
+registered and hold the tokens. A deployment made with `--token` accepts that one token as a trade asset and no
+other (`get_config` → `nep141Token`).
+
+`--network mainnet` is accepted only with `--i-understand-real-funds`, and only with account names that are not
+`.testnet`. Then:
+
+- the contract is initialised with the `near-mainnet` label, per-trade caps that cannot be zero (default 5 NEAR
+  and 25000000 token units, which is 25 USDC; `--cap-near-yocto`, `--cap-token-units`) and the pinned token;
+  none of these can be changed afterwards;
+- the preflight checks the chain id the RPC reports, the caps, and the exposure of this run (trade amount plus
+  refund excess) against the contract cap and against run-all's own ceiling (`--max-exposure-*`, default the
+  mainnet default caps), and prints the value plan: every amount, who sends it and who can receive it;
+- `--dry-run` stops after that. Nothing is deployed, registered, signed or sent;
+- `--resume` needs the flag again; it is never stored in the run directory.
+
+The same path can be rehearsed on a local node: `--network sandbox --contract-network near-mainnet
+--i-understand-real-funds`.
+
+Token contracts (read-only checks, 2026-11-13): USDC on NEAR testnet is
+`3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af` and on mainnet
+`17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1`; both answer `ft_metadata`,
+`storage_balance_of` and `storage_balance_bounds` (minimum 1250000000000000000000 yoctoNEAR). Check the id against
+Circle's own documentation before a real-funds run; run-all checks only that the contract you name reports the
+decimals you name.
+
+Refusal codes added to run-all: `CHAIN_MISMATCH` (the RPC is another chain), `CAP_REQUIRED`, `EXPOSURE_EXCEEDED`,
+`TOKEN_INVALID` (no `ft_metadata`, or other decimals), `TOKEN_NOT_ENABLED` (the deployment pins another token),
+`PAYEE_NOT_REGISTERED`.
+
 ### Windows
 
 - One line, from the repository root in PowerShell:
@@ -375,9 +425,20 @@ host core without a chain in `contract/integration/fixtures/tests/m47_refusal_jo
 near-sandbox node: it creates the four accounts with real create-account transactions, puts their
 keys in a temporary near-cli-rs keychain and a near-cli-rs connection named `sandbox`, then runs
 `run-all --network sandbox` and checks the chain itself: the code hash, the relayer's two keys, the
-supplier's balance delta and `PAID`. It also checks that mainnet, a non-loopback sandbox RPC and a
-wrong wasm are refused before any transaction, that a second run refuses to redeploy
-(`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second journey.
+supplier's balance delta and `PAID`. It also checks that mainnet without the real-funds flag, a
+non-loopback sandbox RPC and a wrong wasm are refused before any transaction, that a second run
+refuses to redeploy (`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second
+journey.
+
+A second test (M50) deploys a real NEP-141 contract (the workspace test token, 6 decimals) and runs
+`--asset usdc --token <id>` for the paid, hold, refund and refusal journeys, checking token balances
+on chain: the supplier receives exactly the trade amount, a refund returns every unit to the buyer,
+and the refused funding comes back whole. It checks `--dry-run` (the value plan is printed, nothing
+is deployed, registered or signed), the cap (`EXPOSURE_EXCEEDED` before anything is sent), another
+token (`TOKEN_NOT_ENABLED`), and the `near-mainnet` label on the same local node: refused without
+`--i-understand-real-funds`, refused with `.testnet` names, capped at the mainnet defaults, PAID
+under the mainnet profile, and not resumable without the flag. `--network mainnet` itself is only
+checked for its refusals; nothing here talks to mainnet.
 
 Differences you will meet on testnet: real block times (the journey needs no waiting), faucet-funded
 accounts, the OS keychain instead of `~/.near-credentials`, and testnet's protocol version, which can

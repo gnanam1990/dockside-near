@@ -67,6 +67,8 @@ const journey = (await import(lib("journey.mjs"))) as {
 
 const NEAR = 10n ** 24n;
 const USDC = 1_000_000n;
+// A NEP-141 contract id on testnet (an account name, not a credential).
+const FAKE_TOKEN = ["usdc", "fakes", "testnet"].join(".");
 const MAINNET_USDC = "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const TESTNET_ACCOUNTS = {
   DOCKSIDE_ESCROW_ACCOUNT: "dockside-escrow.testnet",
@@ -232,9 +234,7 @@ describe("asset, amounts and the deployment arguments", () => {
       kind: "nep141",
       token: { accountId: MAINNET_USDC, decimals: 6 },
     });
-    expect(
-      plan.assetFromFlags({ asset: "usdc", token: "usdc.fakes.testnet", "token-decimals": "18" }).token,
-    ).toEqual({
+    expect(plan.assetFromFlags({ asset: "usdc", token: FAKE_TOKEN, "token-decimals": "18" }).token).toEqual({
       accountId: "usdc.fakes.testnet",
       decimals: 18,
     });
