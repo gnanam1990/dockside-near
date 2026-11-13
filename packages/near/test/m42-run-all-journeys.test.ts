@@ -153,8 +153,10 @@ describe("journey option guards (before any RPC call)", () => {
   });
 
   it("the preflight counts the refund journey's excess in the buyer's balance", () => {
+    // Since M50 the deposit is the plan's trade amount plus the refund excess (lib/plan.mjs).
     const src = readFileSync(TOOL, "utf8");
-    expect(src).toMatch(/journey === "refund" \? amt \+ excess\(f\) : amt/);
+    expect(src).toMatch(/const deposit = amounts\.amount \+ amounts\.excess;/);
+    expect(src).toMatch(/const buyerNear = asset\.kind === "nep141" \? fee : deposit \+ fee;/);
   });
 });
 

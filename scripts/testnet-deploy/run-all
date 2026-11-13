@@ -19,19 +19,54 @@
 #                buyer gets back exactly what it deposited and the supplier nothing
 #   7. write the run record
 #
+# Assets (M50). The journeys run in native NEAR (default) or in a NEP-141 token:
+#   --asset usdc --token <account>   the trade is funded by the buyer's own ft_transfer_call on the
+#                                token contract, released and refunded by the escrow's ft_transfer,
+#                                and checked against token balances. Before the journey run-all
+#                                registers the escrow (and, for a release, the supplier) with the
+#                                token (NEP-145 storage_deposit, paid in NEAR by the escrow account),
+#                                and the journey confirms the supplier's registration on chain
+#                                (check_payee_storage) before the value is locked. The buyer must
+#                                already hold the tokens. A deployment made with --token accepts
+#                                that token only.
+#
+# Real funds (M50). `--network mainnet` runs only with --i-understand-real-funds. A mainnet
+# contract is always initialised with non-zero per-trade caps (default 5 NEAR and 25 USDC in base
+# units) and, for --asset usdc, with the one token it accepts. Before anything is sent the
+# preflight checks the chain id, the caps and the exposure of this run (trade amount plus refund
+# excess, against the contract cap and against run-all's own ceiling) and prints the value plan:
+# every amount, who sends it and who can receive it. --dry-run stops there.
+#
 # Usage:
 #   DOCKSIDE_ESCROW_ACCOUNT=<escrow>.testnet DOCKSIDE_BUYER_ACCOUNT=<buyer>.testnet \
 #   DOCKSIDE_SUPPLIER_ACCOUNT=<supplier>.testnet DOCKSIDE_RELAYER_ACCOUNT=<relayer>.testnet \
-#     scripts/testnet-deploy/run-all --network testnet|sandbox [options]
+#     scripts/testnet-deploy/run-all --network testnet|sandbox|mainnet [options]
 #   (same four variables) scripts/testnet-deploy/run-all --resume <run dir> [resume options]
 #
 # Options:
-#   --network <testnet|sandbox>  required; nothing else is accepted (mainnet is refused)
-#   --rpc-url <url>              default https://test.rpc.fastnear.com, or http://127.0.0.1:4521 for sandbox
+#   --network <testnet|sandbox|mainnet>  required; mainnet needs --i-understand-real-funds and
+#                                accounts that are not .testnet names
+#   --i-understand-real-funds    this run may move real funds (mainnet, or the near-mainnet contract
+#                                label on a sandbox); must be given again with --resume
+#   --contract-network <label>   sandbox only: near-testnet (default) or near-mainnet, to validate
+#                                the mainnet path on a local node
+#   --dry-run                    stop after the preflight and its value plan; nothing is sent
+#   --asset <near|usdc>          the trade asset, default near
+#   --token <account>            the NEP-141 contract (required with --asset usdc); pinned at deployment
+#   --token-decimals <n>         default 6; checked against the token's own metadata
+#   --amount-units <n>           --asset usdc: trade amount in token base units, default 5000000 (5 USDC)
+#   --excess-units <n>           --asset usdc, refund journey: excess, default 1000000 (1 USDC)
+#   --cap-near-yocto <n>         deployment: cap per native trade (mainnet default 5 NEAR; testnet none)
+#   --cap-token-units <n>        deployment: cap per token trade (mainnet default 25000000; testnet none)
+#   --max-exposure-near-yocto <n>, --max-exposure-token-units <n>
+#                                real funds: the highest contract cap run-all accepts (defaults: the
+#                                mainnet default caps)
+#   --rpc-url <url>              default https://test.rpc.fastnear.com, https://rpc.mainnet.fastnear.com
+#                                for mainnet, or http://127.0.0.1:4521 for sandbox
 #   --fallback-rpc-urls <a,b>    further RPC URLs for the read-only checks (same rules as --rpc-url)
 #   --wasm <file>                default .data/repro/dockside_escrow.wasm (scripts/container-reproduce.sh)
 #   --manifest <file>            default .data/repro/build-manifest.json
-#   --amount-yocto <n>           journey trade amount, default 50000000000000000000000 (0.05 NEAR)
+#   --amount-yocto <n>           --asset near: trade amount, default 50000000000000000000000 (0.05 NEAR)
 #   --out <dir>                  default .data/testnet-run/<network>-<UTC time>
 #   --skip-deploy                reuse an escrow that already runs the manifest's code
 #   --relayer-key-file <file>    reuse a function-call key file near-cli-rs saved earlier
@@ -79,8 +114,13 @@ NETWORK=""
 RPC_URL=""
 WASM="$ROOT/.data/repro/dockside_escrow.wasm"
 MANIFEST="$ROOT/.data/repro/build-manifest.json"
-AMOUNT_YOCTO="50000000000000000000000"
+AMOUNT_YOCTO=""
 OUT=""
+REAL_FUNDS=""
+CONTRACT_NETWORK=""
+DRY_RUN=""
+# Asset, amount and cap flags, passed to tool.mjs as they were given.
+ASSET_FLAGS=""
 SKIP_DEPLOY=""
 KEY_FILE=""
 ALLOWANCE="1 NEAR"
@@ -108,13 +148,19 @@ while [ $# -gt 0 ]; do
     --fallback-rpc-urls) DOCKSIDE_FALLBACK_RPC_URLS="${2:-}"; export DOCKSIDE_FALLBACK_RPC_URLS; shift 2 ;;
     --wasm) WASM="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --manifest) MANIFEST="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
-    --amount-yocto) AMOUNT_YOCTO="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --amount-yocto) AMOUNT_YOCTO="${2:-}"; ASSET_FLAGS="$ASSET_FLAGS $1 ${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --asset|--token|--token-decimals|--amount-units|--excess-units|--cap-near-yocto|--cap-token-units|--max-exposure-near-yocto|--max-exposure-token-units)
+      case "${2:-}" in ""|*[!A-Za-z0-9._-]*) echo "run-all: USAGE: $1 needs a plain value" >&2; exit 2 ;; esac
+      ASSET_FLAGS="$ASSET_FLAGS $1 $2"; FIXED="$FIXED $1"; shift 2 ;;
+    --i-understand-real-funds) REAL_FUNDS=1; shift ;;
+    --contract-network) CONTRACT_NETWORK="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --dry-run) DRY_RUN=1; FIXED="$FIXED $1"; shift ;;
     --out) OUT="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --skip-deploy) SKIP_DEPLOY=1; FIXED="$FIXED $1"; shift ;;
     --relayer-key-file) KEY_FILE="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --allowance) ALLOWANCE="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --journey) JOURNEY="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
-    --excess-yocto) EXCESS_YOCTO="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --excess-yocto) EXCESS_YOCTO="${2:-}"; ASSET_FLAGS="$ASSET_FLAGS $1 ${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --no-wait) NO_WAIT=1; shift ;;
     --stop-after) STOP_AFTER="${2:-}"; shift 2 ;;
     --resume) RESUME="${2:-}"; shift 2 ;;
@@ -141,8 +187,17 @@ if [ -n "$RESUME" ]; then
   else
     RPC_URL="$RECORDED_RPC_URL"
   fi
+  CONTRACT_NETWORK=$(node "$TOOL" run-params --dir "$OUT" --field contractNetwork --default near-testnet)
+  if [ "$NETWORK" != "sandbox" ]; then CONTRACT_NETWORK=""; fi
   JOURNEY=$(node "$TOOL" run-params --dir "$OUT" --field journey)
   AMOUNT_YOCTO=$(node "$TOOL" run-params --dir "$OUT" --field amountYocto)
+  # The asset of the run, for the read-only checks (the journey itself reads its seed file).
+  RESUME_ASSET=$(node "$TOOL" run-params --dir "$OUT" --field asset --default near)
+  RESUME_TOKEN=$(node "$TOOL" run-params --dir "$OUT" --field token --default)
+  RESUME_DECIMALS=$(node "$TOOL" run-params --dir "$OUT" --field tokenDecimals --default)
+  if [ "$RESUME_ASSET" = "usdc" ]; then
+    ASSET_FLAGS="--asset usdc --token $RESUME_TOKEN --token-decimals $RESUME_DECIMALS"
+  fi
   WASM=$(node "$TOOL" run-params --dir "$OUT" --field wasm)
   MANIFEST=$(node "$TOOL" run-params --dir "$OUT" --field manifest)
   KEY_FILE=$(node "$TOOL" run-params --dir "$OUT" --field relayerKeyFile)
@@ -157,18 +212,35 @@ case "$JOURNEY" in
 esac
 
 net_flags() {
-  if [ -n "$RPC_URL" ]; then echo "--network $NETWORK --rpc-url $RPC_URL"; else echo "--network $NETWORK"; fi
+  NF="--network $NETWORK"
+  if [ -n "$RPC_URL" ]; then NF="$NF --rpc-url $RPC_URL"; fi
+  if [ -n "$CONTRACT_NETWORK" ]; then NF="$NF --contract-network $CONTRACT_NETWORK"; fi
+  if [ -n "$REAL_FUNDS" ]; then NF="$NF --i-understand-real-funds"; fi
+  echo "$NF"
 }
 
-# Refuses anything but testnet or a loopback sandbox before any other step.
+# Before any other step: the network (mainnet and the near-mainnet label only with
+# --i-understand-real-funds), the account names for that network, and every asset, amount and cap
+# flag. Nothing is read from the chain and nothing is sent here.
 CLI_NETWORK=$(node "$TOOL" profile $(net_flags) --field cliNetwork)
 RPC=$(node "$TOOL" profile $(net_flags) --field rpcUrl)
 RPC_URL="$RPC"
-node "$TOOL" accounts >/dev/null
-# NEAR_CLI, or on Windows the real near.exe behind npm's near/near.cmd/near.ps1 shims.
-NEAR_BIN=$(node "$TOOL" near-cli </dev/null)
-"$NEAR_BIN" --version </dev/null >/dev/null 2>&1 || { say "near-cli-rs ($NEAR_BIN) does not run; set NEAR_CLI"; exit 2; }
-command -v "$CARGO_BIN" >/dev/null 2>&1 || { say "cargo is required to build the journey payload builder"; exit 2; }
+LABEL=$(node "$TOOL" profile $(net_flags) --field contractNetwork)
+IS_REAL=$(node "$TOOL" profile $(net_flags) --field realFunds)
+node "$TOOL" accounts $(net_flags) >/dev/null
+if [ -z "$RESUME" ]; then
+  node "$TOOL" check-run $(net_flags) $ASSET_FLAGS --journey "$JOURNEY" >/dev/null
+fi
+ASSET=$(node "$TOOL" check-run $(net_flags) $ASSET_FLAGS --field asset)
+TOKEN=$(node "$TOOL" check-run $(net_flags) $ASSET_FLAGS --field token)
+TOKEN_DECIMALS=$(node "$TOOL" check-run $(net_flags) $ASSET_FLAGS --field tokenDecimals)
+AMOUNT=$(node "$TOOL" check-run $(net_flags) $ASSET_FLAGS --field amount)
+if [ -z "$DRY_RUN" ]; then
+  # NEAR_CLI, or on Windows the real near.exe behind npm's near/near.cmd/near.ps1 shims.
+  NEAR_BIN=$(node "$TOOL" near-cli </dev/null)
+  "$NEAR_BIN" --version </dev/null >/dev/null 2>&1 || { say "near-cli-rs ($NEAR_BIN) does not run; set NEAR_CLI"; exit 2; }
+  command -v "$CARGO_BIN" >/dev/null 2>&1 || { say "cargo is required to build the journey payload builder"; exit 2; }
+fi
 
 if [ -z "$OUT" ]; then OUT="$ROOT/.data/testnet-run/$NETWORK-$(date -u +%Y%m%dT%H%M%SZ)"; fi
 if [ -z "$RESUME" ] && [ -e "$OUT/journey-seed.json" ]; then
@@ -176,25 +248,28 @@ if [ -z "$RESUME" ] && [ -e "$OUT/journey-seed.json" ]; then
   exit 2
 fi
 mkdir -p "$OUT"
-say "network $NETWORK ($RPC), near-cli-rs connection '$CLI_NETWORK', $JOURNEY journey, record in $OUT"
+say "network $NETWORK ($RPC), contract label $LABEL, near-cli-rs connection '$CLI_NETWORK', $JOURNEY journey in $ASSET${TOKEN:+ ($TOKEN)}, record in $OUT"
+if [ "$IS_REAL" = "true" ]; then say "REAL FUNDS: this run uses the $LABEL contract label (--i-understand-real-funds was given)"; fi
 
 say "1/7 verify the wasm against the build manifest"
 node "$TOOL" verify-artifact --wasm "$WASM" --manifest "$MANIFEST" >"$OUT/artifact.json"
 CODE_HASH=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).nearCodeHash)' "$OUT/artifact.json")
 say "    code hash $CODE_HASH"
 
-EXCESS_FLAGS=""
-if [ -n "$EXCESS_YOCTO" ]; then EXCESS_FLAGS="--excess-yocto $EXCESS_YOCTO"; fi
+PRE_FLAGS="$ASSET_FLAGS --journey $JOURNEY"
+if [ -n "$KEY_FILE" ]; then PRE_FLAGS="$PRE_FLAGS --relayer-key-file $KEY_FILE"; fi
 if [ -n "$RESUME" ]; then
   say "2/7 preflight skipped (--resume)"
 elif [ -n "$SKIP_DEPLOY" ]; then
-  say "2/7 preflight"
-  node "$TOOL" preflight $(net_flags) --wasm "$WASM" --amount-yocto "$AMOUNT_YOCTO" \
-    --journey "$JOURNEY" $EXCESS_FLAGS --skip-deploy >"$OUT/preflight.json"
+  say "2/7 preflight, exposure check and value plan"
+  node "$TOOL" preflight $(net_flags) --wasm "$WASM" $PRE_FLAGS --skip-deploy >"$OUT/preflight.json"
 else
-  say "2/7 preflight"
-  node "$TOOL" preflight $(net_flags) --wasm "$WASM" --amount-yocto "$AMOUNT_YOCTO" \
-    --journey "$JOURNEY" $EXCESS_FLAGS >"$OUT/preflight.json"
+  say "2/7 preflight, exposure check and value plan"
+  node "$TOOL" preflight $(net_flags) --wasm "$WASM" $PRE_FLAGS >"$OUT/preflight.json"
+fi
+if [ -n "$DRY_RUN" ]; then
+  say "DRY RUN: nothing was sent; the checks and the value plan are in $OUT/preflight.json"
+  exit 0
 fi
 
 say "    building the journey payload builder"
@@ -207,10 +282,13 @@ ESCROW="$DOCKSIDE_ESCROW_ACCOUNT"
 RELAYER="$DOCKSIDE_RELAYER_ACCOUNT"
 if [ -z "$SKIP_DEPLOY" ]; then
   say "3/7 deploy and initialise $ESCROW in one transaction"
-  # One transaction: nobody can initialise the contract between the deploy and `new`.
+  # One transaction: nobody can initialise the contract between the deploy and `new`. The caps and
+  # the pinned token in these arguments cannot be changed afterwards.
+  INIT_ARGS=$(node "$TOOL" init-args $(net_flags) $ASSET_FLAGS)
+  say "    new $INIT_ARGS"
   if ! node "$TOOL" near-run --near "$NEAR_BIN" --out "$OUT/deploy.txt" -- \
       contract deploy "$ESCROW" use-file "$WASM" \
-      with-init-call new json-args '{"network":"near-testnet","min_deposit_yocto":null}' \
+      with-init-call new json-args "$INIT_ARGS" \
       prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' \
       network-config "$CLI_NETWORK" sign-with-keychain send </dev/null >/dev/null; then
     say "deploy failed; near-cli-rs output in $OUT/deploy.txt"
@@ -225,7 +303,27 @@ else
 fi
 
 say "4/7 verify the on-chain code hash and config"
-node "$TOOL" verify-deployment $(net_flags) --code-hash "$CODE_HASH" >"$OUT/deployment.json"
+node "$TOOL" verify-deployment $(net_flags) $ASSET_FLAGS --code-hash "$CODE_HASH" >"$OUT/deployment.json"
+
+# NEP-141: the escrow must be registered with the token to receive it, and the supplier to be
+# paid. The escrow account pays the storage deposit (the amounts are in the value plan).
+if [ -z "$RESUME" ] && [ "$ASSET" = "usdc" ]; then
+  node "$TOOL" registrations --file "$OUT/preflight.json" >"$OUT/registrations.txt"
+  N=0
+  while read -r WHO DEPOSIT; do
+    [ -n "$WHO" ] || continue
+    N=$((N + 1))
+    say "    register $WHO with $TOKEN ($DEPOSIT yoctoNEAR from $ESCROW)"
+    if ! node "$TOOL" near-run --near "$NEAR_BIN" --out "$OUT/storage-deposit-$N.txt" -- \
+        contract call-function as-transaction "$TOKEN" storage_deposit \
+        json-args "{\"account_id\":\"$WHO\",\"registration_only\":true}" \
+        prepaid-gas '30.0 Tgas' attached-deposit "$DEPOSIT yoctoNEAR" \
+        sign-as "$ESCROW" network-config "$CLI_NETWORK" sign-with-keychain send </dev/null >/dev/null; then
+      say "storage_deposit for $WHO failed; near-cli-rs output in $OUT/storage-deposit-$N.txt"
+      exit 1
+    fi
+  done <"$OUT/registrations.txt"
+fi
 
 if [ -z "$KEY_FILE" ]; then
   say "5/7 add a function-call key for $RELAYER restricted to $ESCROW"
@@ -247,10 +345,11 @@ node "$TOOL" verify-relayer-key $(net_flags) --key-file "$KEY_FILE" >"$OUT/relay
 if [ -z "$RESUME" ]; then
   # The non-secret settings --resume reads back (the key seed goes to journey-seed.json, 0600).
   node -e '
-const [out, network, rpcUrl, journey, amountYocto, wasm, manifest, relayerKeyFile] = process.argv.slice(1);
-const params = { schema: "dockside/run-params@1", network, rpcUrl, journey, amountYocto, wasm, manifest, relayerKeyFile };
+const [out, network, rpcUrl, journey, amountYocto, wasm, manifest, relayerKeyFile, contractNetwork, asset, token, tokenDecimals] = process.argv.slice(1);
+const params = { schema: "dockside/run-params@1", network, rpcUrl, journey, amountYocto, wasm, manifest, relayerKeyFile,
+  contractNetwork, asset, token, tokenDecimals };
 require("fs").writeFileSync(`${out}/run-params.json`, `${JSON.stringify(params, null, 2)}\n`);
-' "$OUT" "$NETWORK" "$RPC_URL" "$JOURNEY" "$AMOUNT_YOCTO" "$WASM" "$MANIFEST" "$KEY_FILE"
+' "$OUT" "$NETWORK" "$RPC_URL" "$JOURNEY" "$AMOUNT" "$WASM" "$MANIFEST" "$KEY_FILE" "$LABEL" "$ASSET" "$TOKEN" "$TOKEN_DECIMALS"
 fi
 
 if [ -n "$RESUME" ]; then say "6/7 $JOURNEY journey (resume)"; else say "6/7 $JOURNEY journey"; fi
@@ -258,8 +357,8 @@ set -- --near "$NEAR_BIN" --key-file "$KEY_FILE" --mirror "$MIRROR" --out "$OUT"
 if [ -n "$RESUME" ]; then
   set -- "$@" --resume
 else
-  set -- "$@" --journey "$JOURNEY" --amount-yocto "$AMOUNT_YOCTO"
-  if [ -n "$EXCESS_YOCTO" ]; then set -- "$@" --excess-yocto "$EXCESS_YOCTO"; fi
+  # shellcheck disable=SC2086 # ASSET_FLAGS holds plain words checked when they were parsed
+  set -- "$@" --journey "$JOURNEY" $ASSET_FLAGS
 fi
 if [ -n "$NO_WAIT" ]; then set -- "$@" --no-wait; fi
 if [ -n "$STOP_AFTER" ]; then set -- "$@" --stop-after "$STOP_AFTER"; fi
@@ -279,18 +378,19 @@ say "7/7 run record"
 COMMIT=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)
 node -e '
 const fs = require("fs");
-const [out, commit, network] = process.argv.slice(1);
+const [out, commit, network, contractNetwork] = process.argv.slice(1);
 const read = (f) => JSON.parse(fs.readFileSync(`${out}/${f}`, "utf8"));
 const tx = fs.existsSync(`${out}/deploy-tx.txt`) ? fs.readFileSync(`${out}/deploy-tx.txt`, "utf8").trim() : null;
 const j = read("journey.json");
 const rec = {
-  schema: "dockside/testnet-run@1", network, scriptCommit: commit, artifact: read("artifact.json"),
+  schema: "dockside/testnet-run@1", network, contractNetwork, asset: j.asset ?? { kind: "near", token: null },
+  scriptCommit: commit, artifact: read("artifact.json"),
   deployTx: tx, deployment: read("deployment.json"), relayer: read("relayer.json"),
   journey: { kind: j.journey, ok: j.ok, tradeId: j.tradeId, releaseIntentId: j.releaseIntentId, checks: j.checks,
     transactions: j.steps.filter((s) => s.txHash).map((s) => ({ step: s.step, method: s.method, signer: s.signer,
       txHash: s.txHash, blockTimeMs: s.blockTimeMs })) },
 };
 fs.writeFileSync(`${out}/run-record.json`, JSON.stringify(rec, null, 2) + "\n");
-' "$OUT" "$COMMIT" "$NETWORK"
+' "$OUT" "$COMMIT" "$NETWORK" "$LABEL"
 if [ "$JOURNEY" = "refund" ]; then OUTCOME=REFUNDED; else OUTCOME=PAID; fi
 say "PASS: deployed code hash $CODE_HASH, $JOURNEY journey $OUTCOME; record $OUT/run-record.json"

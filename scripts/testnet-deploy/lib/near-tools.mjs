@@ -8,9 +8,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { win32 } from "node:path";
 
 export const TESTNET_RPC_DEFAULT = "https://test.rpc.fastnear.com";
+export const MAINNET_RPC_DEFAULT = "https://rpc.mainnet.fastnear.com";
 export const SANDBOX_RPC_DEFAULT = "http://127.0.0.1:4521";
-/** Contract `new` accepts only this corridor label, on testnet and on the local sandbox alike. */
+/** The contract's network label on testnet, and by default on the local sandbox. */
 export const CONTRACT_NETWORK = "near-testnet";
+/** The contract's network label on mainnet (M50); a sandbox run may use it to validate that path. */
+export const CONTRACT_NETWORK_MAINNET = "near-mainnet";
+/** The flag every run that can move real funds must carry. */
+export const REAL_FUNDS_FLAG = "--i-understand-real-funds";
 
 export class ToolError extends Error {
   constructor(code, message) {
@@ -48,39 +53,81 @@ export function wasmDigest(path) {
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 
 /**
- * The only two networks run-all accepts. `testnet` uses near-cli-rs's built-in `testnet`
- * connection; `sandbox` is a local near-sandbox node behind a loopback RPC URL and a near-cli-rs
- * connection named `sandbox`. Anything else (mainnet included) is refused. Fallback RPC URLs (for
- * the read-only calls of the Node helpers) must pass the same rules as the primary.
+ * The networks run-all accepts.
+ *
+ * `testnet` uses near-cli-rs's built-in `testnet` connection and the `near-testnet` contract label.
+ * `sandbox` is a local near-sandbox node behind a loopback RPC URL and a near-cli-rs connection
+ * named `sandbox`; its contract label is `near-testnet` unless `contractNetwork` says
+ * `near-mainnet`, which validates the mainnet path locally. `mainnet` uses near-cli-rs's built-in
+ * `mainnet` connection and the `near-mainnet` label.
+ *
+ * Everything that runs under the `near-mainnet` label, on mainnet or on the sandbox, is refused
+ * unless `realFunds` is set (the `--i-understand-real-funds` flag). Mainnet and testnet endpoints
+ * are kept apart by host name here and by the chain id the RPC reports (`chainId`, checked by the
+ * preflight and the journey). Fallback RPC URLs must pass the same rules as the primary.
  */
-export function networkProfile(network, rpcUrl, fallbackRpcUrls = []) {
+export function networkProfile(network, rpcUrl, fallbackRpcUrls = [], { contractNetwork, realFunds = false } = {}) {
   let cliNetwork;
   let primary;
+  let label;
+  let chainId;
+  const refuse = (m) => {
+    throw new ToolError("NETWORK_REFUSED", m);
+  };
   if (network === "testnet") {
     cliNetwork = "testnet";
     primary = rpcUrl || TESTNET_RPC_DEFAULT;
+    label = CONTRACT_NETWORK;
+    chainId = "testnet";
   } else if (network === "sandbox") {
     cliNetwork = "sandbox";
     primary = rpcUrl || SANDBOX_RPC_DEFAULT;
+    label = contractNetwork || CONTRACT_NETWORK;
+    chainId = null;
+  } else if (network === "mainnet") {
+    cliNetwork = "mainnet";
+    primary = rpcUrl || MAINNET_RPC_DEFAULT;
+    label = CONTRACT_NETWORK_MAINNET;
+    chainId = "mainnet";
   } else {
-    throw new ToolError(
-      "NETWORK_REFUSED",
-      `--network must be testnet or sandbox (got ${network || "nothing"})`,
-    );
+    refuse(`--network must be testnet, sandbox or mainnet (got ${network || "nothing"})`);
   }
+  if (label !== CONTRACT_NETWORK && label !== CONTRACT_NETWORK_MAINNET)
+    refuse(`--contract-network must be ${CONTRACT_NETWORK} or ${CONTRACT_NETWORK_MAINNET}`);
+  if (contractNetwork && contractNetwork !== label)
+    refuse(`--network ${network} always uses the ${label} contract label, not ${contractNetwork}`);
+  const mainnetLabel = label === CONTRACT_NETWORK_MAINNET;
+  if (mainnetLabel && !realFunds)
+    refuse(
+      network === "mainnet"
+        ? `--network mainnet moves real funds; it runs only with ${REAL_FUNDS_FLAG}`
+        : `the ${label} contract label is the real-funds path; it runs only with ${REAL_FUNDS_FLAG}`,
+    );
   const check = (u) => {
     const url = new URL(u);
     if (network === "testnet") {
-      if (url.protocol !== "https:") throw new ToolError("NETWORK_REFUSED", "testnet RPC must be https");
-      if (/mainnet/i.test(url.hostname))
-        throw new ToolError("NETWORK_REFUSED", "refusing a mainnet RPC host");
+      if (url.protocol !== "https:") refuse("testnet RPC must be https");
+      if (/mainnet/i.test(url.hostname)) refuse("refusing a mainnet RPC host");
+    } else if (network === "mainnet") {
+      if (url.protocol !== "https:") refuse("mainnet RPC must be https");
+      if (/test/i.test(url.hostname)) refuse("refusing a testnet RPC host for --network mainnet");
+      if (LOOPBACK.has(url.hostname)) refuse("refusing a loopback RPC for --network mainnet");
     } else if (!LOOPBACK.has(url.hostname)) {
-      throw new ToolError("NETWORK_REFUSED", "sandbox RPC must be a loopback address");
+      refuse("sandbox RPC must be a loopback address");
     }
     return url.toString().replace(/\/$/, "");
   };
   const rpcUrls = [primary, ...fallbackRpcUrls].map(check);
-  return { network, cliNetwork, rpcUrl: rpcUrls[0], rpcUrls };
+  return {
+    network,
+    cliNetwork,
+    rpcUrl: rpcUrls[0],
+    rpcUrls,
+    contractNetwork: label,
+    // Real funds only under the mainnet label; the flag changes nothing on a testnet-label run.
+    realFunds: mainnetLabel,
+    chainId,
+  };
 }
 
 /** Comma-separated fallback RPC URLs (`--fallback-rpc-urls`, DOCKSIDE_FALLBACK_RPC_URLS). */
@@ -93,8 +140,13 @@ export function parseFallbackRpcUrls(value) {
 
 const ACCOUNT = /^(?=.{2,64}$)([a-z\d]+[-_])*[a-z\d]+(\.([a-z\d]+[-_])*[a-z\d]+)*$/;
 
-/** Accounts named by env vars; every one must be a distinct `.testnet` account (the contract's corridor rule). */
-export function accountsFromEnv(env) {
+/**
+ * Accounts named by env vars: four distinct named accounts that fit the contract's network label
+ * (the contract's own rule): `.testnet` names under `near-testnet`, any other named account under
+ * `near-mainnet`.
+ */
+export function accountsFromEnv(env, contractNetwork = CONTRACT_NETWORK) {
+  const mainnet = contractNetwork === CONTRACT_NETWORK_MAINNET;
   const names = {
     escrow: "DOCKSIDE_ESCROW_ACCOUNT",
     buyer: "DOCKSIDE_BUYER_ACCOUNT",
@@ -105,8 +157,14 @@ export function accountsFromEnv(env) {
   for (const [k, v] of Object.entries(names)) {
     const id = (env[v] || "").trim();
     if (!id) throw new ToolError("MISSING_ACCOUNT", `${v} is not set`);
-    if (!ACCOUNT.test(id) || !id.endsWith(".testnet")) {
-      throw new ToolError("INVALID_ACCOUNT", `${v}=${id} is not a named .testnet account`);
+    const fits = ACCOUNT.test(id) && id.includes(".") && id.endsWith(".testnet") !== mainnet;
+    if (!fits) {
+      throw new ToolError(
+        "INVALID_ACCOUNT",
+        mainnet
+          ? `${v}=${id} is not a named mainnet account (a .testnet name cannot be used under ${contractNetwork})`
+          : `${v}=${id} is not a named .testnet account`,
+      );
     }
     out[k] = id;
   }
@@ -229,6 +287,17 @@ export class Rpc {
       args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
     });
     return JSON.parse(Buffer.from(r.result).toString("utf8"));
+  }
+
+  /** The chain id the node reports (`mainnet`, `testnet`, or a local id). */
+  async chainId() {
+    const st = await this.request("status", []);
+    return st.chain_id;
+  }
+
+  /** NEP-141 balance of `accountId` in base units (a decimal string; "0" when not registered). */
+  async ftBalance(token, accountId) {
+    return this.view(token, "ft_balance_of", { account_id: accountId });
   }
 
   async blockTimeMs(blockHash) {
