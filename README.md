@@ -65,7 +65,7 @@ successful, except the refusals, which fail with exactly the expected code
 | Paid | `trd_7b76…1f2f` | [`ft_transfer_call` 5 USDC](https://testnet.nearblocks.io/txns/2gzs2r79EhfGhTVCVxHHKPmdRUxRTShmBwBBJJCiCHY1) | [inspection PASS](https://testnet.nearblocks.io/txns/9iUmGixdHaSUQzqUyp3EiGDts19avxHLquxuRAE9cQ7B), [approval](https://testnet.nearblocks.io/txns/CAE1EjKSgReY48dKVQouHYwEozCyJSJEJHM1RaexWndq) | [`execute_release`: `ft_transfer` of exactly 5 USDC to the supplier](https://testnet.nearblocks.io/txns/ANyGBfVTpUzjTdMdVZcP2RSnSewzYCRHR97A2Z51CX1B) |
 | Hold | `trd_9656…5a77` | [5 USDC](https://testnet.nearblocks.io/txns/GGReYME6Ha8mAagWvm7NicTTAWdKrUSP6WtzHqSsYgSh) | [`set_hold` DOC_MISMATCH](https://testnet.nearblocks.io/txns/2oxiNqeDRYnEEyTBuLfQar4M21fu5Hv2mpYet1NMbZyL) blocks release; [`resolve_hold` by the risk resolver](https://testnet.nearblocks.io/txns/JDZy69FzLWaqAxUXhLghoHUGWPBpnsHAgwvtxm22TrK1) | [exactly 5 USDC to the supplier](https://testnet.nearblocks.io/txns/FD7izvtEY76ir6nfYYsVcqmtmPhoCtsdwQwmrMsFKa1U) |
 | Refusal | `trd_e93f…1e71` | [2.5](https://testnet.nearblocks.io/txns/72YHkefZekpTDhTn9VLGVoTcvRkS6jLkQ3t3YPhXQbm3) + [2.5 USDC](https://testnet.nearblocks.io/txns/8roKKkeHSHvd1XnVBGSvKvSyM3m1VsGN8m14QQBCf7L9) | six refused calls (next table) | [exactly 5 USDC to the supplier](https://testnet.nearblocks.io/txns/BZ9Ey8dMzmcQfrMvFRBLUTnJXDA7dvmemQ5kuiiivCao) |
-| Refund | — | — | — | **pending**: the run was still in its one-hour cooling period when this README was written |
+| Refund | `trd_dfea…8982` | [5 USDC (1 excess quarantined)](https://testnet.nearblocks.io/txns/GZZzML8uCt4dRfi3TyUva41J9CNC5gdVALvEvYoCRk29) | [`MUTUAL_CANCEL` signed by both](https://testnet.nearblocks.io/txns/FGahhC6FYu1UwvHh2YE52UW4koDC9zdtV3DrCs5oq323), one-hour cooling period | [4](https://testnet.nearblocks.io/txns/9X6ccU7QxAYrN5ySyTSQ8wkNxB3bQPic6cTpcQ3pn9Aj) + [1 USDC](https://testnet.nearblocks.io/txns/J4tcqMKfWxdTncqttvVgexdoagk9zYYe4WEwoqdfHwHR) back to the buyer; supplier nothing |
 
 The six attacks the contract refused on testnet, each a real transaction:
 
@@ -78,8 +78,8 @@ The six attacks the contract refused on testnet, each a real transaction:
 | Release while a hold is active | `HOLD_ACTIVE` | [9z68Gk7x…i5D3](https://testnet.nearblocks.io/txns/9z68Gk7xY17SVMLGGptiaRt7DbTx4JgY47ATRx2Zi5D3) |
 | Approve with a key the agreement does not bind | `SIGNATURE_INVALID` | [5Eu7FQ2C…95gLN](https://testnet.nearblocks.io/txns/5Eu7FQ2CaGr9rqrxToCJEwmEsrtHMbij3CzijPj95gLN) |
 
-After the three USDC journeys the supplier's USDC balance is 15 = 3 × 5, and value left escrow3 only in the three
-`execute_release` calls ([onchain-reverify.json](docs/evidence/M56/onchain-reverify.json)).
+After the four USDC journeys the supplier holds 15 USDC (3 × 5), the buyer has its 5 refunded USDC back, escrow3
+holds 0, and USDC left escrow3 only in the three `execute_release` and two `execute_refund` calls ([onchain-reverify.json](docs/evidence/M56/onchain-reverify.json)).
 
 ### Native NEAR on escrow2 ([M34](docs/status/M34.md), [M44](docs/status/M44.md))
 
@@ -180,7 +180,7 @@ Each merged module, one line. "Owner" marks a step that needs the repository own
 - Relayer signer custody and the testnet product runtime (API and worker against testnet: owner, not run) — [M43](docs/status/M43.md), [runbook](docs/runbooks/testnet-product.md)
 - Proof page and `pnpm judge` (GitHub Pages: owner, not enabled) — [M46](docs/status/M46.md)
 - Refusal journey: six rejected calls, then PAID (ran in USDC on testnet; native run: owner) — [M47](docs/status/M47.md), [M56](docs/status/M56.md)
-- USDC rail (NEP-141 trade asset) and a mainnet guard with caps; audited; on testnet (refund run pending; mainnet: owner) — [M50](docs/status/M50.md), [M56](docs/status/M56.md)
+- USDC rail (NEP-141 trade asset) and a mainnet guard with caps; audited; all four journeys on testnet (mainnet: owner) — [M50](docs/status/M50.md), [M56](docs/status/M56.md)
 - Supplier cash-out to another chain through NEAR Intents 1Click, dry quotes only (real cash-out: owner, not run) — [M52](docs/status/M52.md)
 - "Try to steal this payment" attack console (testnet demo trade: owner, not run) — [M53](docs/status/M53.md), [runbook](docs/runbooks/attack-console.md)
 - Verifiable payment receipt page and signed PDF with an offline verifier — [M54](docs/status/M54.md)
@@ -246,8 +246,7 @@ exists and the contract journeys ran on testnet, but the full real-product gate 
 | What | Where it ran |
 |---|---|
 | Contract: paid, hold, refund journeys in native NEAR | **NEAR testnet**, escrow2 (M34, M44) |
-| Contract: paid, hold and refusal journeys in USDC | **NEAR testnet**, escrow3 (M56); **USDC rail PASS on testnet** |
-| USDC refund journey | **pending** (was running during this README) |
+| Contract: paid, hold, refusal and refund journeys in USDC | **NEAR testnet**, escrow3 (M56); **USDC rail PASS on testnet** |
 | Contract: destination change, NEP-141 recovery, runtime-refunded transfer, the USDC rail | local nearcore node (near-sandbox) |
 | API, worker, web app, four roles, audit export, receipts, cash-out | locally, against a **simulated** NEAR chain (worker relayer custody validated on a local nearcore node, M43) |
 | Who signed on testnet | **one operator** for every role (keys derived from one seed); separate people on separate devices: not run |

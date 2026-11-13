@@ -1,0 +1,72 @@
+{
+  "network": "testnet",
+  "contractNetwork": "near-testnet",
+  "realFunds": false,
+  "rpcUrl": "https://test.rpc.fastnear.com",
+  "journey": "refund",
+  "asset": "nep141",
+  "token": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+  "symbol": "USDC",
+  "decimals": 6,
+  "buyerBalance": "5000000",
+  "amount": "4000000",
+  "excess": "1000000",
+  "depositYocto": "0",
+  "deposit": "5000000",
+  "caps": {
+    "nearYocto": "0",
+    "nep141": "0"
+  },
+  "pinnedToken": {
+    "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+    "decimals": 6
+  },
+  "heldAtMost": "5000000",
+  "registrations": [],
+  "storageDepositYocto": "1250000000000000000000",
+  "plan": [
+    {
+      "what": "fund the trade (ft_transfer_call on the token)",
+      "from": "gnanam1990-dock-buyer.testnet",
+      "to": "gnanam1990-dock-escrow3.testnet",
+      "amount": "5000000 units of 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af (5 tokens) plus 1 yoctoNEAR"
+    },
+    {
+      "what": "refund MUTUAL_CANCEL (the trade amount)",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "gnanam1990-dock-buyer.testnet",
+      "amount": "4000000 units of 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af (4 tokens)"
+    },
+    {
+      "what": "refund EXCESS_FUNDING_RETURN (the excess)",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "gnanam1990-dock-buyer.testnet",
+      "amount": "1000000 units of 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af (1 tokens)"
+    },
+    {
+      "what": "each token transfer the escrow sends",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "amount": "1 yoctoNEAR (required by NEP-141), from the escrow account's own balance"
+    },
+    {
+      "what": "every other step",
+      "from": "gnanam1990-dock-relayer.testnet",
+      "to": "gnanam1990-dock-escrow3.testnet",
+      "amount": "0 attached; gas from the relayer key's allowance"
+    }
+  ],
+  "accounts": {
+    "escrow": "gnanam1990-dock-escrow3.testnet",
+    "buyer": "gnanam1990-dock-buyer.testnet",
+    "supplier": "gnanam1990-dock-supplier.testnet",
+    "relayer": "gnanam1990-dock-relayer.testnet"
+  },
+  "escrowCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+  "balancesYocto": {
+    "escrow": "9992089896542328699999997",
+    "buyer": "9792345071093959599999995",
+    "supplier": "10148504593195581400000000",
+    "relayer": "9962774703905574500000000"
+  }
+}

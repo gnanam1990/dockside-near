@@ -16,12 +16,12 @@ Not copied:
     docs/status/M56.md and in onchain-reverify.json).
   - args/ (each run): the per-call argument files; every call is in journey.json and on chain.
   - testnet-20261113T141902Z and testnet-20261113T143333Z: stopped before sending anything (docs/status/M56.md).
-  - testnet-20261113T143415Z: the USDC refund journey, still running when this was written (pending).
 
 run-usdc-paid-testnet-20261113T142004Z     paid journey, ok, deploys escrow3, run-all at 74cafa5
 run-usdc-hold-testnet-20261113T142216Z     hold journey, ok, run-all at 74cafa5
 run-usdc-refusal-testnet-20261113T142333Z  refusal journey (six refused transactions, then PAID), ok, run-all at 74cafa5
+run-usdc-refund-testnet-20261113T143415Z   refund journey (MUTUAL_CANCEL and EXCESS_FUNDING_RETURN), ok, run-all at 74cafa5
 
-onchain-reverify.json: read-only re-verification of the setup transactions, all 37 journey transactions, the three
+onchain-reverify.json: read-only re-verification of the setup transactions, all 45 journey transactions, the four
 trades' ledgers, release, holds and refunds on gnanam1990-dock-escrow3.testnet, the relayer key and the USDC token
 balances, through https://test.rpc.fastnear.com at a final block (sentTransactions 0).
