@@ -33,7 +33,12 @@ struct Keychain {
 impl Keychain {
     /// A temporary HOME whose near-cli-rs config has only a `sandbox` connection to `rpc`.
     fn new(rpc: &str) -> Result<Keychain> {
-        let home = std::env::temp_dir().join(format!("dockside-run-all-{}", std::process::id()));
+        Keychain::named(rpc, "journeys")
+    }
+
+    /// `tag` keeps the homes of tests that run at the same time apart.
+    fn named(rpc: &str, tag: &str) -> Result<Keychain> {
+        let home = std::env::temp_dir().join(format!("dockside-run-all-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&home);
         std::fs::create_dir_all(home.join(".config/near-cli"))?;
         std::fs::create_dir_all(home.join(".near-credentials/sandbox"))?;
@@ -317,6 +322,237 @@ async fn run_all_deploys_verifies_configures_the_relayer_and_completes_the_journ
     let r = run_all(&kc, &accounts, &refund, "run-refund")?;
     assert_eq!(r.status, 2, "{}", r.log);
     assert!(r.log.contains("RUN_EXISTS"));
+    Ok(())
+}
+
+/// `EXPERIMENTAL_tx_status` straight from the node (curl), independent of run-all's own reader.
+fn tx_status(rpc: &str, hash: &str, signer: &str) -> Result<J> {
+    let body = json!({
+        "jsonrpc": "2.0", "id": 1, "method": "EXPERIMENTAL_tx_status",
+        "params": { "tx_hash": hash, "sender_account_id": signer, "wait_until": "FINAL" },
+    });
+    let o = Command::new("curl")
+        .args(["-sS", "-H", "content-type: application/json", "-d", &body.to_string(), rpc])
+        .output()
+        .context("curl")?;
+    let v: J = serde_json::from_slice(&o.stdout).with_context(|| String::from_utf8_lossy(&o.stderr).to_string())?;
+    if v["result"].is_null() {
+        bail!("tx {hash}: {v}");
+    }
+    Ok(v["result"].clone())
+}
+
+/// The first receipt of `tx` that ran on `escrow`.
+fn escrow_receipt<'a>(tx: &'a J, escrow: &str) -> Result<&'a J> {
+    tx["receipts_outcome"]
+        .as_array()
+        .context("receipts")?
+        .iter()
+        .find(|r| r["outcome"]["executor_id"] == json!(escrow))
+        .context("no receipt on the escrow")
+}
+
+/// M47 refusal journey: six calls the contract must reject are sent as real transactions, each
+/// fails on the escrow with its expected code and changes nothing, and the trade then completes.
+/// One command on fresh accounts (deploy, relayer key, journey), then a second refusal journey
+/// that is stopped part way and finished with `--resume`. Every claim of the run record is checked
+/// again on the node itself.
+#[tokio::test]
+#[ignore = "needs near-cli-rs, the container-built wasm and its manifest (scripts/sandbox/container-sandbox.sh)"]
+async fn run_all_refusal_journey_six_calls_are_rejected_on_chain_and_the_trade_is_then_paid() -> Result<()> {
+    let wasm = env("DOCKSIDE_ESCROW_WASM")?;
+    let manifest_path = env("DOCKSIDE_BUILD_MANIFEST")?;
+    let net = Net::start().await?;
+    let rpc = net.worker.rpc_addr().trim_end_matches('/').to_string();
+    let kc = Keychain::named(&rpc, "refusal")?;
+    let mut ids = Vec::new();
+    for (name, near) in [("no-escrow", 20), ("no-buyer", 10), ("no-supplier", 5), ("no-relayer", 5)] {
+        let a = net.account(name, near).await?;
+        kc.save(name, a.id().as_str())?;
+        ids.push(a.id().clone());
+    }
+    let (escrow, buyer, supplier, relayer) = (ids[0].as_str(), ids[1].as_str(), ids[2].as_str(), ids[3].as_str());
+    let accounts = vec![
+        ("DOCKSIDE_ESCROW_ACCOUNT", escrow.to_string()),
+        ("DOCKSIDE_BUYER_ACCOUNT", buyer.to_string()),
+        ("DOCKSIDE_SUPPLIER_ACCOUNT", supplier.to_string()),
+        ("DOCKSIDE_RELAYER_ACCOUNT", relayer.to_string()),
+    ];
+    let base = ["--network", "sandbox", "--rpc-url", rpc.as_str(), "--wasm", wasm.as_str(), "--manifest", manifest_path.as_str()];
+    let amount: u128 = 50_000_000_000_000_000_000_000;
+    let (first, rest) = (amount / 2, amount - amount / 2);
+
+    // An amount that cannot be funded in two accepted deposits is refused before any journey call.
+    let mut small = base.to_vec();
+    small.extend(["--journey", "refusal", "--amount-yocto", "1500000000000000000000"]);
+    let supplier_start = net.balance(&ids[2]).await?;
+    let buyer_start = net.balance(&ids[1]).await?;
+    let relayer_start = net.balance(&ids[3]).await?;
+
+    let mut args = base.to_vec();
+    args.extend(["--journey", "refusal"]);
+    let r = run_all(&kc, &accounts, &args, "refusal-1")?;
+    if r.status != 0 {
+        bail!("run-all --journey refusal failed ({}):\n{}", r.status, r.log);
+    }
+    assert!(r.log.contains("six calls REFUSED, then PAID"), "{}", r.log);
+    let rec = read(&r.out.join("run-record.json"))?;
+    assert_eq!(rec["journey"]["kind"], json!("refusal"));
+    assert_eq!(rec["journey"]["ok"], json!(true));
+    let trade = rec["journey"]["tradeId"].as_str().context("trade id")?.to_string();
+    let txs = rec["journey"]["transactions"].as_array().context("transactions")?.clone();
+    // (method, signer, the code it must be refused with)
+    let want: [(&str, &str, Option<&str>); 17] = [
+        ("register_trade", relayer, None),
+        ("register_evidence_policy", relayer, None),
+        ("fund", buyer, Some("STALE_REVISION")),
+        ("fund", buyer, None),
+        ("request_refund", relayer, Some("FORBIDDEN")),
+        ("fund", buyer, None),
+        ("submit_manifest_attestation", relayer, None),
+        ("submit_inspection", relayer, None),
+        ("submit_inspection", relayer, Some("NONCE_REPLAYED")),
+        ("set_hold", relayer, None),
+        ("create_release_intent", relayer, Some("DESTINATION_MISMATCH")),
+        ("create_release_intent", relayer, None),
+        ("execute_release", relayer, Some("HOLD_ACTIVE")),
+        ("resolve_hold", relayer, None),
+        ("approve_release", relayer, Some("SIGNATURE_INVALID")),
+        ("approve_release", relayer, None),
+        ("execute_release", relayer, None),
+    ];
+    assert_eq!(txs.len(), want.len(), "{txs:?}");
+    // The node's own record of every transaction: who signed it, what it called, how it ended.
+    let mut on_chain = Vec::new();
+    for (t, (method, signer, code)) in txs.iter().zip(want) {
+        assert_eq!((t["method"].as_str(), t["signer"].as_str()), (Some(method), Some(signer)), "{t}");
+        assert_eq!(t["refused"].as_str(), code, "{t}");
+        let tx = tx_status(&rpc, t["txHash"].as_str().context("tx hash")?, signer)?;
+        assert_eq!(tx["transaction"]["signer_id"], json!(signer));
+        assert_eq!(tx["transaction"]["receiver_id"], json!(escrow));
+        let call = &tx["transaction"]["actions"][0]["FunctionCall"];
+        assert_eq!(call["method_name"], json!(method));
+        let status = &escrow_receipt(&tx, escrow)?["outcome"]["status"];
+        match code {
+            Some(code) => {
+                let text = status["Failure"]["ActionError"]["kind"]["FunctionCallError"]["ExecutionError"].as_str().with_context(|| format!("{method} must fail: {status}"))?;
+                assert_eq!(panic_code(text), code, "{text}");
+                assert!(!tx["status"]["Failure"].is_null(), "the transaction itself is failed: {}", tx["status"]);
+            }
+            None => assert!(status["Failure"].is_null(), "{method}: {status}"),
+        }
+        on_chain.push(tx);
+    }
+    let call = |i: usize| on_chain[i]["transaction"]["actions"][0]["FunctionCall"].clone();
+    let arg = |i: usize| -> Result<J> {
+        let b64 = call(i)["args"].as_str().context("args")?.to_string();
+        let o = Command::new("sh").args(["-c", "printf %s \"$1\" | base64 -d", "sh", &b64]).output()?;
+        Ok(serde_json::from_slice(&o.stdout)?)
+    };
+    // 1. The refused deposit carried real value and named another digest than the accepted ones.
+    assert_eq!(call(2)["deposit"], json!(first.to_string()));
+    assert_eq!(call(3)["deposit"], json!(first.to_string()));
+    assert_eq!(call(5)["deposit"], json!(rest.to_string()));
+    let (wrong, right) = (arg(2)?, arg(3)?);
+    assert_eq!(wrong["trade_id"], right["trade_id"]);
+    assert_ne!(wrong["terms_digest"], right["terms_digest"]);
+    let trade_view: J = net.worker.view(&ids[0], "get_trade").args_json(json!({ "trade_id": trade })).await?.json()?;
+    assert!(trade_view.to_string().contains(right["terms_digest"].as_str().context("digest")?), "the accepted deposits name the registered revision");
+    // 2. The refused refund request names the buyer as funder; the relayer sent it.
+    let refund = arg(4)?;
+    assert_eq!(refund["payload"]["struct"]["funder"]["str"], json!(buyer));
+    assert_eq!(refund["payload"]["struct"]["reason"]["str"], json!("PARTIAL_FUNDING_RETURN"));
+    assert_eq!(refund["payload"]["struct"]["amountYocto"]["u128"], json!(first.to_string()));
+    // 3. The replay is the accepted inspection, byte for byte.
+    assert_eq!(call(8)["args"], call(7)["args"]);
+    // 4. The refused intent pays the relayer; the accepted one pays the supplier.
+    assert_eq!(arg(10)?["payload"]["struct"]["destination"]["str"], json!(relayer));
+    assert_eq!(arg(11)?["payload"]["struct"]["destination"]["str"], json!(supplier));
+    // 5. The refused release is the call that later pays.
+    assert_eq!(call(12)["args"], call(16)["args"]);
+    // 6. The forged approval approves the same intent as the accepted one.
+    let (forged, real) = (arg(14)?, arg(15)?);
+    assert_eq!(forged["payload"]["struct"]["releaseIntentId"], real["payload"]["struct"]["releaseIntentId"]);
+    assert_ne!(forged["signature"], real["signature"]);
+
+    // What the chain holds afterwards.
+    assert_eq!(net.balance(&ids[2]).await? - supplier_start, amount, "the supplier received the trade amount, once");
+    assert!(net.balance(&ids[3]).await? < relayer_start, "the relayer only paid fees");
+    let spent = buyer_start - net.balance(&ids[1]).await?;
+    assert!(spent >= amount && spent < amount + first, "the refused deposit came back to the buyer (spent {spent})");
+    let ledger: J = net.worker.view(&ids[0], "get_ledger").args_json(json!({ "trade_id": trade })).await?.json()?;
+    let b = &ledger["funders"][buyer];
+    assert_eq!((b["funded"].clone(), b["released"].clone()), (json!(amount.to_string()), json!(amount.to_string())), "{ledger}");
+    for k in ["partial", "available", "reserved", "refunded", "refundLocked", "quarantined"] {
+        assert_eq!(b[k], json!("0"), "{k}");
+    }
+    assert_eq!(ledger["conservation"], json!(true));
+    let refunds: J = net.worker.view(&ids[0], "get_refunds").args_json(json!({ "trade_id": trade })).await?.json()?;
+    assert_eq!(refunds, json!([]), "the refused refund request left no refund intent");
+    let release: J = net.worker.view(&ids[0], "get_release").args_json(json!({ "trade_id": trade })).await?.json()?;
+    assert!(release.to_string().contains("\"PAID\""));
+    assert!(!release.to_string().contains(relayer), "no intent names the relayer: {release}");
+    let holds: J = net.worker.view(&ids[0], "get_holds").args_json(json!({ "trade_id": trade })).await?.json()?;
+    assert_eq!((holds.as_array().map(Vec::len), holds[0]["status"].clone()), (Some(1), json!("RESOLVED")));
+
+    // The journey's own checks, as written to the record.
+    let checks = &rec["journey"]["checks"];
+    for c in [
+        "allRefusedWithExpectedCode", "refusalsChangedNothing", "refusedDepositReturned", "relayerReceivedNothing",
+        "fundedExactlyTheTradeAmount", "holdWasActive", "releaseBlockedByHold", "holdResolved", "supplierReceivedExactAmount",
+        "settledTrue", "releasePaid", "ledgerConservation",
+    ] {
+        assert_eq!(checks[c], json!(true), "{c}");
+    }
+    assert_eq!(checks["refusals"].as_array().map(Vec::len), Some(6));
+    let journey = read(&r.out.join("journey.json"))?;
+    for s in journey["steps"].as_array().context("steps")?.iter().filter(|s| !s["refused"].is_null()) {
+        // Before and after views identical, and identical to the core's replay that never saw the call.
+        assert_eq!((s["viewsSameAsBefore"].clone(), s["viewsEqualCore"].clone()), (json!(true), json!(true)), "{s}");
+        let text = s["refused"]["error"].as_str().context("error text")?;
+        assert!(text.starts_with("Smart contract panicked: DOCKSIDE:"), "{text}");
+    }
+
+    // The amount guard, then a second refusal journey on the same deployment, stopped after the
+    // fifth transaction (the relayer's refused refund request) and finished with --resume.
+    let key_file = std::fs::read_to_string(r.out.join("relayer-key.txt"))?;
+    let key_file = key_file
+        .lines()
+        .filter_map(|l| l.split("saved in a file ").nth(1))
+        .find(|p| p.contains("ed25519_"))
+        .context("key file path")?
+        .trim()
+        .to_string();
+    small.extend(["--skip-deploy", "--relayer-key-file", key_file.as_str()]);
+    let trades_before: J = net.worker.view(&ids[0], "get_config").await?.json()?;
+    let r = run_all(&kc, &accounts, &small, "refusal-small")?;
+    assert_eq!(r.status, 2, "{}", r.log);
+    assert!(r.log.contains("two deposits"), "{}", r.log);
+    let trades_after: J = net.worker.view(&ids[0], "get_config").await?.json()?;
+    assert_eq!(trades_before["trades"], trades_after["trades"], "the refused run registered nothing");
+
+    let mut again = args.clone();
+    again.extend(["--skip-deploy", "--relayer-key-file", key_file.as_str(), "--stop-after", "5"]);
+    let r = run_all(&kc, &accounts, &again, "refusal-2")?;
+    assert_eq!(r.status, 3, "{}", r.log);
+    let out = r.out.clone();
+    seed_file_is_private(&out)?;
+    let paused = read(&out.join("journey.json"))?;
+    let trade2 = paused["tradeId"].as_str().context("trade id")?.to_string();
+    assert_ne!(trade2, trade);
+    let ledger: J = net.worker.view(&ids[0], "get_ledger").args_json(json!({ "trade_id": trade2 })).await?.json()?;
+    assert_eq!(ledger["funders"][buyer]["partial"], json!(first.to_string()), "paused half funded: {ledger}");
+    let supplier_before = net.balance(&ids[2]).await?;
+    let r = resume(&kc, &accounts, &out, &[])?;
+    if r.status != 0 {
+        bail!("run-all --resume (refusal) failed ({}):\n{}", r.status, r.log);
+    }
+    let rec2 = read(&out.join("run-record.json"))?;
+    assert_eq!(rec2["journey"]["ok"], json!(true));
+    assert_eq!(rec2["journey"]["tradeId"], json!(trade2));
+    let refused: Vec<&str> = rec2["journey"]["transactions"].as_array().context("transactions")?.iter().filter_map(|t| t["refused"].as_str()).collect();
+    assert_eq!(refused, ["STALE_REVISION", "FORBIDDEN", "NONCE_REPLAYED", "DESTINATION_MISMATCH", "HOLD_ACTIVE", "SIGNATURE_INVALID"]);
+    assert_eq!(net.balance(&ids[2]).await? - supplier_before, amount);
     Ok(())
 }
 
