@@ -100,6 +100,36 @@ const schema = z
     /** Requests per minute per presented session token on authenticated routes. */
     DOCKSIDE_RATE_LIMIT_SESSION_PER_MIN: z.coerce.number().int().min(1).max(1_000_000).default(3000),
     DOCKSIDE_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    /* ---------------- real-chain runtime (M43, docs/runbooks/testnet-product.md) ---------------- */
+    /**
+     * Build manifest (`contract.nearCodeHash`) or artifact record (`nearCodeHash`) of the deployed
+     * escrow. Required whenever the API or worker talks to a NEAR node: startup refuses unless the
+     * escrow's on-chain code hash equals it.
+     */
+    DOCKSIDE_ESCROW_MANIFEST: z.string().min(1).optional(),
+    /** `status.chain_id` the RPC node must report: `testnet`, or a local sandbox's id on a loopback RPC. */
+    DOCKSIDE_NEAR_CHAIN_ID: z
+      .string()
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/)
+      .default("testnet"),
+    /** Relayer account whose function-call key (restricted to the escrow) the worker signs with. */
+    DOCKSIDE_RELAYER_ACCOUNT_ID: z
+      .string()
+      .transform(codec((s) => parseNearAccountId(s, {})))
+      .optional(),
+    /**
+     * PATH of the relayer's near-cli-rs key file (never the key itself). Read only by the worker,
+     * checked for owner-only permissions and kept out of every log and HTTP message.
+     */
+    DOCKSIDE_RELAYER_KEY_FILE: z.string().min(1).optional(),
+    /** Loopback port of the worker's party-call relay (`/relay/v1/*`, proxied by the web server). */
+    DOCKSIDE_RELAY_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+    /** Seed files of the ManifestAttestor and deterministic-policy service keys (isolated signer processes). */
+    DOCKSIDE_MANIFEST_ATTESTOR_KEY_FILE: z.string().min(1).optional(),
+    DOCKSIDE_POLICY_SERVICE_KEY_FILE: z.string().min(1).optional(),
+    /** Transaction validity period of the chain in blocks (NEAR testnet: 86400). */
+    DOCKSIDE_TX_VALIDITY_BLOCKS: z.coerce.number().int().min(10).max(1_000_000).default(86_400),
+    DOCKSIDE_WORKER_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(2_000),
   })
   .strict();
 

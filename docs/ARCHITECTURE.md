@@ -102,8 +102,9 @@ See [scripts/local-stack/README.md](../scripts/local-stack/README.md) and [apps/
 
 The API on its own (`pnpm run api`, i.e. `node services/api/dist/main.js`) serves the authority routes. It adds the
 trade routes only when `DOCKSIDE_ESCROW_CONTRACT_ID` and `DOCKSIDE_NEAR_RPC_URL` are both set. The worker
-(`services/worker`) exits with code 78 (`RELAYER_SIGNER_NOT_PROVISIONED`) until a relayer signer with real custody
-is provisioned.
+(`services/worker`) exits with code 78 (`RELAYER_SIGNER_NOT_PROVISIONED`) until a relayer key file is configured;
+with one it signs with the relayer's function-call key after a chain preflight and custody checks (M43,
+[ADR-0025](adr/0025-relayer-signer-custody-and-testnet-runtime.md), [runbook](runbooks/testnet-product.md)).
 
 ### Configuration (environment only, fails closed on unknown `DOCKSIDE_*` names; values are never echoed)
 

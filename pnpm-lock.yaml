@@ -192,9 +192,15 @@ importers:
 
   services/worker:
     dependencies:
+      '@dockside/authority':
+        specifier: workspace:*
+        version: link:../../packages/authority
       '@dockside/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@dockside/evidence':
+        specifier: workspace:*
+        version: link:../../packages/evidence
       '@dockside/journal':
         specifier: workspace:*
         version: link:../../packages/journal
