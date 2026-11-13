@@ -80,7 +80,9 @@ $U = "https://<your address>"; Invoke-RestMethod "$U/healthz"; Invoke-RestMethod
 ```
 
 `/readyz` must say `network near-testnet` and `fundedPayouts BLOCKED`; the relay status names the relayer and
-escrow2. Open the address in a browser: the sign-in screen appears.
+escrow2. Open the address in a browser: the sign-in screen appears. `<address>/receipt/trd_197c633d724eeb2cddc64d6dabf55976`
+shows the payment receipt of the M34 testnet trade, verified by the browser against NEAR (M54), and
+`<address>/proof/` the proof page.
 
 **8. Enrol the demo organisations.** One command, run inside the running container (R: the service's *Shell*
 tab, paste the part in quotes; F: as below). It bootstraps a buyer, a supplier and an inspection organisation,

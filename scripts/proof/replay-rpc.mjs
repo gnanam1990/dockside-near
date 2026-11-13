@@ -75,9 +75,26 @@ export const MUTATIONS = {
       : result,
   // The node does not know the transactions.
   "tx-unknown": (req, result) => (isTx(req) ? undefined : result),
+  // Receipt (M54): the inspection recorded on the contract did not pass.
+  "inspection-fail": (req, result) => {
+    if (!isView(req, "get_evidence")) return result;
+    const ev = viewJson(result);
+    if (ev.inspection) ev.inspection = { ...ev.inspection, decision: "FAIL", reasonCodes: ["DOCS_MISMATCH"] };
+    return withJson(result, ev);
+  },
+  // Receipt (M54): the release intent never reached PAID.
+  "release-unpaid": (req, result) =>
+    isView(req, "get_release")
+      ? withJson(result, {
+          ...viewJson(result),
+          intents: viewJson(result).intents.map((i) => ({ ...i, state: "SUBMITTING" })),
+        })
+      : result,
 };
 
+/** `testnet` reads fixtures/proof/testnet-recording.json; `testnet-receipt` the receipt recording (M54). */
 export function loadRecording(network = "testnet") {
+  if (!/^[a-z]+(-[a-z]+)?$/.test(network)) throw new Error(`not a recording name: ${network}`);
   return JSON.parse(readFileSync(join(ROOT, `fixtures/proof/${network}-recording.json`), "utf8"));
 }
 

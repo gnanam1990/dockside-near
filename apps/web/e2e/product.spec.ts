@@ -11,11 +11,20 @@
  * T-036 (simulated-chain stand-in for the direct testnet release), T-054, T-037 and T-038
  * (backend-reachable states) — see docs/status/M08.md for what remains NOT_RUN.
  */
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 import { expectAccessible, expectNoBodyOverflow, VIEWPORTS, waitForScreen } from "./helpers";
 import { control, enroll, eventually, openTab, type Person, pdf, png, signAction } from "./stack";
 
 test.describe.configure({ mode: "serial" });
+
+const VERIFY_RECEIPT_CLI = fileURLToPath(
+  new URL("../../../services/api/dist/cli/verify-receipt.js", import.meta.url),
+);
 
 let buyer: Person;
 let supplier: Person;
@@ -417,6 +426,62 @@ test("T-036 buyer locks and approves; T-038 a lost outcome stays locked and neve
   await expect(b.getByTestId("export-preview")).toContainText("Checksum");
   await expect(b.getByTestId("export-preview")).toContainText("MASKED");
   await expectAccessible(b, "timeline and export");
+});
+
+test("M54 payment receipt: signed, re-checked in the browser, saved as PDF and accepted offline", async () => {
+  const b = buyer.page;
+  await openTab(b, tradeId, "payout");
+  const panel = b.getByTestId("payment-receipt");
+  await panel.getByRole("button", { name: "Prepare signed receipt" }).click();
+  await expect(panel.getByTestId("payment-receipt-verdict")).toContainText(
+    "Signature verified in this browser",
+    {
+      timeout: 30_000,
+    },
+  );
+  await expect(panel).toContainText(
+    "Holds: The PDF matches its digest and carries exactly this signed statement",
+  );
+  const open = panel.getByRole("link", { name: "Open the receipt page (checks NEAR)" });
+  await expect(open).toHaveAttribute("href", new RegExp(`/receipt/${tradeId}[?]network=testnet&tx=`));
+  await expectAccessible(b, "payment receipt (buyer)");
+  const [dl] = await Promise.all([
+    b.waitForEvent("download"),
+    panel.getByRole("link", { name: "Save signed PDF" }).click(),
+  ]);
+  expect(dl.suggestedFilename()).toBe(`dockside-receipt-${tradeId}.pdf`);
+  const dir = mkdtempSync(join(tmpdir(), "dockside-m54-e2e-"));
+  const file = join(dir, "receipt.pdf");
+  const keysFile = join(dir, "keys.json");
+  await dl.saveAs(file);
+  // The operator's published key list, saved from the signed audit export panel (M17).
+  await openTab(b, tradeId, "timeline");
+  const exportPanel = b.getByTestId("signed-export");
+  await exportPanel.getByRole("button", { name: "Prepare signed export" }).click();
+  await expect(exportPanel.getByTestId("signed-export-verdict")).toContainText("Signature verified", {
+    timeout: 30_000,
+  });
+  const [keysDl] = await Promise.all([
+    b.waitForEvent("download"),
+    exportPanel.getByRole("link", { name: "Save export key list" }).click(),
+  ]);
+  await keysDl.saveAs(keysFile);
+  // A tampered copy is refused.
+  const tampered = join(dir, "tampered.pdf");
+  writeFileSync(
+    tampered,
+    Buffer.from(readFileSync(file).toString("latin1").replace("(PAID)", "(PA1D)"), "latin1"),
+  );
+  const bad = spawnSync(process.execPath, [VERIFY_RECEIPT_CLI, tampered, "--trusted-keys", keysFile], {
+    encoding: "utf8",
+  });
+  expect(bad.status).toBe(1);
+  const ok = spawnSync(process.execPath, [VERIFY_RECEIPT_CLI, file, "--trusted-keys", keysFile], {
+    encoding: "utf8",
+  });
+  expect(ok.status, ok.stdout + ok.stderr).toBe(0);
+  expect(ok.stdout).toContain(`VERIFIED: payment receipt of trade ${tradeId}`);
+  expect(readFileSync(file).subarray(0, 8).toString("latin1")).toBe("%PDF-1.4");
 });
 
 test("T-034 client boundary: no session token, invitation secret or evidence bytes in DOM, storage or accessibility tree", async () => {

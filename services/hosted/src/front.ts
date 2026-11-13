@@ -25,8 +25,9 @@ export const FRONT_CSP = [
 ].join("; ");
 
 /**
- * Policy of the proof site and the attack console under /proof/ (M53): the same as the pages' own
- * meta policy, with the public NEAR RPC endpoints they read the chain from; the relay is 'self'.
+ * Policy of the proof site and the attack console under /proof/ (M53) and of the payment receipts
+ * under /receipt/ (M54): the same as the pages' own meta policy, with the public NEAR RPC endpoints
+ * they read the chain from; the relay is 'self'.
  */
 export const PROOF_CSP = [
   "default-src 'none'",
@@ -38,6 +39,9 @@ export const PROOF_CSP = [
   "form-action 'none'",
   "frame-ancestors 'none'",
 ].join("; ");
+
+/** A receipt address `/receipt/<trade id>`; the same id rule as site/proof/lib/receipt.mjs. */
+const RECEIPT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 const TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -233,6 +237,24 @@ export function createFront(opts: FrontOptions): Server {
           return;
         }
         serveFile(req, res, pf, "no-cache", PROOF_CSP);
+        return;
+      }
+      // Payment receipts (M54): /receipt/<trade id> is the receipt page, with the proof site's files
+      // beside it so its relative imports resolve. Only files a browser loads are served.
+      if (path.startsWith("/receipt/")) {
+        const rest = path.slice("/receipt".length);
+        const named = proofFiles.get(rest === "/" ? "/receipt.html" : rest);
+        const target =
+          named !== undefined && TYPES[extname(named).toLowerCase()]
+            ? named
+            : named === undefined && RECEIPT_ID.test(rest.slice(1))
+              ? proofFiles.get("/receipt.html")
+              : undefined;
+        if (target === undefined) {
+          send(res, 404, { "Content-Type": "text/plain; charset=utf-8" }, Buffer.from("not found\n"));
+          return;
+        }
+        serveFile(req, res, target, "no-cache", PROOF_CSP);
         return;
       }
     }

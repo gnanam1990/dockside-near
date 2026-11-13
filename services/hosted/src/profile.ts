@@ -29,7 +29,10 @@ export interface HostedProfile {
   readonly relayerKeyFile: string | null;
   readonly apiEnv: Readonly<Record<string, string>>;
   readonly workerEnv: Readonly<Record<string, string>>;
-  /** The proof site (site/proof) served under /proof/, with the attack console at /proof/attack/. */
+  /**
+   * The proof site (site/proof) served under /proof/, with the attack console at /proof/attack/
+   * (M53) and the payment receipts at /receipt/<trade id> (M54).
+   */
   readonly proofRoot: string;
   /** Loopback port of the attack relay (M53). */
   readonly attackPort: number;

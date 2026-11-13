@@ -400,3 +400,85 @@ tbody tr:hover {
     padding: 8px;
   }
 }
+
+/* Payment receipt (M54). */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.receipt-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 16px 24px;
+  align-items: start;
+}
+
+.receipt-facts {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 0;
+}
+
+.qr-figure {
+  margin: 0;
+}
+
+.qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.qr-figure figcaption {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.receipt-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+@media (max-width: 640px) {
+  .receipt-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media print {
+  :root {
+    --surface-canvas: #ffffff;
+    --surface-panel: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+  }
+
+  .no-print,
+  .skip,
+  noscript {
+    display: none;
+  }
+
+  .top {
+    padding: 0 0 8px;
+    border: 0;
+  }
+
+  .panel,
+  .verdict {
+    break-inside: avoid;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
