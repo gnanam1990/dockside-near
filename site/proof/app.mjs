@@ -219,7 +219,7 @@ function renderChecking(panel, network) {
   );
 }
 
-function renderResult(panel, network, result, rerun) {
+function renderResult(panel, network, result, rerun, networkName) {
   const v = verdict(result);
   const s = result.summary;
   const d = network.deployment;
@@ -284,6 +284,17 @@ function renderResult(panel, network, result, rerun) {
         { class: "panel", "data-trade": t.tradeId },
         el("h3", {}, `Trade ${i + 1}: `, mono(t.tradeId)),
         el("p", { class: "muted", text: KIND[t.kind] ?? t.kind }),
+        t.kind === "refund"
+          ? null
+          : el(
+              "p",
+              {},
+              el("a", {
+                href: `./receipt.html?trade=${encodeURIComponent(t.tradeId)}&network=${encodeURIComponent(networkName)}`,
+                "data-receipt": t.tradeId,
+                text: "Payment receipt, verified in your browser",
+              }),
+            ),
         t.trade
           ? facts([
               ["Amount", mono(`${formatNear(t.trade.amountYocto)}`)],
@@ -345,7 +356,7 @@ async function main() {
     const id = ++runId;
     renderChecking(panel, network);
     const result = await verifyNetwork(network);
-    if (id === runId && current === name) renderResult(panel, network, result, () => show(name));
+    if (id === runId && current === name) renderResult(panel, network, result, () => show(name), name);
   }
 
   tabs.replaceChildren(

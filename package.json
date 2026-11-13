@@ -28,6 +28,7 @@
     "export-key": "node services/api/dist/cli/export-key.js",
     "service-key": "node services/api/dist/cli/service-key.js",
     "verify-export": "node services/api/dist/cli/verify-export.js",
+    "verify-receipt": "node services/api/dist/cli/verify-receipt.js",
     "stack": "node --experimental-transform-types --no-warnings --import ./scripts/local-stack/register.mjs scripts/local-stack/stack.ts",
     "contract:build": "node scripts/build-contract.mjs",
     "contract:reproduce": "node scripts/container-reproduce.mjs",
@@ -37,6 +38,7 @@
     "web:e2e:sandbox": "pnpm --filter @dockside/web run e2e:sandbox",
     "hosted": "node services/hosted/dist/main.js",
     "hosted:verify": "node scripts/hosted/verify-container.mjs",
+    "attack-console": "node services/hosted/dist/attack/cli.js",
     "ci:policy": "node scripts/ci/workflow-policy.mjs",
     "ci:local": "node scripts/ci/local-run.mjs",
     "judge": "node scripts/judge/judge.mjs",
@@ -48,6 +50,7 @@
     "@biomejs/biome": "2.5.15",
     "@types/node": "22.20.5",
     "fast-check": "4.10.2",
+    "jsqr": "1.4.0",
     "typescript": "5.9.3",
     "vitest": "4.1.12",
     "yaml": "2.9.0"

@@ -43,6 +43,7 @@ import type { AppDeps } from "./app.js";
 import type { AssetRecoveryModule } from "./assets.js";
 import { type AuditExport, buildAuditExport } from "./export.js";
 import { signAuditExport } from "./export-signing.js";
+import { receiptFacts, receiptPdf, signPaymentReceipt } from "./receipt.js";
 import { registerOwnedPolicy } from "./settings.js";
 import { type Route, route } from "./routing.js";
 
@@ -1353,6 +1354,57 @@ export function tradeRoutes(d: AppDeps): Route[] {
         },
       });
       return signed;
+    }),
+
+    /**
+     * Signed payment receipt of a paid release (M54, ADR-0030): the contract's and the journal's
+     * record, signed by the audit-export key under PAYMENT_RECEIPT, with its PDF. The trade's buyer
+     * and supplier and their organisations' members may have it; anyone else gets "not found".
+     */
+    r("GET", "/v1/trades/:id/payment-receipt", true, undefined, async ({ ctx, params }) => {
+      const c = must(ctx);
+      const m = mods(d);
+      const t = loadTrade(m, c, params["id"] as string);
+      const rel = relationsOf(c, t);
+      if (!["BUYER", "SUPPLIER", "BUYER_ORG", "SUPPLIER_ORG"].some((x) => rel.includes(x as Relation)))
+        fail("NOT_FOUND", "trade not found");
+      if (!d.exportSigner)
+        fail("INVALID_STATE", "no audit export key is enrolled in this process", {
+          reason: "EXPORT_KEY_NOT_CONFIGURED",
+        });
+      const facts = await receiptFacts(m, t, d.config.DOCKSIDE_ORIGIN);
+      const signed = await signPaymentReceipt(
+        {
+          db: d.db,
+          clock: d.clock,
+          ids: d.ids,
+          origin: d.config.DOCKSIDE_ORIGIN,
+          network: d.config.DOCKSIDE_NETWORK,
+        },
+        d.exportSigner,
+        facts,
+        { principalId: c.principal.id, organizationId: c.organizationId },
+      );
+      const pdf = receiptPdf(signed);
+      new AuditLog(d.db, d.clock, d.ids).append({
+        eventType: "PAYMENT_RECEIPT_SIGNED",
+        organizationId: c.organizationId,
+        actorPrincipalId: c.principal.id,
+        actorKeyVersionId: c.keyVersion.id,
+        sessionId: c.session.id,
+        subjectType: "trade",
+        subjectId: t.tradeId,
+        correlationId: c.correlationId,
+        source: SOURCE,
+        payload: {
+          keyId: signed.statement.keyId,
+          releaseIntentId: signed.statement.release.releaseIntentId,
+          txHash: signed.statement.release.txHash,
+          statementDigest: signed.statementDigest,
+          pdfSha256: pdf.sha256,
+        },
+      });
+      return { ...signed, pdf };
     }),
 
     /* ------------------------ operations (journal M05) ------------------------ */

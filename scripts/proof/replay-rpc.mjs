@@ -75,9 +75,72 @@ export const MUTATIONS = {
       : result,
   // The node does not know the transactions.
   "tx-unknown": (req, result) => (isTx(req) ? undefined : result),
+  // Receipt (M54): the inspection recorded on the contract did not pass.
+  "inspection-fail": (req, result) => {
+    if (!isView(req, "get_evidence")) return result;
+    const ev = viewJson(result);
+    if (ev.inspection) ev.inspection = { ...ev.inspection, decision: "FAIL", reasonCodes: ["DOCS_MISMATCH"] };
+    return withJson(result, ev);
+  },
+  // Receipt (M54): the release intent never reached PAID.
+  "release-unpaid": (req, result) =>
+    isView(req, "get_release")
+      ? withJson(result, {
+          ...viewJson(result),
+          intents: viewJson(result).intents.map((i) => ({ ...i, state: "SUBMITTING" })),
+        })
+      : result,
+  // Receipt (M50 on M54): the same trade as a NEP-141 token trade, paid by the escrow's
+  // `ft_transfer` on the token contract instead of a native transfer (the asset and the payout
+  // receipt rewritten; every other recorded fact unchanged).
+  nep141: (req, result) => asNep141(req, result),
+  // ... and that `ft_transfer` names another receiver than the paid intent.
+  "nep141-recipient": (req, result) => asNep141(req, result, "someone-else.testnet"),
 };
 
+/** The token of the NEP-141 variants: Circle's USDC contract on NEAR testnet, 6 decimals. */
+export const NEP141_TOKEN = "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af";
+
+function asNep141(req, result, receiver) {
+  if (isView(req, "get_ledger")) {
+    const ledger = viewJson(result);
+    ledger.asset = {
+      kind: "NEP141",
+      network: ledger.asset.network,
+      tokenAccountId: NEP141_TOKEN,
+      decimals: 6,
+    };
+    return withJson(result, ledger);
+  }
+  if (!isTx(req)) return result;
+  const escrow = result.transaction.receiver_id;
+  return {
+    ...result,
+    receipts: result.receipts.map((r) => {
+      const pay =
+        r.predecessor_id === escrow && r.receiver_id !== escrow
+          ? r.receipt?.Action?.actions?.[0]?.Transfer
+          : undefined;
+      if (!pay) return r;
+      const args = { receiver_id: receiver ?? r.receiver_id, amount: pay.deposit, memo: "dockside release" };
+      const call = {
+        method_name: "ft_transfer",
+        args: Buffer.from(JSON.stringify(args)).toString("base64"),
+        deposit: "1",
+        gas: 10_000_000_000_000,
+      };
+      return {
+        ...r,
+        receiver_id: NEP141_TOKEN,
+        receipt: { ...r.receipt, Action: { ...r.receipt.Action, actions: [{ FunctionCall: call }] } },
+      };
+    }),
+  };
+}
+
+/** `testnet` reads fixtures/proof/testnet-recording.json; `testnet-receipt` the receipt recording (M54). */
 export function loadRecording(network = "testnet") {
+  if (!/^[a-z]+(-[a-z]+)?$/.test(network)) throw new Error(`not a recording name: ${network}`);
   return JSON.parse(readFileSync(join(ROOT, `fixtures/proof/${network}-recording.json`), "utf8"));
 }
 

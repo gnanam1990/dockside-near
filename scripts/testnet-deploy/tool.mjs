@@ -25,7 +25,7 @@
 //   node tool.mjs resume-rpc-url --dir <run dir> [--rpc-url <url>]   the RPC URL a resumed run uses:
 //                         the recorded one, or the override checked against the recorded network
 //   node tool.mjs verify-artifact --wasm <file> --manifest <file>
-//   node tool.mjs preflight NET ASSET --wasm <file> [--skip-deploy] [--journey <paid|hold|refund|refusal>]
+//   node tool.mjs preflight NET ASSET --wasm <file> [--skip-deploy] [--journey <paid|hold|refund|refusal|attack-demo>]
 //                         accounts, balances, token registration, caps and the exposure check; prints
 //                         the value plan (every amount, sender and receiver) to stderr
 //   node tool.mjs tx-hash --file <near-cli output>
@@ -33,7 +33,7 @@
 //   node tool.mjs relayer-key-file --file <near-cli add-key output>
 //   node tool.mjs verify-relayer-key --network <n> [--rpc-url <url>] --key-file <file>
 //   node tool.mjs journey --network <n> [--rpc-url <url>] --near <bin> --key-file <file> --mirror <bin> --out <dir>
-//                         (--journey <paid|hold|refund|refusal> --amount-yocto <n> [--excess-yocto <n>] | --resume)
+//                         (--journey <paid|hold|refund|refusal|attack-demo> --amount-yocto <n> [--excess-yocto <n>] | --resume)
 //                         [--no-wait] [--stop-after <n>] [--pending-tx <hash|none>]
 //       exits 3 (PAUSED) when the journey stops before its end (--stop-after, or --no-wait in a
 //       cooling period); `--resume` with the same --out finishes it from journey-seed.json and

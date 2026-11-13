@@ -324,6 +324,37 @@ async fn run_all_deploys_verifies_configures_the_relayer_and_completes_the_journ
     let r = run_all(&kc, &accounts, &refund, "run-refund")?;
     assert_eq!(r.status, 2, "{}", r.log);
     assert!(r.log.contains("RUN_EXISTS"));
+
+    // M53 attack-demo journey: funded, approved, then held by a deterministic policy and left
+    // there. Nothing is released or refunded; the amount stays in the escrow, reserved.
+    let mut demo = again.clone();
+    demo.extend(["--journey", "attack-demo"]);
+    let supplier_before = net.balance(&ids[2]).await?;
+    let r = run_all(&kc, &accounts, &demo, "run-attack-demo")?;
+    if r.status != 0 {
+        bail!("run-all --journey attack-demo failed ({}):
+{}", r.status, r.log);
+    }
+    assert!(r.log.contains("attack-demo journey demo trade FUNDED, APPROVED and HELD"), "{}", r.log);
+    let rec = read(&r.out.join("run-record.json"))?;
+    assert_eq!(rec["journey"]["kind"], json!("attack-demo"));
+    assert_eq!(rec["journey"]["ok"], json!(true));
+    let txs = rec["journey"]["transactions"].as_array().context("transactions")?;
+    let methods: Vec<&str> = txs.iter().filter_map(|t| t["method"].as_str()).collect();
+    assert_eq!(
+        methods,
+        ["register_trade", "register_evidence_policy", "fund", "submit_manifest_attestation", "submit_inspection", "create_release_intent", "approve_release", "set_hold"]
+    );
+    for c in ["holdActive", "deterministicPolicyHold", "releaseBlockedByHold", "approvalRecorded", "intentPaysBoundSupplier", "fundedExactlyTheTradeAmount", "reservedExactlyTheTradeAmount", "nothingReleased", "nothingRefunded", "ledgerConservation"] {
+        assert_eq!(rec["journey"]["checks"][c], json!(true), "{c}");
+    }
+    let demo_trade = rec["journey"]["tradeId"].as_str().context("trade id")?;
+    let holds: J = net.worker.view(&ids[0], "get_holds").args_json(json!({ "trade_id": demo_trade })).await?.json()?;
+    assert_eq!(holds[0]["status"], json!("ACTIVE"), "{holds}");
+    let ledger: J = net.worker.view(&ids[0], "get_ledger").args_json(json!({ "trade_id": demo_trade })).await?.json()?;
+    assert_eq!(ledger["funders"][ids[1].as_str()]["reserved"], json!(amount.to_string()), "{ledger}");
+    assert_eq!(ledger["totals"]["released"], json!("0"));
+    assert_eq!(net.balance(&ids[2]).await?, supplier_before, "the supplier receives nothing");
     Ok(())
 }
 
@@ -815,6 +846,39 @@ async fn run_all_runs_the_usdc_journeys_and_the_mainnet_label_on_sandbox() -> Re
     assert_eq!(ft_balance(&net, token.id(), supplier).await?, 15 * USDC);
     assert_eq!(ft_balance(&net, token.id(), escrow).await?, 0);
     assert_eq!(ft_balance(&net, token.id(), &ids[3]).await?, 0, "the account the redirected calls named received nothing");
+
+    // M53 attack-demo journey in the token: funded, payee registration confirmed, approved, held
+    // and left there. The amount stays in the escrow, reserved for the supplier.
+    let before = ft_balance(&net, token.id(), buyer).await?;
+    let mut demo = again.clone();
+    demo.extend(["--journey", "attack-demo"]);
+    let r = run_all(&kc, &accounts, &demo, "usdc-attack-demo")?;
+    if r.status != 0 {
+        bail!("run-all --asset usdc --journey attack-demo failed ({}):
+{}", r.status, r.log);
+    }
+    let rec = read(&r.out.join("run-record.json"))?;
+    assert_eq!(rec["journey"]["ok"], json!(true));
+    assert_eq!(
+        methods(&rec),
+        [
+            "register_trade",
+            "register_evidence_policy",
+            "ft_transfer_call",
+            "submit_manifest_attestation",
+            "submit_inspection",
+            "check_payee_storage",
+            "create_release_intent",
+            "approve_release",
+            "set_hold"
+        ]
+    );
+    for c in ["holdActive", "deterministicPolicyHold", "releaseBlockedByHold", "approvalRecorded", "intentPaysBoundSupplier", "fundedExactlyTheTradeAmount", "reservedExactlyTheTradeAmount", "nothingReleased", "nothingRefunded", "ledgerConservation"] {
+        assert_eq!(rec["journey"]["checks"][c], json!(true), "{c}: {}", rec["journey"]["checks"]);
+    }
+    assert_eq!(ft_balance(&net, token.id(), buyer).await?, before - 5 * USDC);
+    assert_eq!(ft_balance(&net, token.id(), escrow).await?, 5 * USDC, "the demo trade's amount stays in the escrow");
+    assert_eq!(ft_balance(&net, token.id(), supplier).await?, 15 * USDC, "the supplier receives nothing from the demo");
 
     // The deployed cap refuses a larger run before anything is sent, and another token is not enabled.
     let mut over = again.clone();

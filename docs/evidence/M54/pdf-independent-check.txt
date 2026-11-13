@@ -1,0 +1,78 @@
+# M54 sample receipt PDF (simulated-chain trade from services/api/test/m54-payment-receipt.test.ts) checked by tools that share no code with Dockside:
+# qpdf and poppler-utils from Debian bookworm in node:22-bookworm-slim (WSL Docker), then jsQR on poppler's rendering.
+
+$ qpdf --version
+qpdf version 11.3.0
+$ qpdf --check receipt.pdf
+checking receipt.pdf
+PDF Version: 1.4
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+exit 0
+$ pdfinfo receipt.pdf
+Title:           Dockside payment receipt trd_3f1efa0ad6ec66b9c7395a80d75f3741
+Producer:        Dockside
+Pages:           1
+Page size:       595 x 842 pts (A4)
+PDF version:     1.4
+$ pdfdetach -list receipt.pdf
+1 embedded files
+1: dockside-receipt.json
+$ pdftotext -layout receipt.pdf -
+Dockside payment receipt
+Issued by the Dockside deployment at https://dockside.test on 2027-01-15T08:00:00Z.
+The facts below were read from the NEAR escrow contract and are signed. Check them on NEAR
+yourself: scan the code or open the address under it. No trust in this document is needed.
+
+
+Trade                              trd_3f1efa0ad6ec66b9c7395a80d75f3741
+Amount paid                        10 NEAR
+Amount (base units)                10000000000000000000000000
+Asset                              NEAR (native) on near-testnet
+Buyer                              acme-buyer.testnet
+Buyer organisation                 org_37f9f683877c4fa0113ed11e2ba8735a
+Supplier                           harbor-supplier.testnet
+Supplier organisation              org_ee55a1697db4a6a728f2e85f515a36c0
+Paid to                            harbor-supplier.testnet
+Inspection                         PASS (DOCS_MATCH), 2027-01-15T08:00:00Z
+Inspection digest                  fd8f735a059f8c0864adb821ea8a4c7f9c8af25fbfae66e16e07e69c92501394
+Release intent                     rli_692297acd380505417a28ed7c0895b42
+Release state                      PAID
+Paid at                            2027-01-15T08:00:00Z
+Release transaction                Hv3mvSUUS7JUCqWGTEcCuxSM5gnu42HxuN4SQUj5kFH5
+Transaction signer                 relayer.testnet
+Escrow contract                    dockside-escrow.testnet
+Network                            near-testnet
+Terms                              revision 1, digest
+                                   a2efab2888c7a08016d767d4f8ce4b97c0f26122d7097207f82ed5df69bc383c
+
+
+
+Verify on NEAR
+                                                Open this address, or scan the code, to have your browser read the
+                                                contract and check every fact above, the code hash of the escrow
+                                                and the release transaction:
+                                                https://dockside.test/receipt/trd_3f1efa0ad6ec66b9c7395a80d7
+                                                5f3741?network=testnet&tx=Hv3mvSUUS7JUCqWGTEcCuxSM5gnu42HxuN
+                                                4SQUj5kFH5&signer=relayer.testnet
+
+
+
+
+Signature
+Signed by key                aek_aa5f846c47a311e0b0fd368342b8a939
+Key of                       the audit-export keys of https://dockside.test
+Public key                   ed25519:6Dt6SYCok4opGyF2N3qnsHsAczCpon1gVmkLhHPAWedB
+Signed at                    2027-01-15T08:00:00Z
+Issued to                    prn_c706d472c9af8e4a9587e024212bbb3a of
+                             org_37f9f683877c4fa0113ed11e2ba8735a
+Statement digest             c2c17d16c858ae509e56f18d997960b365f89700360fbe914fe1212b31e9a12d
+Signature                    ed25519:5jieBEFWMdxNxuq98XuiKVzLJaiPrGrCjZrh3yEkuhXmTGe5RFPVFuoqFCK3mE4GvH
+                             Y1ayUAB5YteStHkGPYiHLf
+
+The signed statement is attached to this PDF as dockside-receipt.json (domain dockside/payment-receipt).
+Verify the file offline: pnpm run verify-receipt <this file> --trusted-keys <published key list>.
+The verifier checks the signature and renders this PDF again from the statement: any edit fails.
+QR decoded from the poppler rendering (827x1170 px): https://dockside.test/receipt/trd_3f1efa0ad6ec66b9c7395a80d75f3741?network=testnet&tx=Hv3mvSUUS7JUCqWGTEcCuxSM5gnu42HxuN4SQUj5kFH5&signer=relayer.testnet

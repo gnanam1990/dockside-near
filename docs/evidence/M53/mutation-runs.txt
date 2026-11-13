@@ -1,0 +1,23 @@
+== mutation: change-payout keeps the active revision number
+     × refuses every attack with its expected code and leaves the trade's views unchanged 
+     × each refusal is about the one thing the attacker cannot have 
+     × sends exactly the arguments the chain already holds when it replays the approval 
+     × signs with the demo key only: no deposit, receiver the escrow, increasing nonces 
+     × sends one attempt per request, reports the core's code, and rate limits the same client 
+     × still refuses everything and the demo stays armed; codes follow the first failing check 
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  6 failed | 8 passed (14)
+== mutation: demoArmed always armed
+     × sends nothing once the risk resolver lifts the hold (the demo is disarmed) 
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 13 passed (14)
+== mutation: relay keeps sending after an accepted attempt
+     × stops for good when the contract ever accepts an attempt 
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 13 passed (14)
+== mutation: refund names the real funder instead of the attacker (after adding the payload check)
+     × each refusal is about the one thing the attacker cannot have 
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 13 passed (14)
+== restored implementation
+      Tests  14 passed (14)

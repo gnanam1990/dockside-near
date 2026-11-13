@@ -378,6 +378,37 @@ async function main() {
       "an application route (/sign-in) gets the app shell",
       deep.status === 200 && (await deep.text()).includes('id="root"'),
     );
+    // Payment receipts and the proof site (M54): static files from the image, read by the browser
+    // from NEAR, under a policy that names the proof manifest's RPC endpoints.
+    const receipt = await fetch(`${WEB}/receipt/trd_${"0".repeat(32)}?network=testnet`);
+    const receiptCsp = receipt.headers.get("content-security-policy") ?? "";
+    check(
+      "GET /receipt/<trade id> serves the receipt page with a policy naming the manifest's RPC endpoints",
+      receipt.status === 200 &&
+        (await receipt.text()).includes('src="./receipt.mjs"') &&
+        receiptCsp.includes("connect-src 'self' https://test.rpc.fastnear.com") &&
+        receiptCsp.includes("frame-ancestors 'none'"),
+      receiptCsp,
+    );
+    let receiptFiles = true;
+    for (const f of [
+      "/receipt/receipt.mjs",
+      "/receipt/lib/receipt.mjs",
+      "/receipt/lib/qr.mjs",
+      "/proof/app.mjs",
+    ]) {
+      const r = await fetch(`${WEB}${f}`);
+      receiptFiles &&=
+        r.status === 200 && (r.headers.get("content-type") ?? "").startsWith("text/javascript");
+    }
+    const proofManifest = await fetch(`${WEB}/receipt/proof-manifest.json`);
+    check(
+      "the receipt's scripts and the proof manifest are served beside it",
+      receiptFiles &&
+        proofManifest.status === 200 &&
+        (await proofManifest.json()).networks?.testnet?.deployment?.contractId ===
+          "gnanam1990-dock-escrow2.testnet",
+    );
     const relay = await fetch(`${WEB}/relay/v1/status`);
     const relayJson = await relay.json();
     check(

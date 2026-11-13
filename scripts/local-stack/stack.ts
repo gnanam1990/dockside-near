@@ -389,7 +389,7 @@ async function main(): Promise<void> {
   const exportSeed = join(dir, "audit-export-key.seed");
   writeFileSync(exportSeed, `${randomBytes(32).toString("hex")}\n`, { mode: 0o600, flag: "wx" });
   const exportProc = await IsolatedSigner.spawn({
-    allowedPurposes: ["AUDIT_EXPORT_KEY_ENROLLMENT", "AUDIT_EXPORT"],
+    allowedPurposes: ["AUDIT_EXPORT_KEY_ENROLLMENT", "AUDIT_EXPORT", "PAYMENT_RECEIPT"],
     seedFile: exportSeed,
   });
   const exportSigner: ExportKeySigner = {

@@ -14,6 +14,11 @@
 //   refusal six calls the contract must reject, each sent as a real transaction that must fail
 //           with its expected DOCKSIDE code and change nothing (REFUSALS below), placed along one
 //           trade that then completes: the hold journey with the trade amount in two deposits
+//   attack-demo  the attack console's demo trade (M53): register, policy, fund, attest, inspect,
+//           intent and the buyer's approval, then a deterministic-policy hold SET after the
+//           approval and never resolved. The journey ends there on purpose: the value stays
+//           reserved for the bound supplier, the release is blocked by the hold, and the trade is
+//           left for anyone to attack from an account that has no authority over it
 //
 // With a NEP-141 trade asset (`--asset usdc --token <id>`, M50) the same journeys run in the token:
 // `fund` is the buyer's own `ft_transfer_call` on the token contract (the escrow's `ft_on_transfer`
@@ -46,7 +51,9 @@ import {
 import { DEFAULT_EXCESS_UNITS, DEFAULT_EXCESS_YOCTO } from "./plan.mjs";
 
 const HOUR = 3_600_000;
-export const JOURNEYS = ["paid", "hold", "refund", "refusal"];
+export const JOURNEYS = ["paid", "hold", "refund", "refusal", "attack-demo"];
+/** Lifetime of the attack demo's hold: inside the trade's 30-day expiry, far beyond any demo. */
+export const DEMO_HOLD_TTL_MS = 28 * 24 * HOUR;
 /** Excess the refund journey deposits on top of the trade amount (0.01 NEAR, or 1 USDC). */
 export { DEFAULT_EXCESS_YOCTO };
 export const SEED_FILE = "journey-seed.json";
@@ -186,6 +193,23 @@ const PLANS = {
     }),
     { id: "approval", what: "approval", extra: (d) => ({ intentId: intentOf(d) }) },
     { id: "execute_release", what: "execute_release", extra: (d) => ({ intentId: intentOf(d) }) },
+  ],
+  // Approved first, then held: the approval exists (and can be replayed), and the hold set after
+  // it blocks the release. No resolution and no execution follow.
+  "attack-demo": [
+    { id: "register", what: "register" },
+    { id: "policy", what: "policy" },
+    { id: "fund", what: "fund" },
+    { id: "attestation", what: "attestation" },
+    { id: "inspection", what: "inspection" },
+    { id: "intent", what: "intent" },
+    { id: "approval", what: "approval", extra: (d) => ({ intentId: intentOf(d) }) },
+    {
+      id: "hold_set",
+      what: "hold_set",
+      extra: () => ({ hold: "h1", issuer: "POLICY_SETTER", ttlMs: DEMO_HOLD_TTL_MS }),
+    },
+    { id: "observe:held", kind: "observe" },
   ],
 };
 
@@ -1057,6 +1081,8 @@ async function checks({ rpc, accounts, journey, tradeId, state, params, balanceO
     return { ok, ...base, checks: c, refunds };
   }
   const release = await rpc.view(accounts.escrow, "get_release", { trade_id: tradeId });
+  if (journey === "attack-demo")
+    return demoChecks({ rpc, accounts, tradeId, state, params, ledger, release, base });
   const exec = steps.find((s) => s.method === "execute_release");
   const delta = exec ? big(exec.payeeAfterYocto) - big(exec.payeeBeforeYocto) : 0n;
   const c = {
@@ -1133,6 +1159,48 @@ async function checks({ rpc, accounts, journey, tradeId, state, params, balanceO
       c.fundedExactlyTheTradeAmount;
   }
   return { ok, ...out, checks: c };
+}
+
+/**
+ * The attack demo's end state: fully funded, the whole amount reserved by one approved intent that
+ * pays the bound supplier, one ACTIVE deterministic-policy hold blocking the release, nothing
+ * released or refunded.
+ */
+async function demoChecks({ rpc, accounts, tradeId, state, params, ledger, release, base }) {
+  const holds = await rpc.view(accounts.escrow, "get_holds", { trade_id: tradeId });
+  const refunds = await rpc.view(accounts.escrow, "get_refunds", { trade_id: tradeId });
+  const held = state.observed["observe:held"] ?? {};
+  const live = release.intents.find((i) => i.releaseIntentId === release.liveIntent) ?? {};
+  const buyer = ledger.funders[accounts.buyer] ?? {};
+  const approval = state.steps.find((s) => s.step === "approval" && s.txHash);
+  const c = {
+    holdActive: holds.length === 1 && holds[0].status === "ACTIVE" && holds[0].resolution === null,
+    deterministicPolicyHold: holds[0]?.issuerRole === "POLICY_SETTER" && typeof holds[0]?.ruleId === "string",
+    holdExpiresAt: holds[0]?.expiresAt ?? null,
+    releaseBlockedByHold:
+      (held.blockers ?? []).includes("HOLD_ACTIVE") && release.blockers.includes("HOLD_ACTIVE"),
+    approvalRecorded: live.state === "DIRECT_TESTNET_AUTHORIZED" && live.approval !== null && !!approval,
+    approvalTxHash: approval?.txHash ?? null,
+    intentPaysBoundSupplier:
+      live.destination === accounts.supplier && release.payoutDestination === accounts.supplier,
+    fundedExactlyTheTradeAmount: big(buyer.funded) === params.amount,
+    reservedExactlyTheTradeAmount: big(buyer.reserved) === params.amount,
+    nothingReleased: big(ledger.totals.released) === 0n && !JSON.stringify(release).includes('"PAID"'),
+    nothingRefunded: refunds.length === 0 && big(ledger.totals.refunded) === 0n,
+    ledgerConservation: ledger.conservation === true,
+  };
+  const ok =
+    c.holdActive &&
+    c.deterministicPolicyHold &&
+    c.releaseBlockedByHold &&
+    c.approvalRecorded &&
+    c.intentPaysBoundSupplier &&
+    c.fundedExactlyTheTradeAmount &&
+    c.reservedExactlyTheTradeAmount &&
+    c.nothingReleased &&
+    c.nothingRefunded &&
+    c.ledgerConservation;
+  return { ok, ...base, release, holds, checks: c };
 }
 
 function tail(text) {

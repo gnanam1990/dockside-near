@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Dockside hosted runtime: one process tree that serves the web app, the control API and the worker behind a single HTTP port",
+  "description": "Dockside hosted runtime: one process tree that serves the web app, the control API, the worker and the attack console relay behind a single HTTP port",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -14,6 +14,7 @@
     "@dockside/api": "workspace:*",
     "@dockside/authority": "workspace:*",
     "@dockside/core": "workspace:*",
+    "@dockside/near": "workspace:*",
     "@dockside/worker": "workspace:*"
   }
 }

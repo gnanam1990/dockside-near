@@ -4,6 +4,7 @@ export interface Replay {
   methods(): string[];
   close(): Promise<void>;
 }
+export const NEP141_TOKEN: string;
 export const MUTATIONS: Record<string, (req: any, result: any) => any>;
 export function loadRecording(network?: string): any;
 export function requestKey(req: any): string;

@@ -34,3 +34,9 @@ services:
         value: gnanam1990-dock-relayer.testnet
       - key: RELAYER_KEY_JSON_B64
         sync: false
+      # Attack console (M53): the base64 of the demo account's function-call key file, or leave it
+      # empty and the console replays recorded attempts. The Pages copy may call the relay.
+      - key: ATTACK_KEY_JSON_B64
+        sync: false
+      - key: HOSTED_ATTACK_ALLOWED_ORIGINS
+        value: https://gnanam1990.github.io

@@ -226,6 +226,13 @@ export function valuePlan({
       to: accounts.buyer,
       amount: show(amounts.excess),
     });
+  } else if (journey === "attack-demo") {
+    rows.push({
+      what: "reserved for the supplier by the approved intent and HELD (the journey releases and refunds nothing; the value stays in the escrow)",
+      from: accounts.escrow,
+      to: accounts.supplier,
+      amount: `${show(amounts.amount)}, not sent`,
+    });
   } else {
     rows.push({
       what: journey === "paid" ? "release" : "release after the hold is resolved",

@@ -24,6 +24,25 @@ export const FRONT_CSP = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+/**
+ * Policy of the proof site and the attack console under /proof/ (M53) and of the payment receipts
+ * under /receipt/ (M54): the same as the pages' own meta policy, with the public NEAR RPC endpoints
+ * they read the chain from; the relay is 'self'.
+ */
+export const PROOF_CSP = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self'",
+  "connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://rpc.mainnet.fastnear.com https://archival-rpc.mainnet.fastnear.com",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+/** A receipt address `/receipt/<trade id>`; the same id rule as site/proof/lib/receipt.mjs. */
+const RECEIPT_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
 const TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -36,6 +55,7 @@ const TYPES: Readonly<Record<string, string>> = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
   ".txt": "text/plain; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
 };
 
 /** Request headers that describe one hop and are not forwarded. */
@@ -58,6 +78,11 @@ export interface FrontOptions {
   readonly relayPort: number;
   /** Upstream response timeout. The relay waits for transaction finality, so this is generous. */
   readonly upstreamTimeoutMs?: number;
+  /**
+   * The proof site (site/proof) served under /proof/ and the attack console's relay on loopback
+   * (M53): /proof/attack/api/* is forwarded to it as /attack/api/*.
+   */
+  readonly proof?: { readonly root: string; readonly attackPort: number };
 }
 
 /** Every file of the web build, by URL path. Requests can only ever name one of these. */
@@ -81,6 +106,7 @@ function apiRoute(path: string): boolean {
 
 export function createFront(opts: FrontOptions): Server {
   const files = indexWebRoot(opts.webRoot);
+  const proofFiles = opts.proof ? indexWebRoot(opts.proof.root) : new Map<string, string>();
   const shell = files.get("/index.html");
   if (shell === undefined) throw new Error("the web build has no index.html");
   const secure = opts.origin.startsWith("https://");
@@ -98,7 +124,13 @@ export function createFront(opts: FrontOptions): Server {
     res.end(body);
   };
 
-  const serveFile = (req: IncomingMessage, res: ServerResponse, file: string, cache: string) => {
+  const serveFile = (
+    req: IncomingMessage,
+    res: ServerResponse,
+    file: string,
+    cache: string,
+    csp?: string,
+  ) => {
     let body: Buffer;
     try {
       body = readFileSync(file);
@@ -110,11 +142,12 @@ export function createFront(opts: FrontOptions): Server {
       "Content-Type": TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
       "Content-Length": String(body.byteLength),
       "Cache-Control": cache,
+      ...(csp ? { "Content-Security-Policy": csp } : {}),
     };
     send(res, 200, headers, req.method === "HEAD" ? undefined : body);
   };
 
-  const proxy = (req: IncomingMessage, res: ServerResponse, upstreamPort: number) => {
+  const proxy = (req: IncomingMessage, res: ServerResponse, upstreamPort: number, path = req.url) => {
     const headers: Record<string, string | string[]> = {};
     for (const [k, v] of Object.entries(req.headers))
       if (v !== undefined && !HOP_BY_HOP.has(k.toLowerCase())) headers[k] = v;
@@ -141,7 +174,7 @@ export function createFront(opts: FrontOptions): Server {
         host: "127.0.0.1",
         port: upstreamPort,
         method: req.method,
-        path: req.url,
+        path,
         headers,
         timeout: opts.upstreamTimeoutMs ?? 120_000,
       },
@@ -173,6 +206,10 @@ export function createFront(opts: FrontOptions): Server {
       proxy(req, res, opts.relayPort);
       return;
     }
+    if (opts.proof && rawPath.startsWith("/proof/attack/api/")) {
+      proxy(req, res, opts.proof.attackPort, rawUrl.slice("/proof".length));
+      return;
+    }
     if (req.method !== "GET" && req.method !== "HEAD") {
       req.resume();
       send(res, 405, { Allow: "GET, HEAD", "Content-Type": "text/plain; charset=utf-8" });
@@ -183,6 +220,43 @@ export function createFront(opts: FrontOptions): Server {
       path = decodeURIComponent(rawPath);
     } catch {
       path = "\0";
+    }
+    if (opts.proof) {
+      if (path === "/attack" || path === "/attack/" || path === "/proof") {
+        send(res, 302, {
+          Location: path === "/proof" ? "/proof/" : "/proof/attack/",
+          "Cache-Control": "no-cache",
+        });
+        return;
+      }
+      if (path.startsWith("/proof/")) {
+        const rel = path.slice("/proof".length);
+        const pf = proofFiles.get(rel.endsWith("/") ? `${rel}index.html` : rel);
+        if (pf === undefined) {
+          send(res, 404, { "Content-Type": "text/plain; charset=utf-8" }, Buffer.from("not found\n"));
+          return;
+        }
+        serveFile(req, res, pf, "no-cache", PROOF_CSP);
+        return;
+      }
+      // Payment receipts (M54): /receipt/<trade id> is the receipt page, with the proof site's files
+      // beside it so its relative imports resolve. Only files a browser loads are served.
+      if (path.startsWith("/receipt/")) {
+        const rest = path.slice("/receipt".length);
+        const named = proofFiles.get(rest === "/" ? "/receipt.html" : rest);
+        const target =
+          named !== undefined && TYPES[extname(named).toLowerCase()]
+            ? named
+            : named === undefined && RECEIPT_ID.test(rest.slice(1))
+              ? proofFiles.get("/receipt.html")
+              : undefined;
+        if (target === undefined) {
+          send(res, 404, { "Content-Type": "text/plain; charset=utf-8" }, Buffer.from("not found\n"));
+          return;
+        }
+        serveFile(req, res, target, "no-cache", PROOF_CSP);
+        return;
+      }
     }
     const file = files.get(path === "/" ? "/index.html" : path);
     if (file !== undefined) {

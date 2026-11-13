@@ -1,0 +1,34 @@
+# M54 receipt verifier, live read-only run against https://test.rpc.fastnear.com on 2026-11-13T11:32:46.781Z
+
+## release trd_197c633d724eeb2cddc64d6dabf55976: PASS at final block 277504286, 7 requests
+PASS  code-hash         7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N
+PASS  trade             trd_197c633d724eeb2cddc64d6dabf55976 on near-testnet
+PASS  inspection        PASS (DOCS_MATCH)
+PASS  release-intent    rli_abb154c802f92362dc09d32fe48888be PAID, 0.05 NEAR to gnanam1990-dock-supplier.testnet
+PASS  approval-binding  inspection 4187d180b333c2ab802898acdbf621a3da8f105df8cd0be63168a2ea1d1cac80, manifest 326f472218141d281983f96a9910c86f04ef83136fdb6c21f02d4c0df5808cd1
+PASS  conservation      funded 50000000000000000000000 = released 50000000000000000000000
+PASS  released-total    0.05 NEAR
+PASS  release-tx        execute_release of trd_197c633d724eeb2cddc64d6dabf55976 / rli_abb154c802f92362dc09d32fe48888be by gnanam1990-dock-relayer.testnet on gnanam1990-dock-escrow2.testnet, success, FINAL
+PASS  release-transfer  0.05 NEAR to gnanam1990-dock-supplier.testnet, succeeded
+
+## hold trd_75c1de55a8c9f1aa532ec37eb611f46f: PASS at final block 277504289, 7 requests
+PASS  code-hash         7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N
+PASS  trade             trd_75c1de55a8c9f1aa532ec37eb611f46f on near-testnet
+PASS  inspection        PASS (DOCS_MATCH)
+PASS  release-intent    rli_221f8384040598d5bff0dccab0397da2 PAID, 0.05 NEAR to gnanam1990-dock-supplier.testnet
+PASS  approval-binding  inspection b782b407becf79041c4028d0dd7e5097d2e00114b121931a91f0b3f7d4354834, manifest e18e575e6fa03d32bfe0de388f3419bda2703a1e58ba6a2ce4e80395fcf92df7
+PASS  conservation      funded 50000000000000000000000 = released 50000000000000000000000
+PASS  released-total    0.05 NEAR
+PASS  release-tx        execute_release of trd_75c1de55a8c9f1aa532ec37eb611f46f / rli_221f8384040598d5bff0dccab0397da2 by gnanam1990-dock-relayer.testnet on gnanam1990-dock-escrow2.testnet, success, FINAL
+PASS  release-transfer  0.05 NEAR to gnanam1990-dock-supplier.testnet, succeeded
+
+## refund trd_a54930d5d5af718e0fc8a8c9d43b9a2d: FAIL at final block 277504291, 6 requests
+PASS  code-hash         7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N
+PASS  trade             trd_a54930d5d5af718e0fc8a8c9d43b9a2d on near-testnet
+FAIL  inspection        no inspection
+FAIL  release-intent    no PAID release intent
+FAIL  approval-binding  no approval
+PASS  conservation      funded 60000000000000000000000 = refunded 60000000000000000000000
+FAIL  released-total    0 NEAR
+ERROR release-tx        no release transaction named: open the receipt link with its tx parameter
+ERROR release-transfer  no release transaction named: open the receipt link with its tx parameter

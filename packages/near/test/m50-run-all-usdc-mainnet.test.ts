@@ -484,6 +484,19 @@ describe("exposure check and value plan", () => {
       to: accounts.supplier,
       amount: "50000000000000000000000 yoctoNEAR (0.05 NEAR)",
     });
+    // The attack demo (M53) reserves the amount and sends it nowhere.
+    const demo = plan.valuePlan({
+      journey: "attack-demo",
+      asset: usdc,
+      amounts: { amount: 5n * USDC, excess: 0n },
+      accounts,
+      deploy: false,
+      relayerKey: false,
+    });
+    expect(demo.some((r) => r.what === "release" || r.what.startsWith("release after"))).toBe(false);
+    expect(demo.find((r) => r.to === accounts.supplier)?.amount).toBe(
+      "5000000 units of " + MAINNET_USDC + " (5 tokens), not sent",
+    );
     expect(plan.human(1n, 6)).toBe("0.000001");
     expect(plan.human(25_000_000n, 6)).toBe("25");
   });
@@ -508,6 +521,10 @@ describe("journey plans for a token trade", () => {
     expect(hold).toContain("hold_set");
     // A refund pays the funder, which is registered by holding the token: no payee step.
     expect(journey.planMethods("refund", usdc).map((s) => s.id)).not.toContain("payee_storage");
+    // The attack demo (M53) confirms the payee's registration before its intent as well.
+    const demo = journey.planMethods("attack-demo", usdc).map((s) => s.id);
+    expect(demo.indexOf("payee_storage")).toBe(demo.indexOf("intent") - 1);
+    expect(demo.at(-1)).toBe("observe:held");
     // Native journeys are unchanged.
     expect(journey.planMethods("paid").map((s) => s.id)).not.toContain("payee_storage");
     expect(journey.planMethods("paid", { kind: "near", token: null }).length).toBe(8);

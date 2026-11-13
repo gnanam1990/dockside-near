@@ -184,7 +184,27 @@ export function verifySignedAuditExport(
   );
 
   // 4. The signing key is one of the operator's published export keys and was valid when it signed.
-  const k = trusted.find((t) => t.keyId === keyId && t.publicKey === pk);
+  addKeyChecks(add, trusted, {
+    keyId,
+    publicKey: pk,
+    origin: st["origin"],
+    network: st["network"],
+    signedAt: st["signedAt"],
+  });
+  return done(tradeId, keyId);
+}
+
+/**
+ * Checks that a statement's signing key is one of the operator's published audit-export keys and
+ * was valid when it signed (ADR-0018 §7). Shared by the signed audit export and the signed payment
+ * receipt (M54), which use the same key.
+ */
+export function addKeyChecks(
+  add: (id: string, ok: boolean, detail: string) => boolean,
+  trusted: readonly TrustedExportKey[],
+  st: { keyId: string | null; publicKey: string; origin: unknown; network: unknown; signedAt: unknown },
+): void {
+  const k = trusted.find((t) => t.keyId === st.keyId && t.publicKey === st.publicKey);
   if (
     !add(
       "key.trusted",
@@ -192,14 +212,14 @@ export function verifySignedAuditExport(
       k ? `key ${k.keyId} ${k.publicKey}` : "the signing key is not in the trusted key list",
     )
   )
-    return done(tradeId, keyId);
-  if (!k) return done(tradeId, keyId);
+    return;
+  if (!k) return;
   add(
     "key.origin",
-    k.origin === st["origin"] && k.network === st["network"],
+    k.origin === st.origin && k.network === st.network,
     `key bound to ${k.origin} on ${k.network}`,
   );
-  const signedAt = typeof st["signedAt"] === "number" ? st["signedAt"] : -1;
+  const signedAt = typeof st.signedAt === "number" ? st.signedAt : -1;
   add(
     "key.not-revoked",
     k.status !== "REVOKED",
@@ -211,7 +231,6 @@ export function verifySignedAuditExport(
     inWindow,
     `signed at ${signedAt}; key valid from ${k.enrolledAt}${k.retiredAt === null ? "" : ` until ${k.retiredAt}`}`,
   );
-  return done(tradeId, keyId);
 }
 
 /** Parse a trusted key list file (`{schema, keys}` or a bare array of keys). */
