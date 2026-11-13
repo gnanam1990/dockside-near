@@ -1,0 +1,19 @@
+{
+  "name": "@dockside/hosted",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dockside hosted runtime: one process tree that serves the web app, the control API and the worker behind a single HTTP port",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dockside/api": "workspace:*",
+    "@dockside/authority": "workspace:*",
+    "@dockside/core": "workspace:*",
+    "@dockside/worker": "workspace:*"
+  }
+}
