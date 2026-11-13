@@ -54,19 +54,21 @@
 # Environment: NEAR_CLI (near-cli-rs binary; on Windows the real near.exe is found from the npm
 # global prefix or `where near`), CARGO (default `cargo`), DOCKSIDE_FALLBACK_RPC_URLS.
 #
+# Journey keys: the Dockside principal keys of the journey's trade (test keys of that one trade,
+# not NEAR keys) derive from a random seed kept in <run dir>/journey-seed.json, mode 0600, so a
+# stuck trade can be finished with --resume. No NEAR private key is read, printed or stored.
+#
+# Exit status: 0 PASS, 1 a near-cli-rs command failed, 2 a refusal or a failed check, 3 PAUSED
+# (the journey stopped part way on purpose; finish it with --resume <run dir>).
+#
 # Every near-cli-rs command runs through `tool.mjs near-run` with stdin closed, so a question it
 # asks fails at once instead of hanging; "Transaction has expired" (never included) is signed
 # again, at most 3 attempts.
 #
 # Signing: the escrow, buyer and relayer accounts sign with their own keys from the near-cli-rs
-# keychain (`sign-with-keychain` checks the OS keychain, then the legacy keychain directory). The
-# relayed journey calls are signed with the function-call key file. This script never reads,
-# prints or stores a NEAR private key. It does keep the journey's own Dockside principal key seed
-# (test keys of that one trade, not NEAR keys) in <run dir>/journey-seed.json, mode 0600, so a
-# stuck trade can be finished with --resume.
-#
-# Exit status: 0 PASS, 1 a near-cli-rs command failed, 2 a refusal or a failed check, 3 PAUSED
-# (the journey stopped part way on purpose; finish it with --resume <run dir>).
+# keychain (`sign-with-keychain` checks the OS keychain, then ~/.near-credentials). The relayed
+# journey calls are signed with the new function-call key file. This script never reads, prints
+# or stores a private key.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)

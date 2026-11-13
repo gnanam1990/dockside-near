@@ -280,6 +280,15 @@ For gate evidence keep: the commit, `build-manifest.json`, `run-record.json`, `j
 
 ## How it was validated (sandbox)
 
+The hold and refund journeys and `--resume` (M42) are validated in the same test, after the paid
+runs described next: `--journey hold --stop-after 6` pauses with exit 3 while the hold is ACTIVE
+on chain (`journey-seed.json` mode 0600; a resume with an extra setting is refused) and `--resume`
+finishes it to `PAID` with the hold RESOLVED; `--journey refund --no-wait` pauses with both refund
+intents TIMELOCKED, the test moves the sandbox clock one hour on (on testnet the refund journey
+waits one real hour instead) and `--resume` finishes it: both `REFUNDED`, the buyer's ledger
+`funded` = `refunded`, every other bucket 0, the supplier's balance unchanged; a second journey
+in the same directory is refused (`RUN_EXISTS`).
+
 `contract/integration/sandbox-tests/tests/run_all_on_sandbox.rs`, run by `pnpm run contract:sandbox`
 (scripts/sandbox/container-sandbox.sh, `node:22-trixie-slim`), plays the user's part on a local
 near-sandbox node: it creates the four accounts with real create-account transactions, puts their
@@ -287,16 +296,9 @@ keys in a temporary near-cli-rs keychain and a near-cli-rs connection named `san
 `run-all --network sandbox` and checks the chain itself: the code hash, the relayer's two keys, the
 supplier's balance delta and `PAID`. It also checks that mainnet, a non-loopback sandbox RPC and a
 wrong wasm are refused before any transaction, that a second run refuses to redeploy
-(`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second journey. Since M42
-it also runs `--journey hold --stop-after 6` (paused with exit 3 while the hold is ACTIVE on chain,
-`journey-seed.json` mode 0600, a resume with an extra setting refused) and finishes it with
-`--resume` to `PAID` with the hold RESOLVED, and `--journey refund --no-wait` (paused with both
-intents TIMELOCKED), moves the sandbox clock one hour on and finishes it with `--resume`: both
-`REFUNDED`, the buyer's ledger `funded` = `refunded`, every other bucket 0, the supplier's balance
-unchanged; a second journey in the same directory is refused (`RUN_EXISTS`).
+(`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second journey.
 
-Differences you will meet on testnet: real block times (the paid and hold journeys need no waiting;
-the refund journey waits one real hour, where the sandbox test moves the clock), faucet-funded
+Differences you will meet on testnet: real block times (the journey needs no waiting), faucet-funded
 accounts, the OS keychain instead of `~/.near-credentials`, and testnet's protocol version, which can
 differ from the sandbox's (nearcore 2.14.0, protocol 88).
 
