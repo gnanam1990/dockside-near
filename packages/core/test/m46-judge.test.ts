@@ -73,7 +73,7 @@ describe("M46 pnpm judge, on-chain part against recorded testnet answers", () =>
     expect(r.out).toMatch(
       /mainnet: deployment\s+\| not deployed yet\s+\| not deployed yet, nothing to read\s+\| SKIP/,
     );
-    expect(r.out).toMatch(/JUDGE: PASS {2}62 passed, 0 failed, 0 not readable, 6 skipped/);
+    expect(r.out).toMatch(/JUDGE: PASS {2}62 passed, 0 failed, 0 not readable, 7 skipped/);
     expect(r.status).toBe(0);
     const report = JSON.parse(readFileSync(REPORT, "utf8"));
     expect(report.summary).toMatchObject({ verdict: "PASS", pass: 62, fail: 0, error: 0 });
@@ -99,7 +99,7 @@ describe("M46 pnpm judge, on-chain part against recorded testnet answers", () =>
   });
 
   it("exits 1 when everything was skipped, and 2 on a usage error", async () => {
-    const skipped = await judge("--skip", "install,unit,contract,manifest,chain");
+    const skipped = await judge("--skip", "install,unit,contract,manifest,chain,usdc");
     expect(skipped.out).toMatch(/JUDGE: FAIL {2}0 passed/);
     expect(skipped.status).toBe(1);
     const usage = await judge("--only", "everything");
