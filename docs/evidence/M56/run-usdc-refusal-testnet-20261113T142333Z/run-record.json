@@ -1,0 +1,280 @@
+{
+  "schema": "dockside/testnet-run@1",
+  "network": "testnet",
+  "contractNetwork": "near-testnet",
+  "asset": {
+    "kind": "nep141",
+    "token": {
+      "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "decimals": 6
+    }
+  },
+  "scriptCommit": "74cafa55404a3a8aba618abc2eacd77e58c02c72",
+  "artifact": {
+    "bytes": 862018,
+    "sha256": "025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770",
+    "nearCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "commit": "74cafa55404a3a8aba618abc2eacd77e58c02c72",
+    "platform": "linux-x64"
+  },
+  "deployTx": null,
+  "deployment": {
+    "contractId": "gnanam1990-dock-escrow3.testnet",
+    "onChainCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "match": true,
+    "blockHeight": 277521769,
+    "config": {
+      "network": "near-testnet",
+      "minDepositYocto": "1000000000000000000000",
+      "minDepositNep141": "10000",
+      "maxTradeAmount": {
+        "nearYocto": "0",
+        "nep141": "0"
+      },
+      "nep141Token": {
+        "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+        "decimals": 6
+      },
+      "trades": 2,
+      "unexpectedAssets": 0,
+      "refundPolicy": {
+        "id": "dockside-refund-v1",
+        "revision": 1
+      }
+    }
+  },
+  "relayer": {
+    "relayer": "gnanam1990-dock-relayer.testnet",
+    "publicKey": "ed25519:C3EMNRphXDfHC5JEJXo1ZveMnAg3N8kMJm5pJa2xYZXp",
+    "receiverId": "gnanam1990-dock-escrow3.testnet",
+    "methodNames": [],
+    "allowance": "988956529476977600000000"
+  },
+  "journey": {
+    "kind": "refusal",
+    "ok": true,
+    "tradeId": "trd_e93f842de9d221e6dcdd201aeabe1e71",
+    "releaseIntentId": "rli_894549a53cad39921e1b4c1b21e7ff26",
+    "checks": {
+      "settledTrue": true,
+      "releasePaid": true,
+      "supplierDeltaYocto": "5000000",
+      "supplierReceivedExactAmount": true,
+      "ledgerConservation": true,
+      "releasedTotal": "5000000",
+      "holdWasActive": true,
+      "releaseBlockedByHold": true,
+      "holdSetBy": "POLICY_SETTER (doc-mismatch@1)",
+      "holdResolved": true,
+      "deterministicPolicyHold": true,
+      "refusals": [
+        {
+          "step": "refuse:fund_wrong_terms",
+          "what": "funding with a wrong terms digest",
+          "method": "ft_transfer_call",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "expected": "STALE_REVISION",
+          "code": "STALE_REVISION",
+          "message": "deposit names another trade revision digest",
+          "txHash": "4u9sbsZJecFijqPxNP4LL9yXZYkbFJgznCBxjRr1qDBX",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:relayer_refund",
+          "what": "a relayer attempting a funder-only refund",
+          "method": "request_refund",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "expected": "FORBIDDEN",
+          "code": "FORBIDDEN",
+          "message": "caller is not the original funder",
+          "txHash": "qKB4NxwH4ZARn1kQgqkGXh3UQpzdoJcceVcvNvQbzgw",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:replayed_nonce",
+          "what": "a replayed nonce (the accepted inspection sent again)",
+          "method": "submit_inspection",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "expected": "NONCE_REPLAYED",
+          "code": "NONCE_REPLAYED",
+          "message": "nonce already consumed",
+          "txHash": "HuR557dMzDP4jLKVzXw3rSWCDFJbHVuMz5vrSomLuegn",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:payout_redirect",
+          "what": "payout redirected to an unbound account",
+          "method": "create_release_intent",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "expected": "DESTINATION_MISMATCH",
+          "code": "DESTINATION_MISMATCH",
+          "message": "intent destination is not the revision-bound destination",
+          "txHash": "Dex2SQYEgCFJDF3P61KuWLGmHA4xFngWSBkQ5YvGtm1Y",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:release_while_held",
+          "what": "release while a hold is active",
+          "method": "execute_release",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "expected": "HOLD_ACTIVE",
+          "code": "HOLD_ACTIVE",
+          "message": "release conjunction incomplete: HOLD_ACTIVE,APPROVAL_MISSING",
+          "txHash": "9z68Gk7xY17SVMLGGptiaRt7DbTx4JgY47ATRx2Zi5D3",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:unbound_approval",
+          "what": "approval signed by an unbound key",
+          "method": "approve_release",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "expected": "SIGNATURE_INVALID",
+          "code": "SIGNATURE_INVALID",
+          "message": "signature does not verify for the bound key and domain",
+          "txHash": "5Eu7FQ2CaGr9rqrxToCJEwmEsrtHMbij3CzijPj95gLN",
+          "stateUnchanged": true
+        }
+      ],
+      "allRefusedWithExpectedCode": true,
+      "refusalsChangedNothing": true,
+      "refusedDepositReturned": true,
+      "relayerReceivedNothing": true,
+      "supplierTotalDeltaYocto": "5000000",
+      "fundedExactlyTheTradeAmount": true
+    },
+    "transactions": [
+      {
+        "step": "register",
+        "method": "register_trade",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "2DmBBSGXTmsxGTDG4BrxLJxbwQ2rsDsrDCyYWszW4qhj",
+        "blockTimeMs": 1794579822700
+      },
+      {
+        "step": "policy",
+        "method": "register_evidence_policy",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "HvJgXo7sWvFEhFmEYS4VmprGi1Yqv34gJjKXQ8XkuE1b",
+        "blockTimeMs": 1794579828132
+      },
+      {
+        "step": "refuse:fund_wrong_terms",
+        "method": "ft_transfer_call",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "4u9sbsZJecFijqPxNP4LL9yXZYkbFJgznCBxjRr1qDBX",
+        "blockTimeMs": 1794579837757,
+        "refused": "STALE_REVISION"
+      },
+      {
+        "step": "fund:1",
+        "method": "ft_transfer_call",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "72YHkefZekpTDhTn9VLGVoTcvRkS6jLkQ3t3YPhXQbm3",
+        "blockTimeMs": 1794579849894
+      },
+      {
+        "step": "refuse:relayer_refund",
+        "method": "request_refund",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "qKB4NxwH4ZARn1kQgqkGXh3UQpzdoJcceVcvNvQbzgw",
+        "blockTimeMs": 1794579857731,
+        "refused": "FORBIDDEN"
+      },
+      {
+        "step": "fund:2",
+        "method": "ft_transfer_call",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "8roKKkeHSHvd1XnVBGSvKvSyM3m1VsGN8m14QQBCf7L9",
+        "blockTimeMs": 1794579869193
+      },
+      {
+        "step": "attestation",
+        "method": "submit_manifest_attestation",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "14T5zsrg5t3pivwZZP5vtrKNefsHxvMPpXbJ8A8mkLnk",
+        "blockTimeMs": 1794579875202
+      },
+      {
+        "step": "inspection",
+        "method": "submit_inspection",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "BzpPjHnwUCFzCDddGiP8vb71kyGetwmCeDkxVHdf8rUi",
+        "blockTimeMs": 1794579880843
+      },
+      {
+        "step": "refuse:replayed_nonce",
+        "method": "submit_inspection",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "HuR557dMzDP4jLKVzXw3rSWCDFJbHVuMz5vrSomLuegn",
+        "blockTimeMs": 1794579888255,
+        "refused": "NONCE_REPLAYED"
+      },
+      {
+        "step": "hold_set",
+        "method": "set_hold",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "4h3UN1wLLZjiDAFV47vwc7jPGMCjT8TTF52xg8i9sgM5",
+        "blockTimeMs": 1794579896893
+      },
+      {
+        "step": "refuse:payout_redirect",
+        "method": "create_release_intent",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "Dex2SQYEgCFJDF3P61KuWLGmHA4xFngWSBkQ5YvGtm1Y",
+        "blockTimeMs": 1794579904200,
+        "refused": "DESTINATION_MISMATCH"
+      },
+      {
+        "step": "payee_storage",
+        "method": "check_payee_storage",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "EVw7dPje7iuq59M6Bk59SqqAEXDgkcg59GPBiFP7XaWJ",
+        "blockTimeMs": 1794579913866
+      },
+      {
+        "step": "intent",
+        "method": "create_release_intent",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "42XFDGkhwXNZx4L6BmuowwsUBbJkifJebxiyDd7AAdm3",
+        "blockTimeMs": 1794579921150
+      },
+      {
+        "step": "refuse:release_while_held",
+        "method": "execute_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "9z68Gk7xY17SVMLGGptiaRt7DbTx4JgY47ATRx2Zi5D3",
+        "blockTimeMs": 1794579928911,
+        "refused": "HOLD_ACTIVE"
+      },
+      {
+        "step": "hold_resolve",
+        "method": "resolve_hold",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "53sYv3yZE5xvkAGoUrdvvsEx7ide3fFAWzYBrkuaQi9x",
+        "blockTimeMs": 1794579938080
+      },
+      {
+        "step": "refuse:unbound_approval",
+        "method": "approve_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "5Eu7FQ2CaGr9rqrxToCJEwmEsrtHMbij3CzijPj95gLN",
+        "blockTimeMs": 1794579945348,
+        "refused": "SIGNATURE_INVALID"
+      },
+      {
+        "step": "approval",
+        "method": "approve_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "4HpKLPgGzE5MnMeNAey7fuuZ5aWnxyZP3MRpJyZNPHzq",
+        "blockTimeMs": 1794579954398
+      },
+      {
+        "step": "execute_release",
+        "method": "execute_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "BZ9Ey8dMzmcQfrMvFRBLUTnJXDA7dvmemQ5kuiiivCao",
+        "blockTimeMs": 1794579960551
+      }
+    ]
+  }
+}

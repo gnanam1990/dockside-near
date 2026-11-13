@@ -98,7 +98,46 @@ DOCKSIDE_API_URL=http://127.0.0.1:8791 DOCKSIDE_RELAYER_URL=http://127.0.0.1:879
   pnpm --filter @dockside/web exec vite preview --host 127.0.0.1 --port 4391
 ```
 
-See [scripts/local-stack/README.md](../scripts/local-stack/README.md) and [apps/web/README.md](../apps/web/README.md).
+Windows PowerShell:
+
+```powershell
+# terminal 1
+$env:DOCKSIDE_ORIGIN="http://127.0.0.1:4391"; pnpm run stack
+# terminal 2
+$env:DOCKSIDE_API_URL="http://127.0.0.1:8791"; $env:DOCKSIDE_RELAYER_URL="http://127.0.0.1:8792"
+pnpm --filter @dockside/web exec vite preview --host 127.0.0.1 --port 4391
+```
+
+To drive a trade by hand, create the administrator invitations through the stack's control port. The browser
+product suite (`pnpm --filter @dockside/web exec playwright test e2e/product.spec.ts`) does exactly this. See
+[scripts/local-stack/README.md](../scripts/local-stack/README.md) and [apps/web/README.md](../apps/web/README.md).
+
+### The testnet journeys on your own accounts
+
+This is the command that produced the on-chain journeys in the README. It needs Docker for the reproducible
+contract build, [near-cli-rs](https://github.com/near/near-cli-rs) 0.31 and four testnet accounts you create: an
+empty escrow account (10 NEAR), a buyer (at least 0.15 NEAR), a supplier and a relayer (2 NEAR), with their
+full-access keys in the near-cli-rs keychain.
+
+```sh
+pnpm run contract:reproduce        # deployable wasm and manifest in a Linux container (.data/repro/)
+export DOCKSIDE_ESCROW_ACCOUNT=<escrow>.testnet DOCKSIDE_BUYER_ACCOUNT=<buyer>.testnet \
+       DOCKSIDE_SUPPLIER_ACCOUNT=<supplier>.testnet DOCKSIDE_RELAYER_ACCOUNT=<relayer>.testnet
+scripts/testnet-deploy/run-all --network testnet                      # paid journey, native NEAR
+scripts/testnet-deploy/run-all --network testnet --asset usdc \
+  --token 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af   # the same in Circle testnet USDC
+# Windows PowerShell: set the same variables with $env:..., then
+# powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet
+```
+
+The script deploys and initialises the contract in one transaction, checks the on-chain code hash against the build
+manifest, adds a relayer function-call key restricted to the escrow and runs one trade. It prints `run-all: PASS`
+and writes `run-record.json`. `--journey hold|refund|refusal|attack-demo` selects the other journeys, `--skip-deploy`
+and `--relayer-key-file` reuse a deployment, `--dry-run` prints every amount and stops. The default RPC is
+`https://test.rpc.fastnear.com`. `--network mainnet` runs only with `--i-understand-real-funds`, non-zero caps and one
+pinned token. Details: [scripts/testnet-deploy/README.md](../scripts/testnet-deploy/README.md); USDC token
+registration and the owner steps: [status/M50.md](status/M50.md). The recorded runs: [M34](status/M34.md),
+[M44](status/M44.md), [M56](status/M56.md).
 
 The API on its own (`pnpm run api`, i.e. `node services/api/dist/main.js`) serves the authority routes. It adds the
 trade routes only when `DOCKSIDE_ESCROW_CONTRACT_ID` and `DOCKSIDE_NEAR_RPC_URL` are both set. The worker
@@ -225,5 +264,6 @@ docs/          adr/, status/, evidence/, USER-NEXT-STEPS.md, spec/ (sealed)
 Nothing in this repository pushes, deploys, signs with a real wallet, funds, calls 1Click or creates accounts. The
 container suites run a local nearcore node only, and CI holds no secrets and only reads the repository. Testnet
 deployment (`scripts/testnet-deploy/run-all --network testnet`, with accounts you create) and everything after it
-are yours to run ([USER-NEXT-STEPS.md](USER-NEXT-STEPS.md)). Mainnet and the funded payout profile are refused at startup and by the
-contract until separately authorized.
+are yours to run ([USER-NEXT-STEPS.md](USER-NEXT-STEPS.md)). The API and worker refuse mainnet and the funded payout
+profile at startup. The contract accepts `near-mainnet` only with non-zero caps fixed at initialisation (default
+5 NEAR or 25 USDC per trade) and one pinned token (M50, ADR-0028); no mainnet deployment exists.

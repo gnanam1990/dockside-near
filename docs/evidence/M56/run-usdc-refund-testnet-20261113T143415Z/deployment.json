@@ -1,0 +1,25 @@
+{
+  "contractId": "gnanam1990-dock-escrow3.testnet",
+  "onChainCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+  "match": true,
+  "blockHeight": 277522847,
+  "config": {
+    "network": "near-testnet",
+    "minDepositYocto": "1000000000000000000000",
+    "minDepositNep141": "10000",
+    "maxTradeAmount": {
+      "nearYocto": "0",
+      "nep141": "0"
+    },
+    "nep141Token": {
+      "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "decimals": 6
+    },
+    "trades": 3,
+    "unexpectedAssets": 0,
+    "refundPolicy": {
+      "id": "dockside-refund-v1",
+      "revision": 1
+    }
+  }
+}

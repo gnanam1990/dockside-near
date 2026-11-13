@@ -1,0 +1,83 @@
+{
+  "network": "testnet",
+  "contractNetwork": "near-testnet",
+  "realFunds": false,
+  "rpcUrl": "https://test.rpc.fastnear.com",
+  "journey": "paid",
+  "asset": "nep141",
+  "token": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+  "symbol": "USDC",
+  "decimals": 6,
+  "buyerBalance": "20000000",
+  "amount": "5000000",
+  "excess": "0",
+  "depositYocto": "0",
+  "deposit": "5000000",
+  "caps": null,
+  "pinnedToken": {
+    "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+    "decimals": 6
+  },
+  "heldAtMost": "5000000",
+  "registrations": [
+    "gnanam1990-dock-escrow3.testnet"
+  ],
+  "storageDepositYocto": "1250000000000000000000",
+  "plan": [
+    {
+      "what": "deploy and initialise the escrow",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "gnanam1990-dock-escrow3.testnet",
+      "amount": "0 NEAR attached; the account pays gas and keeps its own balance as storage stake"
+    },
+    {
+      "what": "register gnanam1990-dock-escrow3.testnet with the token (storage_deposit)",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "amount": "1250000000000000000000 yoctoNEAR (0.00125 NEAR)"
+    },
+    {
+      "what": "add the relayer's function-call key",
+      "from": "gnanam1990-dock-relayer.testnet",
+      "to": "gnanam1990-dock-relayer.testnet",
+      "amount": "0 NEAR attached; gas only"
+    },
+    {
+      "what": "fund the trade (ft_transfer_call on the token)",
+      "from": "gnanam1990-dock-buyer.testnet",
+      "to": "gnanam1990-dock-escrow3.testnet",
+      "amount": "5000000 units of 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af (5 tokens) plus 1 yoctoNEAR"
+    },
+    {
+      "what": "release",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "gnanam1990-dock-supplier.testnet",
+      "amount": "5000000 units of 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af (5 tokens)"
+    },
+    {
+      "what": "each token transfer the escrow sends",
+      "from": "gnanam1990-dock-escrow3.testnet",
+      "to": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "amount": "1 yoctoNEAR (required by NEP-141), from the escrow account's own balance"
+    },
+    {
+      "what": "every other step",
+      "from": "gnanam1990-dock-relayer.testnet",
+      "to": "gnanam1990-dock-escrow3.testnet",
+      "amount": "0 attached; gas from the relayer key's allowance"
+    }
+  ],
+  "accounts": {
+    "escrow": "gnanam1990-dock-escrow3.testnet",
+    "buyer": "gnanam1990-dock-buyer.testnet",
+    "supplier": "gnanam1990-dock-supplier.testnet",
+    "relayer": "gnanam1990-dock-relayer.testnet"
+  },
+  "escrowCodeHash": "11111111111111111111111111111111",
+  "balancesYocto": {
+    "escrow": "10000000000000000000000000",
+    "buyer": "9796581434138498200000000",
+    "supplier": "10148504593195581400000000",
+    "relayer": "9981452403991208700000000"
+  }
+}
