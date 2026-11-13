@@ -71,6 +71,14 @@ describe.each([
       "surface-subtle",
       "on-action-primary",
       "border-default",
+      "border-subtle",
+      "surface-hover",
+      "surface-selected",
+      "tint-positive",
+      "tint-warning",
+      "tint-negative",
+      "tint-unknown",
+      "tint-neutral",
     ])
       expect(t[k], k).toMatch(/^#[0-9a-f]{6}$/);
   });
@@ -82,6 +90,23 @@ describe.each([
   it("primary and secondary text on surface-subtle (table headers, selected nav) meet 4.5:1", () => {
     for (const fg of ["text-primary", "text-secondary"])
       expect(contrast(t[fg] as string, t["surface-subtle"] as string)).toBeGreaterThanOrEqual(4.5);
+  });
+  it("status text, links and body text on their tinted fills (callouts, badges) meet 4.5:1", () => {
+    const tints: Record<string, string> = {
+      "tint-positive": "status-positive",
+      "tint-warning": "status-warning",
+      "tint-negative": "status-negative",
+      "tint-unknown": "status-unknown",
+      "tint-neutral": "text-secondary",
+    };
+    for (const [tint, own] of Object.entries(tints))
+      for (const fg of [own, "text-primary", "text-secondary", "action-secondary"])
+        expect(contrast(t[fg] as string, t[tint] as string), `${fg} on ${tint}`).toBeGreaterThanOrEqual(4.5);
+  });
+  it("text and status on hover, selected and neutral surfaces (table rows, current navigation) meets 4.5:1", () => {
+    for (const bg of ["surface-hover", "surface-selected", "tint-neutral"])
+      for (const fg of [...TEXT, "action-primary"])
+        expect(contrast(t[fg] as string, t[bg] as string), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
   });
   it("button text on action-primary meets 4.5:1", () => {
     expect(contrast(t["on-action-primary"] as string, t["action-primary"] as string)).toBeGreaterThanOrEqual(
