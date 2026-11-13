@@ -4,34 +4,10 @@
 // browser and checked by lib/receipt.mjs. Chain data is only ever written to the page as text.
 import { encodeQr, qrPathData } from "./lib/qr.mjs";
 import { parseReceiptLocation, receiptVerdict, verifyReceipt } from "./lib/receipt.mjs";
+import { arrive, badge, el, external, icon, mono, mountNav, VERDICT_ICON } from "./lib/ui.mjs";
 
-const STATUS_TEXT = { PASS: "Pass", FAIL: "Fail", ERROR: "Not readable" };
 const SVG = "http://www.w3.org/2000/svg";
 
-function el(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === undefined || v === null || v === false) continue;
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else node.setAttribute(k, v === true ? "" : String(v));
-  }
-  for (const c of children.flat()) {
-    if (c === undefined || c === null || c === false) continue;
-    node.append(typeof c === "string" ? document.createTextNode(c) : c);
-  }
-  return node;
-}
-
-const external = (href, text, cls) =>
-  el("a", { href, target: "_blank", rel: "noopener noreferrer", class: cls, text });
-const mono = (text) => el("span", { class: "mono", text: String(text) });
-const badge = (status) =>
-  el("span", {
-    class: `badge badge-${status.toLowerCase()}`,
-    "data-status": status,
-    text: STATUS_TEXT[status],
-  });
 const time = (ms) =>
   typeof ms === "number" ? new Date(ms).toISOString().replace(".000Z", "Z") : "not recorded";
 
@@ -114,15 +90,27 @@ function facts(pairs) {
   );
 }
 
-function message(root, cls, title, ...lines) {
-  root.replaceChildren(
+/** A verdict box: icon, title, sentences and optional actions, the same shape on every page. */
+function verdictBox(kind, value, title, lines, actions) {
+  return arrive(
     el(
       "div",
-      { class: `verdict ${cls}`, "data-verdict": cls.replace("verdict-", "").toUpperCase(), role: "status" },
-      el("p", { class: "verdict-title", text: title }),
-      lines.map((l) => (typeof l === "string" ? el("p", { text: l }) : l)),
+      { class: `verdict verdict-${kind}`, "data-verdict": value, role: "status" },
+      el("div", { class: "verdict-mark", "aria-hidden": "true" }, icon(VERDICT_ICON[kind], { size: 26 })),
+      el(
+        "div",
+        { class: "verdict-body" },
+        el("p", { class: "verdict-title", text: title }),
+        lines.map((l) => (typeof l === "string" ? el("p", { text: l }) : l)),
+      ),
+      actions ? el("div", { class: "verdict-actions no-print" }, actions) : null,
     ),
   );
+}
+
+function message(root, cls, title, ...lines) {
+  const kind = cls.replace("verdict-", "");
+  root.replaceChildren(verdictBox(kind, kind.toUpperCase(), title, lines.filter(Boolean)));
 }
 
 /** The address the QR code carries: this page, with the transaction it verified pinned in it. */
@@ -140,35 +128,40 @@ function render(root, network, where, result, rerun) {
   const s = result.summary;
   const f = result.facts ?? {};
   const problems = s.fail + s.error;
-  const head = el(
-    "div",
-    { class: `verdict verdict-${v.toLowerCase()}`, "data-verdict": v, role: "status" },
-    el("p", {
-      class: "verdict-title",
-      text:
-        v === "PASS"
-          ? `Verified: all ${s.total} checks passed`
-          : `Not verified: ${problems} of ${s.total} checks did not pass`,
-    }),
-    el(
-      "p",
-      {},
-      result.block
-        ? `Read by this browser from ${network.label} at final block ${result.block.height} (${time(result.block.timestampMs)}) with ${result.rpcCalls} read-only requests. `
-        : "The RPC endpoints could not be reached. ",
-      s.error > 0
-        ? `${s.error} value(s) could not be read; an unreadable value is never counted as a pass.`
-        : "",
-    ),
-    el(
-      "div",
-      { class: "actions no-print" },
-      el("button", { type: "button", class: "btn", id: "print", text: "Print receipt" }),
-      el("button", { type: "button", class: "btn", id: "rerun", text: "Verify again" }),
-    ),
+  const print = el(
+    "button",
+    { type: "button", class: "btn", id: "print" },
+    icon("printer", { size: 18 }),
+    "Print receipt",
   );
-  head.querySelector("#print").addEventListener("click", () => window.print());
-  head.querySelector("#rerun").addEventListener("click", rerun);
+  const again = el(
+    "button",
+    { type: "button", class: "btn", id: "rerun" },
+    icon("refresh-cw", { size: 18 }),
+    "Verify again",
+  );
+  print.addEventListener("click", () => window.print());
+  again.addEventListener("click", rerun);
+  const head = verdictBox(
+    v === "PASS" ? "pass" : "fail",
+    v,
+    v === "PASS"
+      ? `Verified: all ${s.total} checks passed`
+      : `Not verified: ${problems} of ${s.total} checks did not pass`,
+    [
+      el(
+        "p",
+        {},
+        result.block
+          ? `Read by this browser from ${network.label} at final block ${result.block.height} (${time(result.block.timestampMs)}) with ${result.rpcCalls} read-only requests. `
+          : "The RPC endpoints could not be reached. ",
+        s.error > 0
+          ? `${s.error} value(s) could not be read; an unreadable value is never counted as a pass.`
+          : "",
+      ),
+    ],
+    [print, again],
+  );
 
   const ex = network.explorer ?? {};
   const account = (id) =>
@@ -177,7 +170,12 @@ function render(root, network, where, result, rerun) {
   const card = el(
     "section",
     { class: "panel receipt-card", "aria-labelledby": "receipt-title" },
-    el("h2", { id: "receipt-title" }, "Receipt for trade ", mono(f.tradeId ?? where.tradeId)),
+    el(
+      "div",
+      { class: "receipt-head" },
+      el("h2", { id: "receipt-title" }, "Receipt for trade ", mono(f.tradeId ?? where.tradeId)),
+      el("p", {}, `Dockside escrow · ${network.label}`),
+    ),
     el(
       "div",
       { class: "receipt-body" },
@@ -219,14 +217,15 @@ function render(root, network, where, result, rerun) {
     card,
     el(
       "section",
-      { class: "panel" },
-      el("h2", { text: "Checks made by this browser" }),
+      { class: "panel", "aria-labelledby": "checks-title" },
+      el("h2", { id: "checks-title", text: "Checks made by this browser" }),
       checksTable(result.rows),
     ),
   );
 }
 
 async function main() {
+  mountNav("receipt");
   const root = document.getElementById("receipt");
   const where = parseReceiptLocation(location.href);
   let manifest;
