@@ -278,7 +278,8 @@ run T-024 and T-048 with redacted evidence. Only `PASS` supports `DRY_COMPATIBLE
 ## 10. Funded mainnet: separately authorized only
 
 `DOCKSIDE_NETWORK=near-mainnet` and any `DOCKSIDE_FUNDED_PAYOUTS` value other than `BLOCKED` are refused at startup,
-and the contract's `new` accepts only `near-testnet`. A funded corridor first needs a contract entry point that
+and the deployed contract's `new` accepts only `near-testnet` (the M50 branch, not merged and not deployed, adds a
+capped `near-mainnet` label for the escrow contract alone: [status/M50.md](status/M50.md)). A funded corridor first needs a contract entry point that
 consumes a FundedPayoutAuthorization atomically, a verified corridor, an exposure cap and your explicit authorization
 of network, wallet, amount, signer and executor (REAL-PRODUCT-GATE "Separate funded-mainnet gate").
 

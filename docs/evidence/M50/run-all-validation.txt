@@ -1,0 +1,4 @@
+test run_all_refusal_journey_six_calls_are_rejected_on_chain_and_the_trade_is_then_paid ... ok
+test run_all_deploys_verifies_configures_the_relayer_and_completes_the_journey_on_sandbox ... ok
+test run_all_runs_the_usdc_journeys_and_the_mainnet_label_on_sandbox ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 149.48s
