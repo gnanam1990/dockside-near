@@ -1,0 +1,11 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.72s
+     Running tests/run_all_on_sandbox.rs (target/debug/deps/run_all_on_sandbox-d203181e7de74628)
+
+running 2 tests
+test run_all_deploys_verifies_configures_the_relayer_and_completes_the_journey_on_sandbox has been running for over 60 seconds
+test run_all_refusal_journey_six_calls_are_rejected_on_chain_and_the_trade_is_then_paid has been running for over 60 seconds
+test run_all_refusal_journey_six_calls_are_rejected_on_chain_and_the_trade_is_then_paid ... ok
+test run_all_deploys_verifies_configures_the_relayer_and_completes_the_journey_on_sandbox ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 84.82s
+

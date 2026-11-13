@@ -71,6 +71,17 @@ const j = (await import(pathToFileURL(join(ROOT, "scripts/testnet-deploy/lib/jou
   runJourney(o: Json): Promise<JourneyResult>;
 };
 
+const t = (await import(pathToFileURL(join(ROOT, "scripts/testnet-deploy/lib/near-tools.mjs")).href)) as {
+  parseTxHash(text: string): string | null;
+  looksLikePrompt(text: string): boolean;
+  classifyNearFailure(text: string): { retry: boolean; kind: string };
+  runNear(
+    bin: string,
+    args: string[],
+    o: { run: () => Promise<{ status: number; text: string; txHash: string | null }> },
+  ): Promise<{ status: number; txHash: string | null }>;
+};
+
 const ACCOUNTS = {
   escrow: "dockside-escrow.testnet",
   buyer: "acme-buyer.testnet",
@@ -159,6 +170,44 @@ describe("reading a failed receipt", () => {
     ).toBeNull();
     expect(j.contractRefusal({ SuccessValue: "" }).code).toBeNull();
     expect(j.contractRefusal(undefined).code).toBeNull();
+  });
+});
+
+describe("near-cli-rs output of a failed transaction", () => {
+  // What near-cli-rs 0.31.1 printed (exit status 1) for a function call that failed on a
+  // near-sandbox node, captured in the sandbox container; ESC stands for the escape character.
+  const captured = [
+    "ESC[31m├  ERROR Transaction failed",
+    "│    Gas used: 1.7 Tgas",
+    "│    Transaction fee: 0.0001196145831208 NEAR",
+    "│    Transaction ID: FNUNXyVDcfohu2mmpeYGvKHxNPCKJCQ2qhXsjsdSxh4c",
+    "│    To see the transaction in the transaction explorer, please open this url in your browser:",
+    "│    http://127.0.0.1:9011/FNUNXyVDcfohu2mmpeYGvKHxNPCKJCQ2qhXsjsdSxh4c",
+    "│     ESC[0m",
+    "├  Function execution logs:",
+    "│    ESC[31mLogs [test.near] (failed):ESC[39m   ESC[2mNo logsESC[0m",
+    "│     ESC[0m",
+    "",
+    "Error: ",
+    "   0: ESC[91mError: An error occurred during a `FunctionCall` action.",
+    '      CompilationError(CodeDoesNotExist { account_id: AccountId("test.near") })ESC[0m',
+    "",
+  ]
+    .join("\n")
+    .replaceAll("ESC", String.fromCharCode(27));
+
+  it("carries the transaction id, is not a question, and is never signed again", async () => {
+    expect(t.parseTxHash(captured)).toBe("FNUNXyVDcfohu2mmpeYGvKHxNPCKJCQ2qhXsjsdSxh4c");
+    expect(t.looksLikePrompt(captured)).toBe(false);
+    expect(t.classifyNearFailure(captured)).toMatchObject({ retry: false, kind: "SENT" });
+    let runs = 0;
+    const r = await t.runNear("near", ["x"], {
+      run: async () => {
+        runs++;
+        return { status: 1, text: captured, txHash: t.parseTxHash(captured) };
+      },
+    });
+    expect([runs, r.status, r.txHash]).toEqual([1, 1, "FNUNXyVDcfohu2mmpeYGvKHxNPCKJCQ2qhXsjsdSxh4c"]);
   });
 });
 
