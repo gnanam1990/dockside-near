@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://*.onrender.com https://*.fly.dev; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://*.onrender.com https://*.fly.dev; base-uri 'none'; form-action 'none'"
     />
     <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
@@ -17,11 +17,17 @@
     <link rel="stylesheet" href="../proof.css" />
     <link rel="stylesheet" href="./attack.css" />
   </head>
-  <body>
+  <body class="page-attack">
     <a class="skip" href="#attacks">Skip to the attacks</a>
-    <header class="top">
+    <header class="masthead">
+      <div class="wrap masthead-row">
+        <p class="brand"><span class="mark" aria-hidden="true">D</span> Dockside <span class="brand-sub">public proof</span></p>
+        <nav id="site-nav" class="site-nav no-print" aria-label="Proof site"></nav>
+      </div>
+    </header>
+    <div class="hero">
       <div class="wrap">
-        <p class="brand"><span class="mark" aria-hidden="true">D</span> Dockside</p>
+        <p class="eyebrow">NEAR testnet · real transactions · read back by your browser</p>
         <h1>Try to steal this payment</h1>
         <p class="lede">
           A real trade payment sits in the Dockside escrow on NEAR testnet: funded, approved by the buyer, and held
@@ -29,46 +35,51 @@
           account that has no authority over the trade. Your browser then reads that transaction from NEAR itself
           and shows what the contract answered.
         </p>
-        <p class="muted"><a href="../">Proof page</a> · testnet only · nothing here can move your funds</p>
+        <p class="hero-meta"><a href="../">Proof page</a> · testnet only · nothing here can move your funds</p>
       </div>
-    </header>
-    <main class="wrap">
-      <section id="trade" class="panel" aria-labelledby="trade-title" aria-busy="true">
+    </div>
+    <main class="wrap main console">
+      <section id="trade" class="panel vault" aria-labelledby="trade-title" aria-busy="true">
         <h2 id="trade-title">The payment</h2>
-        <p class="muted" id="trade-loading">Reading the trade from NEAR…</p>
+        <p class="muted loading-line" id="trade-loading">Reading the trade from NEAR…</p>
       </section>
-      <section id="attacks" class="panel" aria-labelledby="attacks-title" tabindex="-1">
+      <section id="attacks" class="panel exhibits" aria-labelledby="attacks-title" tabindex="-1">
         <h2 id="attacks-title">Five ways to try</h2>
         <p id="mode" class="mode" role="status"></p>
         <ol id="attack-list" class="attack-list"></ol>
       </section>
       <section class="panel notes" aria-labelledby="how-title">
         <h2 id="how-title">How this works, and its limits</h2>
-        <ul>
+        <ul class="terms">
           <li>
-            <strong>Real transactions.</strong> The console's relay signs each attempt with the demo account's
-            function-call key. That key can only call the escrow, cannot attach a deposit and holds only a gas
-            allowance; the demo account is not a party, signer or destination of the trade.
+            <strong>Real transactions.</strong>
+            <span>The console's relay signs each attempt with the demo account's function-call key. That key can
+            only call the escrow, cannot attach a deposit and holds only a gas allowance; the demo account is not a
+            party, signer or destination of the trade.</span>
           </li>
           <li>
-            <strong>Read back by your browser.</strong> The relay returns only a transaction hash. This page asks
-            a public NEAR RPC endpoint for that transaction and shows the contract's own error code from it, and
-            re-reads the trade's ledger afterwards.
+            <strong>Read back by your browser.</strong>
+            <span>The relay returns only a transaction hash. This page asks a public NEAR RPC endpoint for that
+            transaction and shows the contract's own error code from it, and re-reads the trade's ledger
+            afterwards.</span>
           </li>
           <li>
-            <strong>Rate limited.</strong> One attempt per visitor every 20 seconds and a fixed number per ten
-            minutes over everyone. If the relay is down or busy, the page replays attempts that were already
-            recorded: it reads those transactions from the chain the same way.
+            <strong>Rate limited.</strong>
+            <span>One attempt per visitor every 20 seconds and a fixed number per ten minutes over everyone. If the
+            relay is down or busy, the page replays attempts that were already recorded: it reads those
+            transactions from the chain the same way.</span>
           </li>
           <li>
-            <strong>What the codes mean depends on time.</strong> The buyer's approval and the evidence
-            attestation are signed for 24 hours. After that, a replayed approval is refused as
-            <code>EXPIRED</code> and a release lists the expired evidence first; the hold stays among the
-            blockers. Every attempt is still refused, and the page shows the code the contract actually returned.
+            <strong>What the codes mean depends on time.</strong>
+            <span>The buyer's approval and the evidence attestation are signed for 24 hours. After that, a replayed
+            approval is refused as <code>EXPIRED</code> and a release lists the expired evidence first; the hold
+            stays among the blockers. Every attempt is still refused, and the page shows the code the contract
+            actually returned.</span>
           </li>
           <li>
-            <strong>Not shown.</strong> This is the testnet deployment, and the trade's own keys belong to one
-            operator's test run, not to separate companies.
+            <strong>Not shown.</strong>
+            <span>This is the testnet deployment, and the trade's own keys belong to one operator's test run, not
+            to separate companies.</span>
           </li>
         </ul>
       </section>

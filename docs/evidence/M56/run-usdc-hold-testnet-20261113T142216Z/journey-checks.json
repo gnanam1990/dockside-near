@@ -1,0 +1,13 @@
+{
+  "settledTrue": true,
+  "releasePaid": true,
+  "supplierDeltaYocto": "5000000",
+  "supplierReceivedExactAmount": true,
+  "ledgerConservation": true,
+  "releasedTotal": "5000000",
+  "holdWasActive": true,
+  "releaseBlockedByHold": true,
+  "holdSetBy": "POLICY_SETTER (doc-mismatch@1)",
+  "holdResolved": true,
+  "deterministicPolicyHold": true
+}

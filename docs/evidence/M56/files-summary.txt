@@ -1,0 +1,27 @@
+What was copied from the owner's run directories (.data/testnet-run/, git-ignored) and what was not.
+
+Copied unchanged (no secret, no local path): artifact.json, preflight.json, deployment.json, relayer.json,
+journey.json, journey-checks.json, journey-state.json (the resume checkpoint: every completed step, its mirror replay
+and the read-only observations), run-record.json, registrations.txt (the account registered with the token and the
+storage deposit) and, for the deploying run, deploy-tx.txt (the deploy transaction hash only).
+
+Copied with local paths redacted: run-params.json. The wasm and manifest paths are written as <repo>/... and the
+relayer key file path as <home>/.../<public key>.json. No other field was changed.
+
+Not copied:
+  - the journey key-seed file (each run): the seed every Dockside principal key of that trade derives from.
+  - any key file, and relayer-key.txt (raw near-cli-rs output of the AddKey call; its transaction hash
+    DK7ZvpG5okCLXYAyQU6BbbpcbSEN8SbHY6hpVCBhxCC8 is recorded in docs/status/M56.md and re-verified on chain).
+  - deploy.txt and storage-deposit-1.txt (raw near-cli-rs output; their transaction hashes are recorded in
+    docs/status/M56.md and in onchain-reverify.json).
+  - args/ (each run): the per-call argument files; every call is in journey.json and on chain.
+  - testnet-20261113T141902Z and testnet-20261113T143333Z: stopped before sending anything (docs/status/M56.md).
+
+run-usdc-paid-testnet-20261113T142004Z     paid journey, ok, deploys escrow3, run-all at 74cafa5
+run-usdc-hold-testnet-20261113T142216Z     hold journey, ok, run-all at 74cafa5
+run-usdc-refusal-testnet-20261113T142333Z  refusal journey (six refused transactions, then PAID), ok, run-all at 74cafa5
+run-usdc-refund-testnet-20261113T143415Z   refund journey (MUTUAL_CANCEL and EXCESS_FUNDING_RETURN), ok, run-all at 74cafa5
+
+onchain-reverify.json: read-only re-verification of the setup transactions, all 45 journey transactions, the four
+trades' ledgers, release, holds and refunds on gnanam1990-dock-escrow3.testnet, the relayer key and the USDC token
+balances, through https://test.rpc.fastnear.com at a final block (sentTransactions 0).

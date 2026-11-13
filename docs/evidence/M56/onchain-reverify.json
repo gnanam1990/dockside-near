@@ -1,0 +1,2003 @@
+{
+  "queriedAt": "2026-11-13T15:35:29.634Z",
+  "rpc": "https://test.rpc.fastnear.com",
+  "finality": "final",
+  "sentTransactions": 0,
+  "blockHeight": 277529142,
+  "escrowAccount": {
+    "account": "gnanam1990-dock-escrow3.testnet",
+    "codeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "codeHashMatches": true,
+    "amount": "9992089896542328699999995",
+    "storageUsage": 883400
+  },
+  "getConfig": {
+    "network": "near-testnet",
+    "minDepositYocto": "1000000000000000000000",
+    "minDepositNep141": "10000",
+    "maxTradeAmount": {
+      "nearYocto": "0",
+      "nep141": "0"
+    },
+    "nep141Token": {
+      "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "decimals": 6
+    },
+    "trades": 4,
+    "unexpectedAssets": 0,
+    "refundPolicy": {
+      "id": "dockside-refund-v1",
+      "revision": 1
+    }
+  },
+  "relayerKey": {
+    "publicKey": "ed25519:C3EMNRphXDfHC5JEJXo1ZveMnAg3N8kMJm5pJa2xYZXp",
+    "permission": {
+      "FunctionCall": {
+        "allowance": "977957837127800300000000",
+        "method_names": [],
+        "receiver_id": "gnanam1990-dock-escrow3.testnet"
+      }
+    }
+  },
+  "tokenMetadata": {
+    "spec": "ft-1.0.0",
+    "name": "USDC",
+    "symbol": "USDC",
+    "icon": "data:image/svg+xml,%3C%3Fxml version=%221.0%22 encoding=%22utf-8%22%3F%3E%3C!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0) --%3E%3Csvg version=%221.1%22 id=%22Layer_1%22 xmlns=%22http://www.w3.org/2000/svg%22 xmlns:xlink=%22http://www.w3.org/1999/xlink%22 x=%220px%22 y=%220px%22 viewBox=%220 0 256 256%22 style=%22enable-background:new 0 0 256 256;%22 xml:space=%22preserve%22%3E%3Cstyle type=%22text/css%22%3E .st0%7Bfill:%232775CA;%7D .st1%7Bfill:%23FFFFFF;%7D%0A%3C/style%3E%3Ccircle class=%22st0%22 cx=%22128%22 cy=%22128%22 r=%22128%22/%3E%3Cpath class=%22st1%22 d=%22M104,217c0,3-2.4,4.7-5.2,3.8C60,208.4,32,172.2,32,129.3c0-42.8,28-79.1,66.8-91.5c2.9-0.9,5.2,0.8,5.2,3.8 v7.5c0,2-1.5,4.3-3.4,5C69.9,65.4,48,94.9,48,129.3c0,34.5,21.9,63.9,52.6,75.1c1.9,0.7,3.4,3,3.4,5V217z%22/%3E%3Cpath class=%22st1%22 d=%22M136,189.3c0,2.2-1.8,4-4,4h-8c-2.2,0-4-1.8-4-4v-12.6c-17.5-2.4-26-12.1-28.3-25.5c-0.4-2.3,1.4-4.3,3.7-4.3 h9.1c1.9,0,3.5,1.4,3.9,3.2c1.7,7.9,6.3,14,20.3,14c10.3,0,17.7-5.8,17.7-14.4c0-8.6-4.3-11.9-19.5-14.4c-22.4-3-33-9.8-33-27.3 c0-13.5,10.3-24.1,26.1-26.3V69.3c0-2.2,1.8-4,4-4h8c2.2,0,4,1.8,4,4v12.7c12.9,2.3,21.1,9.6,23.8,21.8c0.5,2.3-1.3,4.4-3.7,4.4 h-8.4c-1.8,0-3.3-1.2-3.8-2.9c-2.3-7.7-7.8-11.1-17.4-11.1c-10.6,0-16.1,5.1-16.1,12.3c0,7.6,3.1,11.4,19.4,13.7 c22,3,33.4,9.3,33.4,28c0,14.2-10.6,25.7-27.1,28.3V189.3z%22/%3E%3Cpath class=%22st1%22 d=%22M157.2,220.8c-2.9,0.9-5.2-0.8-5.2-3.8v-7.5c0-2.2,1.3-4.3,3.4-5c30.6-11.2,52.6-40.7,52.6-75.1 c0-34.5-21.9-63.9-52.6-75.1c-1.9-0.7-3.4-3-3.4-5v-7.5c0-3,2.4-4.7,5.2-3.8C196,50.2,224,86.5,224,129.3 C224,172.2,196,208.4,157.2,220.8z%22/%3E%3C/svg%3E%0A",
+    "reference": null,
+    "reference_hash": null,
+    "decimals": 6
+  },
+  "tokenBalances": {
+    "gnanam1990-dock-buyer.testnet": "5000000",
+    "gnanam1990-dock-supplier.testnet": "15000000",
+    "gnanam1990-dock-relayer.testnet": "0",
+    "gnanam1990-dock-escrow3.testnet": "0"
+  },
+  "setup": [
+    {
+      "label": "deploy_and_new",
+      "txHash": "6PfiGs1mhovxnESPSbjzvMAAz1VoFpKuipee7bxkJgoR",
+      "signer": "gnanam1990-dock-escrow3.testnet",
+      "receiver": "gnanam1990-dock-escrow3.testnet",
+      "actions": [
+        "DeployContract",
+        "FunctionCall:new"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "returnValue": "",
+      "failedReceipts": [],
+      "ftEvents": [],
+      "ftTransfersFromEscrow": [],
+      "nativeTransfersFromEscrow": [],
+      "escrowLogs": []
+    },
+    {
+      "label": "storage_deposit_escrow_on_token",
+      "txHash": "NqmTm9hb4yoYFNtbuHUm7HnuKk4hJHx1k8wjwBjaXJw",
+      "signer": "gnanam1990-dock-escrow3.testnet",
+      "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "actions": [
+        "FunctionCall:storage_deposit"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "returnValue": "{\"total\":\"1250000000000000000000\",\"available\":\"0\"}",
+      "failedReceipts": [],
+      "ftEvents": [],
+      "ftTransfersFromEscrow": [],
+      "nativeTransfersFromEscrow": [],
+      "escrowLogs": []
+    },
+    {
+      "label": "add_relayer_function_call_key",
+      "txHash": "DK7ZvpG5okCLXYAyQU6BbbpcbSEN8SbHY6hpVCBhxCC8",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "receiver": "gnanam1990-dock-relayer.testnet",
+      "actions": [
+        "AddKey"
+      ],
+      "finalExecutionStatus": "FINAL",
+      "txStatus": "SuccessValue",
+      "returnValue": "",
+      "failedReceipts": [],
+      "ftEvents": [],
+      "ftTransfersFromEscrow": [],
+      "nativeTransfersFromEscrow": [],
+      "escrowLogs": []
+    }
+  ],
+  "journeys": [
+    {
+      "run": "testnet-20261113T142004Z",
+      "kind": "paid",
+      "recordOk": true,
+      "tradeId": "trd_7b76900e411a5bd8afadcf322bdf1f2f",
+      "transactions": [
+        {
+          "label": "register",
+          "txHash": "HjwvyyMaJD7dmBKgvPb5tNYd7aM9xUGw3pePBXKimU5i",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_trade"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"231a1bc7e16a431f80cdd98fd041bb38cbccd928fd76ae7cb2a35a2d92f14b4c\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "policy",
+          "txHash": "C4d5pJJcfpQdxHMxJTWwcfTAi7xkxT8wsE2yzw6mbMPi",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_evidence_policy"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "fund",
+          "txHash": "2gzs2r79EhfGhTVCVxHHKPmdRUxRTShmBwBBJJCiCHY1",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "actions": [
+            "FunctionCall:ft_transfer_call"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"5000000\"",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-buyer.testnet",
+              "to": "gnanam1990-dock-escrow3.testnet",
+              "amount": "5000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "attestation",
+          "txHash": "ENqMU6twRmduFF5NW4FLnS6ZdhKZ2g16fvct1XkNxa61",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_manifest_attestation"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"12cb9714ddda64092efe915c4cfd0893954ab245177faad5e0ed92f5cdbfd9e0\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "inspection",
+          "txHash": "9iUmGixdHaSUQzqUyp3EiGDts19avxHLquxuRAE9cQ7B",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_inspection"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"0c4aca5c2d2ea6f2a3d6bf1d402b94ae30d73c938d13b8951bf83ad89f0b0a7d\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "payee_storage",
+          "txHash": "ARZPSyceef2hzGZ1ZaxvazDfkMDd4EKWwAQujPP4EH4K",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:check_payee_storage"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "intent",
+          "txHash": "35JnmjooHC4ZpYv7jrZWtWsACjQpPb5GfNeiYFkAPywU",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:create_release_intent"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "{\"releaseIntentId\":\"rli_ddbced059cb048a1b17881d1cb6b89b5\",\"joined\":false}",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "approval",
+          "txHash": "CAE1EjKSgReY48dKVQouHYwEozCyJSJEJHM1RaexWndq",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:approve_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"bc8c0f0ca4251a17c21468e2ff278ef36f8b16c02a7ee15d5607e217d6e81e71\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "execute_release",
+          "txHash": "ANyGBfVTpUzjTdMdVZcP2RSnSewzYCRHR97A2Z51CX1B",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:execute_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-escrow3.testnet",
+              "to": "gnanam1990-dock-supplier.testnet",
+              "amount": "5000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [
+            {
+              "receiver": "gnanam1990-dock-supplier.testnet",
+              "amount": "5000000",
+              "deposit": "1",
+              "outcome": "SuccessValue"
+            }
+          ],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        }
+      ],
+      "verdicts": [
+        {
+          "tx": "HjwvyyMaJD7dmBKgvPb5tNYd7aM9xUGw3pePBXKimU5i",
+          "ok": true,
+          "why": "SuccessValue \"231a1bc7e16a431f80cdd98fd041bb38cbccd928fd76ae7cb2a35a2d92f14b4c\", failed receipts 0"
+        },
+        {
+          "tx": "C4d5pJJcfpQdxHMxJTWwcfTAi7xkxT8wsE2yzw6mbMPi",
+          "ok": true,
+          "why": "SuccessValue \"c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8\", failed receipts 0"
+        },
+        {
+          "tx": "2gzs2r79EhfGhTVCVxHHKPmdRUxRTShmBwBBJJCiCHY1",
+          "ok": true,
+          "why": "SuccessValue \"5000000\", failed receipts 0"
+        },
+        {
+          "tx": "ENqMU6twRmduFF5NW4FLnS6ZdhKZ2g16fvct1XkNxa61",
+          "ok": true,
+          "why": "SuccessValue \"12cb9714ddda64092efe915c4cfd0893954ab245177faad5e0ed92f5cdbfd9e0\", failed receipts 0"
+        },
+        {
+          "tx": "9iUmGixdHaSUQzqUyp3EiGDts19avxHLquxuRAE9cQ7B",
+          "ok": true,
+          "why": "SuccessValue \"0c4aca5c2d2ea6f2a3d6bf1d402b94ae30d73c938d13b8951bf83ad89f0b0a7d\", failed receipts 0"
+        },
+        {
+          "tx": "ARZPSyceef2hzGZ1ZaxvazDfkMDd4EKWwAQujPP4EH4K",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        },
+        {
+          "tx": "35JnmjooHC4ZpYv7jrZWtWsACjQpPb5GfNeiYFkAPywU",
+          "ok": true,
+          "why": "SuccessValue {\"releaseIntentId\":\"rli_ddbced059cb048a1b17881d1cb6b89b5\",\"joined\":false}, failed receipts 0"
+        },
+        {
+          "tx": "CAE1EjKSgReY48dKVQouHYwEozCyJSJEJHM1RaexWndq",
+          "ok": true,
+          "why": "SuccessValue \"bc8c0f0ca4251a17c21468e2ff278ef36f8b16c02a7ee15d5607e217d6e81e71\", failed receipts 0"
+        },
+        {
+          "tx": "ANyGBfVTpUzjTdMdVZcP2RSnSewzYCRHR97A2Z51CX1B",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        }
+      ],
+      "allTransactionsAsExpected": true,
+      "views": {
+        "ledger": {
+          "asset": {
+            "kind": "NEP141",
+            "network": "near-testnet",
+            "tokenAccountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+            "decimals": 6
+          },
+          "required": "5000000",
+          "committed": "5000000",
+          "fullyFunded": true,
+          "totals": {
+            "funded": "5000000",
+            "partial": "0",
+            "available": "0",
+            "reserved": "0",
+            "released": "5000000",
+            "refundLocked": "0",
+            "refunded": "0",
+            "quarantined": "0",
+            "fees": "0",
+            "excessDetectedAt": null
+          },
+          "funders": {
+            "gnanam1990-dock-buyer.testnet": {
+              "funded": "5000000",
+              "partial": "0",
+              "available": "0",
+              "reserved": "0",
+              "released": "5000000",
+              "refundLocked": "0",
+              "refunded": "0",
+              "quarantined": "0",
+              "fees": "0",
+              "excessDetectedAt": null
+            }
+          },
+          "deposits": [
+            {
+              "index": 0,
+              "funder": "gnanam1990-dock-buyer.testnet",
+              "amount": "5000000",
+              "accepted": "5000000",
+              "quarantined": "0",
+              "atMs": 1794579652221
+            }
+          ],
+          "conservation": true
+        },
+        "release": {
+          "tradeId": "trd_7b76900e411a5bd8afadcf322bdf1f2f",
+          "revision": 1,
+          "termsDigest": "231a1bc7e16a431f80cdd98fd041bb38cbccd928fd76ae7cb2a35a2d92f14b4c",
+          "payoutDestination": "gnanam1990-dock-supplier.testnet",
+          "liveIntent": null,
+          "blockers": [
+            "MANIFEST_NOT_CURRENT",
+            "NO_RELEASE_INTENT"
+          ],
+          "holdsViewDigest": "f49884a2c90ab0299404e813f4671d67c84cbdbc91e732a027f543b76524167c",
+          "intents": [
+            {
+              "releaseIntentId": "rli_ddbced059cb048a1b17881d1cb6b89b5",
+              "tradeRevision": 1,
+              "termsDigest": "231a1bc7e16a431f80cdd98fd041bb38cbccd928fd76ae7cb2a35a2d92f14b4c",
+              "requestDigest": "07e209e145146017b96b53a58800cc3da8659452ed07f0e9c45c91a87dfc0782",
+              "amount": "5000000",
+              "slices": [
+                {
+                  "funder": "gnanam1990-dock-buyer.testnet",
+                  "amount": "5000000"
+                }
+              ],
+              "sourceBucket": "AVAILABLE",
+              "destination": "gnanam1990-dock-supplier.testnet",
+              "executionProfile": "DIRECT_TESTNET",
+              "state": "PAID",
+              "stateVersion": 4,
+              "createdAt": 1794579676290,
+              "expiresAt": 1794838873757,
+              "approval": {
+                "digest": "bc8c0f0ca4251a17c21468e2ff278ef36f8b16c02a7ee15d5607e217d6e81e71",
+                "approvedAt": 1794579681194,
+                "expiresAt": 1794666078257,
+                "manifestRevision": 1,
+                "manifestDigest": "12cb9714ddda64092efe915c4cfd0893954ab245177faad5e0ed92f5cdbfd9e0",
+                "attestationDigest": "73c69b7103386f7f97db6a7eb766c9897f243aceebc7158e108dd83098c7f9f0",
+                "inspectionDigest": "0c4aca5c2d2ea6f2a3d6bf1d402b94ae30d73c938d13b8951bf83ad89f0b0a7d",
+                "holdsViewDigest": "f49884a2c90ab0299404e813f4671d67c84cbdbc91e732a027f543b76524167c"
+              },
+              "pendingCancel": null,
+              "exitDigest": null,
+              "predecessor": null,
+              "successor": null,
+              "attempts": [
+                "rla_0ee59d85919d59268d7032d388cf44bd"
+              ],
+              "consumedManifest": "12cb9714ddda64092efe915c4cfd0893954ab245177faad5e0ed92f5cdbfd9e0",
+              "history": [
+                [
+                  "RELEASE_INTENT_CREATED",
+                  1794579676290
+                ],
+                [
+                  "VALUE_LOCKED",
+                  1794579676290
+                ],
+                [
+                  "DIRECT_TESTNET_AUTHORIZED",
+                  1794579681194
+                ],
+                [
+                  "SUBMITTING",
+                  1794579686108
+                ],
+                [
+                  "PAID",
+                  1794579687083
+                ]
+              ]
+            }
+          ],
+          "revisions": [
+            {
+              "revision": 1,
+              "digest": "231a1bc7e16a431f80cdd98fd041bb38cbccd928fd76ae7cb2a35a2d92f14b4c",
+              "activatedAt": 1794579639553
+            }
+          ],
+          "pendingDestinationChange": null,
+          "destinationHistory": [],
+          "pendingKeyRebinding": null,
+          "keyRebindingHistory": [],
+          "abandonPolicy": {
+            "id": "dockside-abandon-v1",
+            "revision": 1,
+            "graceMs": 86400000
+          }
+        },
+        "holds": [],
+        "refunds": []
+      },
+      "conservationRecomputed": true,
+      "conservationContractFlag": true
+    },
+    {
+      "run": "testnet-20261113T142216Z",
+      "kind": "hold",
+      "recordOk": true,
+      "tradeId": "trd_96560def80db3315577c91c0f9265a77",
+      "transactions": [
+        {
+          "label": "register",
+          "txHash": "BWbSL6ure3p4rGQG8NtVnAqndKVquMyjJwg98CDwMFg7",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_trade"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "policy",
+          "txHash": "8Vjis3Byti84gmesKHhxa7Up62Cxo1LJd12HV8z9V7Ry",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_evidence_policy"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "fund",
+          "txHash": "GGReYME6Ha8mAagWvm7NicTTAWdKrUSP6WtzHqSsYgSh",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "actions": [
+            "FunctionCall:ft_transfer_call"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"5000000\"",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-buyer.testnet",
+              "to": "gnanam1990-dock-escrow3.testnet",
+              "amount": "5000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "attestation",
+          "txHash": "7hzwBHmWJeSE1r5BjSKbe6fyoPkXdhzxeUszp7iwpo5e",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_manifest_attestation"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "inspection",
+          "txHash": "B76PT2DN1roPPTpeP9XYZC5Rfq3qnkXZX4HHU1z9eJ9b",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_inspection"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"85f8b960936d4881c496f2a1aeb2e62fad360483c56c641d4bcadd60b568bf82\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "hold_set",
+          "txHash": "2oxiNqeDRYnEEyTBuLfQar4M21fu5Hv2mpYet1NMbZyL",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:set_hold"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"db554aeca695452d58f46d67ab6f662c13b8840555f8d8bc53731ccc44b2a9bc\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "payee_storage",
+          "txHash": "4XFiXJ26iekwM91ABa1TXM9XBsLebEbcNANVoRq2D8cs",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:check_payee_storage"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "intent",
+          "txHash": "BsVL6KsCqYoAtKQ45ercipksq52BxqbV9tn8MiHZD72C",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:create_release_intent"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "{\"releaseIntentId\":\"rli_888224b79be758a123931fe000c877e0\",\"joined\":false}",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "hold_resolve",
+          "txHash": "JDZy69FzLWaqAxUXhLghoHUGWPBpnsHAgwvtxm22TrK1",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:resolve_hold"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"2092ffe68c4a4c32838e536c9aefaca162693f96f4f667052cf740863ebe13ba\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "approval",
+          "txHash": "DmyA9MCRcAZeB4rcSdQHYUX2vAP5B8zRYFJcu6Wx9TJo",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:approve_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"44cfcf3be8ec75f1ae108f5290dbc4bfa7a1a6964a78cf2aded3dea6dd49459e\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "execute_release",
+          "txHash": "FD7izvtEY76ir6nfYYsVcqmtmPhoCtsdwQwmrMsFKa1U",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:execute_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-escrow3.testnet",
+              "to": "gnanam1990-dock-supplier.testnet",
+              "amount": "5000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [
+            {
+              "receiver": "gnanam1990-dock-supplier.testnet",
+              "amount": "5000000",
+              "deposit": "1",
+              "outcome": "SuccessValue"
+            }
+          ],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        }
+      ],
+      "verdicts": [
+        {
+          "tx": "BWbSL6ure3p4rGQG8NtVnAqndKVquMyjJwg98CDwMFg7",
+          "ok": true,
+          "why": "SuccessValue \"8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f\", failed receipts 0"
+        },
+        {
+          "tx": "8Vjis3Byti84gmesKHhxa7Up62Cxo1LJd12HV8z9V7Ry",
+          "ok": true,
+          "why": "SuccessValue \"c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8\", failed receipts 0"
+        },
+        {
+          "tx": "GGReYME6Ha8mAagWvm7NicTTAWdKrUSP6WtzHqSsYgSh",
+          "ok": true,
+          "why": "SuccessValue \"5000000\", failed receipts 0"
+        },
+        {
+          "tx": "7hzwBHmWJeSE1r5BjSKbe6fyoPkXdhzxeUszp7iwpo5e",
+          "ok": true,
+          "why": "SuccessValue \"75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150\", failed receipts 0"
+        },
+        {
+          "tx": "B76PT2DN1roPPTpeP9XYZC5Rfq3qnkXZX4HHU1z9eJ9b",
+          "ok": true,
+          "why": "SuccessValue \"85f8b960936d4881c496f2a1aeb2e62fad360483c56c641d4bcadd60b568bf82\", failed receipts 0"
+        },
+        {
+          "tx": "2oxiNqeDRYnEEyTBuLfQar4M21fu5Hv2mpYet1NMbZyL",
+          "ok": true,
+          "why": "SuccessValue \"db554aeca695452d58f46d67ab6f662c13b8840555f8d8bc53731ccc44b2a9bc\", failed receipts 0"
+        },
+        {
+          "tx": "4XFiXJ26iekwM91ABa1TXM9XBsLebEbcNANVoRq2D8cs",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        },
+        {
+          "tx": "BsVL6KsCqYoAtKQ45ercipksq52BxqbV9tn8MiHZD72C",
+          "ok": true,
+          "why": "SuccessValue {\"releaseIntentId\":\"rli_888224b79be758a123931fe000c877e0\",\"joined\":false}, failed receipts 0"
+        },
+        {
+          "tx": "JDZy69FzLWaqAxUXhLghoHUGWPBpnsHAgwvtxm22TrK1",
+          "ok": true,
+          "why": "SuccessValue \"2092ffe68c4a4c32838e536c9aefaca162693f96f4f667052cf740863ebe13ba\", failed receipts 0"
+        },
+        {
+          "tx": "DmyA9MCRcAZeB4rcSdQHYUX2vAP5B8zRYFJcu6Wx9TJo",
+          "ok": true,
+          "why": "SuccessValue \"44cfcf3be8ec75f1ae108f5290dbc4bfa7a1a6964a78cf2aded3dea6dd49459e\", failed receipts 0"
+        },
+        {
+          "tx": "FD7izvtEY76ir6nfYYsVcqmtmPhoCtsdwQwmrMsFKa1U",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        }
+      ],
+      "allTransactionsAsExpected": true,
+      "views": {
+        "ledger": {
+          "asset": {
+            "kind": "NEP141",
+            "network": "near-testnet",
+            "tokenAccountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+            "decimals": 6
+          },
+          "required": "5000000",
+          "committed": "5000000",
+          "fullyFunded": true,
+          "totals": {
+            "funded": "5000000",
+            "partial": "0",
+            "available": "0",
+            "reserved": "0",
+            "released": "5000000",
+            "refundLocked": "0",
+            "refunded": "0",
+            "quarantined": "0",
+            "fees": "0",
+            "excessDetectedAt": null
+          },
+          "funders": {
+            "gnanam1990-dock-buyer.testnet": {
+              "funded": "5000000",
+              "partial": "0",
+              "available": "0",
+              "reserved": "0",
+              "released": "5000000",
+              "refundLocked": "0",
+              "refunded": "0",
+              "quarantined": "0",
+              "fees": "0",
+              "excessDetectedAt": null
+            }
+          },
+          "deposits": [
+            {
+              "index": 0,
+              "funder": "gnanam1990-dock-buyer.testnet",
+              "amount": "5000000",
+              "accepted": "5000000",
+              "quarantined": "0",
+              "atMs": 1794579757198
+            }
+          ],
+          "conservation": true
+        },
+        "release": {
+          "tradeId": "trd_96560def80db3315577c91c0f9265a77",
+          "revision": 1,
+          "termsDigest": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f",
+          "payoutDestination": "gnanam1990-dock-supplier.testnet",
+          "liveIntent": null,
+          "blockers": [
+            "MANIFEST_NOT_CURRENT",
+            "NO_RELEASE_INTENT"
+          ],
+          "holdsViewDigest": "c52a1381c299a2876c01f074d7933b9c2a5a4603e38dd4f84362544b3b1b5418",
+          "intents": [
+            {
+              "releaseIntentId": "rli_888224b79be758a123931fe000c877e0",
+              "tradeRevision": 1,
+              "termsDigest": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f",
+              "requestDigest": "7093426531cc0451a5f867c91be810cce06d18552337e8c2a5bfa67b0685126f",
+              "amount": "5000000",
+              "slices": [
+                {
+                  "funder": "gnanam1990-dock-buyer.testnet",
+                  "amount": "5000000"
+                }
+              ],
+              "sourceBucket": "AVAILABLE",
+              "destination": "gnanam1990-dock-supplier.testnet",
+              "executionProfile": "DIRECT_TESTNET",
+              "state": "PAID",
+              "stateVersion": 4,
+              "createdAt": 1794579786885,
+              "expiresAt": 1794838983926,
+              "approval": {
+                "digest": "44cfcf3be8ec75f1ae108f5290dbc4bfa7a1a6964a78cf2aded3dea6dd49459e",
+                "approvedAt": 1794579798234,
+                "expiresAt": 1794666195825,
+                "manifestRevision": 1,
+                "manifestDigest": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150",
+                "attestationDigest": "44657db94c5bec672e078d45e497acfec4119a37146b8bca940198d794db5069",
+                "inspectionDigest": "85f8b960936d4881c496f2a1aeb2e62fad360483c56c641d4bcadd60b568bf82",
+                "holdsViewDigest": "c52a1381c299a2876c01f074d7933b9c2a5a4603e38dd4f84362544b3b1b5418"
+              },
+              "pendingCancel": null,
+              "exitDigest": null,
+              "predecessor": null,
+              "successor": null,
+              "attempts": [
+                "rla_8f7302e12a887b63f5ea37933ff05bde"
+              ],
+              "consumedManifest": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150",
+              "history": [
+                [
+                  "RELEASE_INTENT_CREATED",
+                  1794579786885
+                ],
+                [
+                  "VALUE_LOCKED",
+                  1794579786885
+                ],
+                [
+                  "DIRECT_TESTNET_AUTHORIZED",
+                  1794579798234
+                ],
+                [
+                  "SUBMITTING",
+                  1794579802713
+                ],
+                [
+                  "PAID",
+                  1794579803885
+                ]
+              ]
+            }
+          ],
+          "revisions": [
+            {
+              "revision": 1,
+              "digest": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f",
+              "activatedAt": 1794579744448
+            }
+          ],
+          "pendingDestinationChange": null,
+          "destinationHistory": [],
+          "pendingKeyRebinding": null,
+          "keyRebindingHistory": [],
+          "abandonPolicy": {
+            "id": "dockside-abandon-v1",
+            "revision": 1,
+            "graceMs": 86400000
+          }
+        },
+        "holds": [
+          {
+            "holdId": "hld_796b853d353195611493e8299e4617e6",
+            "status": "RESOLVED",
+            "reasonCode": "DOC_MISMATCH",
+            "issuerRole": "POLICY_SETTER",
+            "ruleId": "doc-mismatch@1",
+            "manifestDigest": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150",
+            "issuedAt": 1794579770934,
+            "expiresAt": 1795184570934,
+            "recordedAt": 1794579773402,
+            "setDigest": "db554aeca695452d58f46d67ab6f662c13b8840555f8d8bc53731ccc44b2a9bc",
+            "resolution": {
+              "code": "RELEASE_HOLD",
+              "evidenceDigest": "ca3758c30188f316cf05b5b0edecc51e2bb6f1e2d7ff438e10697f12c470ce7a",
+              "resolvedAt": 1794579792788,
+              "digest": "2092ffe68c4a4c32838e536c9aefaca162693f96f4f667052cf740863ebe13ba"
+            }
+          }
+        ],
+        "refunds": []
+      },
+      "conservationRecomputed": true,
+      "conservationContractFlag": true
+    },
+    {
+      "run": "testnet-20261113T142333Z",
+      "kind": "refusal",
+      "recordOk": true,
+      "tradeId": "trd_e93f842de9d221e6dcdd201aeabe1e71",
+      "transactions": [
+        {
+          "label": "register",
+          "txHash": "2DmBBSGXTmsxGTDG4BrxLJxbwQ2rsDsrDCyYWszW4qhj",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_trade"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"420cda1c1fa0b9ac2b26f280dd30f60ffb69e7d07a0d92e2bef8a3d19341e8e0\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "policy",
+          "txHash": "HvJgXo7sWvFEhFmEYS4VmprGi1Yqv34gJjKXQ8XkuE1b",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_evidence_policy"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refuse:fund_wrong_terms",
+          "txHash": "4u9sbsZJecFijqPxNP4LL9yXZYkbFJgznCBxjRr1qDBX",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "actions": [
+            "FunctionCall:ft_transfer_call"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"0\"",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-buyer.testnet",
+              "to": "gnanam1990-dock-escrow3.testnet",
+              "amount": "2500000"
+            },
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-escrow3.testnet",
+              "to": "gnanam1990-dock-buyer.testnet",
+              "amount": "2500000"
+            }
+          ],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": "STALE_REVISION"
+        },
+        {
+          "label": "fund:1",
+          "txHash": "72YHkefZekpTDhTn9VLGVoTcvRkS6jLkQ3t3YPhXQbm3",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "actions": [
+            "FunctionCall:ft_transfer_call"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"2500000\"",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-buyer.testnet",
+              "to": "gnanam1990-dock-escrow3.testnet",
+              "amount": "2500000"
+            }
+          ],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refuse:relayer_refund",
+          "txHash": "qKB4NxwH4ZARn1kQgqkGXh3UQpzdoJcceVcvNvQbzgw",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:request_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "Failure",
+          "failureCode": "FORBIDDEN",
+          "failedReceipts": [
+            {
+              "executor": "gnanam1990-dock-escrow3.testnet",
+              "code": "FORBIDDEN"
+            }
+          ],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": "FORBIDDEN"
+        },
+        {
+          "label": "fund:2",
+          "txHash": "8roKKkeHSHvd1XnVBGSvKvSyM3m1VsGN8m14QQBCf7L9",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "actions": [
+            "FunctionCall:ft_transfer_call"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"2500000\"",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-buyer.testnet",
+              "to": "gnanam1990-dock-escrow3.testnet",
+              "amount": "2500000"
+            }
+          ],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "attestation",
+          "txHash": "14T5zsrg5t3pivwZZP5vtrKNefsHxvMPpXbJ8A8mkLnk",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_manifest_attestation"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"9974cbfb5957ea862347093be9e81c891032601f29fded756adbd358aa5172cc\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "inspection",
+          "txHash": "BzpPjHnwUCFzCDddGiP8vb71kyGetwmCeDkxVHdf8rUi",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_inspection"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"279c74b02ecbc217d131b3684656e060935aaca8a33ed24465eedc6fd23a3d8d\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refuse:replayed_nonce",
+          "txHash": "HuR557dMzDP4jLKVzXw3rSWCDFJbHVuMz5vrSomLuegn",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:submit_inspection"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "Failure",
+          "failureCode": "NONCE_REPLAYED",
+          "failedReceipts": [
+            {
+              "executor": "gnanam1990-dock-escrow3.testnet",
+              "code": "NONCE_REPLAYED"
+            }
+          ],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": "NONCE_REPLAYED"
+        },
+        {
+          "label": "hold_set",
+          "txHash": "4h3UN1wLLZjiDAFV47vwc7jPGMCjT8TTF52xg8i9sgM5",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:set_hold"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"c5785f5c4db55fb97db292bb50f2d24e58cf62770b857b466fdaff450245549b\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refuse:payout_redirect",
+          "txHash": "Dex2SQYEgCFJDF3P61KuWLGmHA4xFngWSBkQ5YvGtm1Y",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:create_release_intent"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "Failure",
+          "failureCode": "DESTINATION_MISMATCH",
+          "failedReceipts": [
+            {
+              "executor": "gnanam1990-dock-escrow3.testnet",
+              "code": "DESTINATION_MISMATCH"
+            }
+          ],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": "DESTINATION_MISMATCH"
+        },
+        {
+          "label": "payee_storage",
+          "txHash": "EVw7dPje7iuq59M6Bk59SqqAEXDgkcg59GPBiFP7XaWJ",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:check_payee_storage"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "intent",
+          "txHash": "42XFDGkhwXNZx4L6BmuowwsUBbJkifJebxiyDd7AAdm3",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:create_release_intent"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "{\"releaseIntentId\":\"rli_894549a53cad39921e1b4c1b21e7ff26\",\"joined\":false}",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refuse:release_while_held",
+          "txHash": "9z68Gk7xY17SVMLGGptiaRt7DbTx4JgY47ATRx2Zi5D3",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:execute_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "Failure",
+          "failureCode": "HOLD_ACTIVE",
+          "failedReceipts": [
+            {
+              "executor": "gnanam1990-dock-escrow3.testnet",
+              "code": "HOLD_ACTIVE"
+            }
+          ],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": "HOLD_ACTIVE"
+        },
+        {
+          "label": "hold_resolve",
+          "txHash": "53sYv3yZE5xvkAGoUrdvvsEx7ide3fFAWzYBrkuaQi9x",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:resolve_hold"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"9e077fe9354e48ea98765d86453539d8df479513f2d4986eca91d529f446ccf9\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refuse:unbound_approval",
+          "txHash": "5Eu7FQ2CaGr9rqrxToCJEwmEsrtHMbij3CzijPj95gLN",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:approve_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "Failure",
+          "failureCode": "SIGNATURE_INVALID",
+          "failedReceipts": [
+            {
+              "executor": "gnanam1990-dock-escrow3.testnet",
+              "code": "SIGNATURE_INVALID"
+            }
+          ],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": "SIGNATURE_INVALID"
+        },
+        {
+          "label": "approval",
+          "txHash": "4HpKLPgGzE5MnMeNAey7fuuZ5aWnxyZP3MRpJyZNPHzq",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:approve_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"4e2f2da5663898d73245417ad05f78a6399e95df102512bfd6bb18bee74078dd\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "execute_release",
+          "txHash": "BZ9Ey8dMzmcQfrMvFRBLUTnJXDA7dvmemQ5kuiiivCao",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:execute_release"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-escrow3.testnet",
+              "to": "gnanam1990-dock-supplier.testnet",
+              "amount": "5000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [
+            {
+              "receiver": "gnanam1990-dock-supplier.testnet",
+              "amount": "5000000",
+              "deposit": "1",
+              "outcome": "SuccessValue"
+            }
+          ],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        }
+      ],
+      "verdicts": [
+        {
+          "tx": "2DmBBSGXTmsxGTDG4BrxLJxbwQ2rsDsrDCyYWszW4qhj",
+          "ok": true,
+          "why": "SuccessValue \"420cda1c1fa0b9ac2b26f280dd30f60ffb69e7d07a0d92e2bef8a3d19341e8e0\", failed receipts 0"
+        },
+        {
+          "tx": "HvJgXo7sWvFEhFmEYS4VmprGi1Yqv34gJjKXQ8XkuE1b",
+          "ok": true,
+          "why": "SuccessValue \"c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8\", failed receipts 0"
+        },
+        {
+          "tx": "4u9sbsZJecFijqPxNP4LL9yXZYkbFJgznCBxjRr1qDBX",
+          "ok": true,
+          "why": "refused funding: ft_transfer_call returned \"0\""
+        },
+        {
+          "tx": "72YHkefZekpTDhTn9VLGVoTcvRkS6jLkQ3t3YPhXQbm3",
+          "ok": true,
+          "why": "SuccessValue \"2500000\", failed receipts 0"
+        },
+        {
+          "tx": "qKB4NxwH4ZARn1kQgqkGXh3UQpzdoJcceVcvNvQbzgw",
+          "ok": true,
+          "why": "expected FORBIDDEN, got Failure FORBIDDEN"
+        },
+        {
+          "tx": "8roKKkeHSHvd1XnVBGSvKvSyM3m1VsGN8m14QQBCf7L9",
+          "ok": true,
+          "why": "SuccessValue \"2500000\", failed receipts 0"
+        },
+        {
+          "tx": "14T5zsrg5t3pivwZZP5vtrKNefsHxvMPpXbJ8A8mkLnk",
+          "ok": true,
+          "why": "SuccessValue \"9974cbfb5957ea862347093be9e81c891032601f29fded756adbd358aa5172cc\", failed receipts 0"
+        },
+        {
+          "tx": "BzpPjHnwUCFzCDddGiP8vb71kyGetwmCeDkxVHdf8rUi",
+          "ok": true,
+          "why": "SuccessValue \"279c74b02ecbc217d131b3684656e060935aaca8a33ed24465eedc6fd23a3d8d\", failed receipts 0"
+        },
+        {
+          "tx": "HuR557dMzDP4jLKVzXw3rSWCDFJbHVuMz5vrSomLuegn",
+          "ok": true,
+          "why": "expected NONCE_REPLAYED, got Failure NONCE_REPLAYED"
+        },
+        {
+          "tx": "4h3UN1wLLZjiDAFV47vwc7jPGMCjT8TTF52xg8i9sgM5",
+          "ok": true,
+          "why": "SuccessValue \"c5785f5c4db55fb97db292bb50f2d24e58cf62770b857b466fdaff450245549b\", failed receipts 0"
+        },
+        {
+          "tx": "Dex2SQYEgCFJDF3P61KuWLGmHA4xFngWSBkQ5YvGtm1Y",
+          "ok": true,
+          "why": "expected DESTINATION_MISMATCH, got Failure DESTINATION_MISMATCH"
+        },
+        {
+          "tx": "EVw7dPje7iuq59M6Bk59SqqAEXDgkcg59GPBiFP7XaWJ",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        },
+        {
+          "tx": "42XFDGkhwXNZx4L6BmuowwsUBbJkifJebxiyDd7AAdm3",
+          "ok": true,
+          "why": "SuccessValue {\"releaseIntentId\":\"rli_894549a53cad39921e1b4c1b21e7ff26\",\"joined\":false}, failed receipts 0"
+        },
+        {
+          "tx": "9z68Gk7xY17SVMLGGptiaRt7DbTx4JgY47ATRx2Zi5D3",
+          "ok": true,
+          "why": "expected HOLD_ACTIVE, got Failure HOLD_ACTIVE"
+        },
+        {
+          "tx": "53sYv3yZE5xvkAGoUrdvvsEx7ide3fFAWzYBrkuaQi9x",
+          "ok": true,
+          "why": "SuccessValue \"9e077fe9354e48ea98765d86453539d8df479513f2d4986eca91d529f446ccf9\", failed receipts 0"
+        },
+        {
+          "tx": "5Eu7FQ2CaGr9rqrxToCJEwmEsrtHMbij3CzijPj95gLN",
+          "ok": true,
+          "why": "expected SIGNATURE_INVALID, got Failure SIGNATURE_INVALID"
+        },
+        {
+          "tx": "4HpKLPgGzE5MnMeNAey7fuuZ5aWnxyZP3MRpJyZNPHzq",
+          "ok": true,
+          "why": "SuccessValue \"4e2f2da5663898d73245417ad05f78a6399e95df102512bfd6bb18bee74078dd\", failed receipts 0"
+        },
+        {
+          "tx": "BZ9Ey8dMzmcQfrMvFRBLUTnJXDA7dvmemQ5kuiiivCao",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        }
+      ],
+      "allTransactionsAsExpected": true,
+      "views": {
+        "ledger": {
+          "asset": {
+            "kind": "NEP141",
+            "network": "near-testnet",
+            "tokenAccountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+            "decimals": 6
+          },
+          "required": "5000000",
+          "committed": "5000000",
+          "fullyFunded": true,
+          "totals": {
+            "funded": "5000000",
+            "partial": "0",
+            "available": "0",
+            "reserved": "0",
+            "released": "5000000",
+            "refundLocked": "0",
+            "refunded": "0",
+            "quarantined": "0",
+            "fees": "0",
+            "excessDetectedAt": null
+          },
+          "funders": {
+            "gnanam1990-dock-buyer.testnet": {
+              "funded": "5000000",
+              "partial": "0",
+              "available": "0",
+              "reserved": "0",
+              "released": "5000000",
+              "refundLocked": "0",
+              "refunded": "0",
+              "quarantined": "0",
+              "fees": "0",
+              "excessDetectedAt": null
+            }
+          },
+          "deposits": [
+            {
+              "index": 0,
+              "funder": "gnanam1990-dock-buyer.testnet",
+              "amount": "2500000",
+              "accepted": "2500000",
+              "quarantined": "0",
+              "atMs": 1794579849894
+            },
+            {
+              "index": 1,
+              "funder": "gnanam1990-dock-buyer.testnet",
+              "amount": "2500000",
+              "accepted": "2500000",
+              "quarantined": "0",
+              "atMs": 1794579869193
+            }
+          ],
+          "conservation": true
+        },
+        "release": {
+          "tradeId": "trd_e93f842de9d221e6dcdd201aeabe1e71",
+          "revision": 1,
+          "termsDigest": "420cda1c1fa0b9ac2b26f280dd30f60ffb69e7d07a0d92e2bef8a3d19341e8e0",
+          "payoutDestination": "gnanam1990-dock-supplier.testnet",
+          "liveIntent": null,
+          "blockers": [
+            "MANIFEST_NOT_CURRENT",
+            "NO_RELEASE_INTENT"
+          ],
+          "holdsViewDigest": "7f7b1f786b9b8dc2226084744a849d64e22a2ed8d0ee2338757807f8738d3614",
+          "intents": [
+            {
+              "releaseIntentId": "rli_894549a53cad39921e1b4c1b21e7ff26",
+              "tradeRevision": 1,
+              "termsDigest": "420cda1c1fa0b9ac2b26f280dd30f60ffb69e7d07a0d92e2bef8a3d19341e8e0",
+              "requestDigest": "c95f3b1ed314c1fbd0dbf34a24a5ee0a6038de5b5ac121c20460d2e0c2efd967",
+              "amount": "5000000",
+              "slices": [
+                {
+                  "funder": "gnanam1990-dock-buyer.testnet",
+                  "amount": "5000000"
+                }
+              ],
+              "sourceBucket": "AVAILABLE",
+              "destination": "gnanam1990-dock-supplier.testnet",
+              "executionProfile": "DIRECT_TESTNET",
+              "state": "PAID",
+              "stateVersion": 4,
+              "createdAt": 1794579921150,
+              "expiresAt": 1794839118627,
+              "approval": {
+                "digest": "4e2f2da5663898d73245417ad05f78a6399e95df102512bfd6bb18bee74078dd",
+                "approvedAt": 1794579954398,
+                "expiresAt": 1794666351409,
+                "manifestRevision": 1,
+                "manifestDigest": "9974cbfb5957ea862347093be9e81c891032601f29fded756adbd358aa5172cc",
+                "attestationDigest": "b560ef997505b7e2b629ec918d809e4e36169a5eb289712114692106090081e7",
+                "inspectionDigest": "279c74b02ecbc217d131b3684656e060935aaca8a33ed24465eedc6fd23a3d8d",
+                "holdsViewDigest": "7f7b1f786b9b8dc2226084744a849d64e22a2ed8d0ee2338757807f8738d3614"
+              },
+              "pendingCancel": null,
+              "exitDigest": null,
+              "predecessor": null,
+              "successor": null,
+              "attempts": [
+                "rla_83f24816e3f21fc9e48d293ab7c946c4"
+              ],
+              "consumedManifest": "9974cbfb5957ea862347093be9e81c891032601f29fded756adbd358aa5172cc",
+              "history": [
+                [
+                  "RELEASE_INTENT_CREATED",
+                  1794579921150
+                ],
+                [
+                  "VALUE_LOCKED",
+                  1794579921150
+                ],
+                [
+                  "DIRECT_TESTNET_AUTHORIZED",
+                  1794579954398
+                ],
+                [
+                  "SUBMITTING",
+                  1794579960551
+                ],
+                [
+                  "PAID",
+                  1794579961697
+                ]
+              ]
+            }
+          ],
+          "revisions": [
+            {
+              "revision": 1,
+              "digest": "420cda1c1fa0b9ac2b26f280dd30f60ffb69e7d07a0d92e2bef8a3d19341e8e0",
+              "activatedAt": 1794579822700
+            }
+          ],
+          "pendingDestinationChange": null,
+          "destinationHistory": [],
+          "pendingKeyRebinding": null,
+          "keyRebindingHistory": [],
+          "abandonPolicy": {
+            "id": "dockside-abandon-v1",
+            "revision": 1,
+            "graceMs": 86400000
+          }
+        },
+        "holds": [
+          {
+            "holdId": "hld_3106a429adf1d801404ebc1676791135",
+            "status": "RESOLVED",
+            "reasonCode": "DOC_MISMATCH",
+            "issuerRole": "POLICY_SETTER",
+            "ruleId": "doc-mismatch@1",
+            "manifestDigest": "9974cbfb5957ea862347093be9e81c891032601f29fded756adbd358aa5172cc",
+            "issuedAt": 1794579894746,
+            "expiresAt": 1795184694746,
+            "recordedAt": 1794579896893,
+            "setDigest": "c5785f5c4db55fb97db292bb50f2d24e58cf62770b857b466fdaff450245549b",
+            "resolution": {
+              "code": "RELEASE_HOLD",
+              "evidenceDigest": "95f43ba400674f1a64a807c3d809ea834c517b7f03b81e79a9e4205d13906fc2",
+              "resolvedAt": 1794579938080,
+              "digest": "9e077fe9354e48ea98765d86453539d8df479513f2d4986eca91d529f446ccf9"
+            }
+          }
+        ],
+        "refunds": []
+      },
+      "conservationRecomputed": true,
+      "conservationContractFlag": true
+    },
+    {
+      "run": "testnet-20261113T143415Z",
+      "kind": "refund",
+      "recordOk": true,
+      "tradeId": "trd_dfeab127b611450a9f0047f7ddb58982",
+      "transactions": [
+        {
+          "label": "register",
+          "txHash": "4MW5KM7SJs2g4SDBWtQX7ohG4wWvfi3km1dwqLBsBCmi",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:register_trade"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"fa783715ae97a18d52ce2b433c10b25efe59309a6612c07a2ea2a12f2c4f6a4e\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "fund",
+          "txHash": "GZZzML8uCt4dRfi3TyUva41J9CNC5gdVALvEvYoCRk29",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "actions": [
+            "FunctionCall:ft_transfer_call"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"5000000\"",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-buyer.testnet",
+              "to": "gnanam1990-dock-escrow3.testnet",
+              "amount": "5000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refund:cancel",
+          "txHash": "FGahhC6FYu1UwvHh2YE52UW4koDC9zdtV3DrCs5oq323",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:request_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"rfd_ff4f60ab26dee3e5c2b328ff21d17f2d\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "refund:excess",
+          "txHash": "GvpqdHhMZNH5qLpmxsLDXVyZDHMkHKxCYkjwQhMgwQh2",
+          "signer": "gnanam1990-dock-buyer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:request_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "\"rfd_9edd9a83571f56ca7053fbf0d0bca49c\"",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "authorize:cancel",
+          "txHash": "2ikMQuTT7DbZCsyEFUygwKJaiU15dtcxLJTE5913A7kT",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:authorize_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "execute:cancel",
+          "txHash": "9X6ccU7QxAYrN5ySyTSQ8wkNxB3bQPic6cTpcQ3pn9Aj",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:execute_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-escrow3.testnet",
+              "to": "gnanam1990-dock-buyer.testnet",
+              "amount": "4000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [
+            {
+              "receiver": "gnanam1990-dock-buyer.testnet",
+              "amount": "4000000",
+              "deposit": "1",
+              "outcome": "SuccessValue"
+            }
+          ],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "authorize:excess",
+          "txHash": "6A4v2Yxg3EDV9NZF1VibVFxNSjHXtb6cEA4oNxPpH9Cn",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:authorize_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "",
+          "failedReceipts": [],
+          "ftEvents": [],
+          "ftTransfersFromEscrow": [],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        },
+        {
+          "label": "execute:excess",
+          "txHash": "J4tcqMKfWxdTncqttvVgexdoagk9zYYe4WEwoqdfHwHR",
+          "signer": "gnanam1990-dock-relayer.testnet",
+          "receiver": "gnanam1990-dock-escrow3.testnet",
+          "actions": [
+            "FunctionCall:execute_refund"
+          ],
+          "finalExecutionStatus": "FINAL",
+          "txStatus": "SuccessValue",
+          "returnValue": "true",
+          "failedReceipts": [],
+          "ftEvents": [
+            {
+              "event": "ft_transfer",
+              "from": "gnanam1990-dock-escrow3.testnet",
+              "to": "gnanam1990-dock-buyer.testnet",
+              "amount": "1000000"
+            }
+          ],
+          "ftTransfersFromEscrow": [
+            {
+              "receiver": "gnanam1990-dock-buyer.testnet",
+              "amount": "1000000",
+              "deposit": "1",
+              "outcome": "SuccessValue"
+            }
+          ],
+          "nativeTransfersFromEscrow": [],
+          "escrowLogs": [],
+          "expectedRefusal": null
+        }
+      ],
+      "verdicts": [
+        {
+          "tx": "4MW5KM7SJs2g4SDBWtQX7ohG4wWvfi3km1dwqLBsBCmi",
+          "ok": true,
+          "why": "SuccessValue \"fa783715ae97a18d52ce2b433c10b25efe59309a6612c07a2ea2a12f2c4f6a4e\", failed receipts 0"
+        },
+        {
+          "tx": "GZZzML8uCt4dRfi3TyUva41J9CNC5gdVALvEvYoCRk29",
+          "ok": true,
+          "why": "SuccessValue \"5000000\", failed receipts 0"
+        },
+        {
+          "tx": "FGahhC6FYu1UwvHh2YE52UW4koDC9zdtV3DrCs5oq323",
+          "ok": true,
+          "why": "SuccessValue \"rfd_ff4f60ab26dee3e5c2b328ff21d17f2d\", failed receipts 0"
+        },
+        {
+          "tx": "GvpqdHhMZNH5qLpmxsLDXVyZDHMkHKxCYkjwQhMgwQh2",
+          "ok": true,
+          "why": "SuccessValue \"rfd_9edd9a83571f56ca7053fbf0d0bca49c\", failed receipts 0"
+        },
+        {
+          "tx": "2ikMQuTT7DbZCsyEFUygwKJaiU15dtcxLJTE5913A7kT",
+          "ok": true,
+          "why": "SuccessValue , failed receipts 0"
+        },
+        {
+          "tx": "9X6ccU7QxAYrN5ySyTSQ8wkNxB3bQPic6cTpcQ3pn9Aj",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        },
+        {
+          "tx": "6A4v2Yxg3EDV9NZF1VibVFxNSjHXtb6cEA4oNxPpH9Cn",
+          "ok": true,
+          "why": "SuccessValue , failed receipts 0"
+        },
+        {
+          "tx": "J4tcqMKfWxdTncqttvVgexdoagk9zYYe4WEwoqdfHwHR",
+          "ok": true,
+          "why": "SuccessValue true, failed receipts 0"
+        }
+      ],
+      "allTransactionsAsExpected": true,
+      "views": {
+        "ledger": {
+          "asset": {
+            "kind": "NEP141",
+            "network": "near-testnet",
+            "tokenAccountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+            "decimals": 6
+          },
+          "required": "4000000",
+          "committed": "0",
+          "fullyFunded": false,
+          "totals": {
+            "funded": "5000000",
+            "partial": "0",
+            "available": "0",
+            "reserved": "0",
+            "released": "0",
+            "refundLocked": "0",
+            "refunded": "5000000",
+            "quarantined": "0",
+            "fees": "0",
+            "excessDetectedAt": null
+          },
+          "funders": {
+            "gnanam1990-dock-buyer.testnet": {
+              "funded": "5000000",
+              "partial": "0",
+              "available": "0",
+              "reserved": "0",
+              "released": "0",
+              "refundLocked": "0",
+              "refunded": "5000000",
+              "quarantined": "0",
+              "fees": "0",
+              "excessDetectedAt": 1794580471952
+            }
+          },
+          "deposits": [
+            {
+              "index": 0,
+              "funder": "gnanam1990-dock-buyer.testnet",
+              "amount": "5000000",
+              "accepted": "4000000",
+              "quarantined": "1000000",
+              "atMs": 1794580471952
+            }
+          ],
+          "conservation": true
+        },
+        "release": {
+          "tradeId": "trd_dfeab127b611450a9f0047f7ddb58982",
+          "revision": 1,
+          "termsDigest": "fa783715ae97a18d52ce2b433c10b25efe59309a6612c07a2ea2a12f2c4f6a4e",
+          "payoutDestination": "gnanam1990-dock-supplier.testnet",
+          "liveIntent": null,
+          "blockers": [
+            "NOT_FULLY_FUNDED",
+            "MANIFEST_NOT_CURRENT",
+            "INSPECTION_NOT_PASS",
+            "NO_RELEASE_INTENT"
+          ],
+          "holdsViewDigest": "fe5e41cb358aeb3e0403286765ccdecdf9b3e6cc68a2072246be9316fd341f0e",
+          "intents": [],
+          "revisions": [
+            {
+              "revision": 1,
+              "digest": "fa783715ae97a18d52ce2b433c10b25efe59309a6612c07a2ea2a12f2c4f6a4e",
+              "activatedAt": 1794580463983
+            }
+          ],
+          "pendingDestinationChange": null,
+          "destinationHistory": [],
+          "pendingKeyRebinding": null,
+          "keyRebindingHistory": [],
+          "abandonPolicy": {
+            "id": "dockside-abandon-v1",
+            "revision": 1,
+            "graceMs": 86400000
+          }
+        },
+        "holds": [],
+        "refunds": [
+          {
+            "refundIntentId": "rfd_9edd9a83571f56ca7053fbf0d0bca49c",
+            "reason": "EXCESS_FUNDING_RETURN",
+            "funder": "gnanam1990-dock-buyer.testnet",
+            "amount": "1000000",
+            "sourceBucket": "QUARANTINED",
+            "state": "REFUNDED",
+            "requestDigest": "99ce62af20dec8ed499a7b45194c7505cf83a3b4769e68c86b950cfa4709cf09",
+            "initiatorRole": "FUNDER",
+            "buyerSigned": false,
+            "supplierSigned": false,
+            "clockOrigin": 1794580471952,
+            "deadline": 1794584071952,
+            "requestedAt": 1794580486133,
+            "dispute": null,
+            "history": [
+              [
+                "REQUESTED",
+                1794580486133
+              ],
+              [
+                "TIMELOCKED",
+                1794580486133
+              ],
+              [
+                "AUTHORIZED",
+                1794584096951
+              ],
+              [
+                "EXECUTING",
+                1794584102366
+              ],
+              [
+                "REFUNDED",
+                1794584103656
+              ]
+            ],
+            "basis": null,
+            "riskSigned": false
+          },
+          {
+            "refundIntentId": "rfd_ff4f60ab26dee3e5c2b328ff21d17f2d",
+            "reason": "MUTUAL_CANCEL",
+            "funder": "gnanam1990-dock-buyer.testnet",
+            "amount": "4000000",
+            "sourceBucket": "AVAILABLE",
+            "state": "REFUNDED",
+            "requestDigest": "12f4ea3df26c58a4f7081b262fac54810f1aeba6d7089071d0754952815aa6cf",
+            "initiatorRole": "BUYER",
+            "buyerSigned": true,
+            "supplierSigned": true,
+            "clockOrigin": 1794580478896,
+            "deadline": 1794584078896,
+            "requestedAt": 1794580478896,
+            "dispute": null,
+            "history": [
+              [
+                "REQUESTED",
+                1794580478896
+              ],
+              [
+                "TIMELOCKED",
+                1794580478896
+              ],
+              [
+                "AUTHORIZED",
+                1794584084228
+              ],
+              [
+                "EXECUTING",
+                1794584089651
+              ],
+              [
+                "REFUNDED",
+                1794584090846
+              ]
+            ],
+            "basis": null,
+            "riskSigned": false
+          }
+        ]
+      },
+      "conservationRecomputed": true,
+      "conservationContractFlag": true
+    }
+  ]
+}
