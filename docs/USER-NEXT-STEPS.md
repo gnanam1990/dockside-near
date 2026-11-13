@@ -4,7 +4,10 @@ Dockside is **IMPLEMENTED_UNVERIFIED**. Every code path below exists and passes 
 chain, the escrow contract also runs with real transactions on a local nearcore node (near-sandbox), and §2–§3 are
 **done**: you deployed the security-hardened escrow (commit `4ff233b`, code hash
 `7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N`) on `gnanam1990-dock-escrow2.testnet` and ran one trade to PAID there
-(docs/status/M34.md). **Use `gnanam1990-dock-escrow2.testnet` for every new trade.** The first escrow,
+(docs/status/M34.md), and the audited NEP-141 build (M50) on `gnanam1990-dock-escrow3.testnet` (code hash
+`ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq`, token Circle testnet USDC `3e2210e1…b8af`), where the paid, hold,
+refusal and refund journeys ran in USDC (docs/status/M56.md). **Use `gnanam1990-dock-escrow3.testnet` for every new
+USDC trade and `gnanam1990-dock-escrow2.testnet` for every new native-NEAR trade.** The first escrow,
 `gnanam1990-dock-escrow.testnet`, runs the superseded pre-audit contract `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM`
 (M24) without the m25–m33 security fixes; do not use it for new trades. The steps
 that remain need things this build was not allowed to create or hold. Every step here is for **you** to run;
@@ -14,8 +17,12 @@ What remains yours, in short:
 
 | Yours | Why it cannot be done here | Section |
 |---|---|---|
-| Push the repository and check the first CI run | nothing was pushed; the workflow has only been replayed locally | §1 |
-| ~~Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet`~~ | **done** (M24; hardened contract on escrow2 in M34) | §2–§3 |
+| ~~Push the repository and check the first CI run~~ | **done**: `main` was pushed and CI passed at `cf52cc5` ([run 43353700412](https://github.com/gnanam1990/dockside-near/actions/runs/43353700412)); keep it green | §1 |
+| Make the repository public and enable GitHub Pages (Settings → Pages → GitHub Actions), then confirm `pages.yml` deployed | only the repository owner can change these settings | §1 |
+| Record and publish the demo video | needs the owner's screen, voice and accounts | [demo/DEMO-SCRIPT.md](demo/DEMO-SCRIPT.md) |
+| Deploy the hosted container (M55) | needs a hosting account | [runbooks/hosted-deploy.md](runbooks/hosted-deploy.md) |
+| ~~Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet`~~ | **done** (M24; hardened contract on escrow2 in M34; USDC journeys on escrow3 in M56) | §2–§3 |
+| Run the web app, API and worker against testnet at least once | they have only run against a simulated chain; needs the relayer key custody of §4 | §4–§5, [runbooks/testnet-product.md](runbooks/testnet-product.md) |
 | Custody of the relayer key and the worker's `TxSigner` | a signing key with real custody (keychain, HSM, KMS or an isolated signer) is yours | §4 |
 | Custody of the audit-export key (HSM or KMS if you need it) | the build uses an isolated signer process | §5 |
 | Separate people on separate devices for the buyer, supplier, inspector and risk/policy roles | INV-13: one operator holding every key does not count | §6–§7 |
@@ -58,7 +65,9 @@ one commit and this one wasm. The digest and NEAR code hash of the build recorde
 [docs/status/M18.md](status/M18.md).
 
 CI (`.github/workflows/ci.yml`, ADR-0020) runs the same on GitHub's `ubuntu-24.04` and `windows-2022` runners with
-read-only permissions and no secrets. It has never run, because nothing was pushed. When you push:
+read-only permissions and no secrets. It ran on GitHub after the owner pushed `main` and passed at `cf52cc5`
+([run 43353700412](https://github.com/gnanam1990/dockside-near/actions/runs/43353700412), all three jobs green;
+BUILD-STATUS.md). Later pushes run it again. For each push you check:
 
 1. Confirm the three pinned action SHAs once, for example
    `git ls-remote https://github.com/actions/checkout refs/tags/v4.2.2` must print
@@ -105,6 +114,13 @@ account `gnanam1990-dock-escrow2.testnet` in one transaction (`7TZqFwwKH9NKohDRS
 `9Wpr243gsWkQuKFbtmBrKMiGkXCPXp3MDfN8M1qrkcEn`). Re-verified read-only on chain; evidence: docs/evidence/M34/. A
 further journey against this deployment: `run-all --network testnet --skip-deploy --relayer-key-file <that run's
 relayer key file>` with `DOCKSIDE_ESCROW_ACCOUNT=gnanam1990-dock-escrow2.testnet`.
+
+**Done for USDC (M56)**, four runs on 2026-11-13 at run-all commit `74cafa5`: the paid run deployed the audited M50
+build on the fresh account `gnanam1990-dock-escrow3.testnet` (`6PfiGs1mhovxnESPSbjzvMAAz1VoFpKuipee7bxkJgoR`, code hash
+`ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq`), registered it with the Circle testnet USDC token and added a relayer
+key restricted to escrow3; the paid, hold, refusal (six refused calls, then PAID) and refund journeys followed. After
+them the supplier holds 15 USDC, the buyer its 5 refunded USDC and escrow3 0. Evidence: docs/evidence/M56/, re-read
+read-only in `onchain-reverify.json`; `pnpm judge` re-checks all of it.
 
 **Superseded (M24)**, three runs on 2026-11-12 from Windows against `gnanam1990-dock-escrow.testnet`, which now runs
 the superseded pre-audit contract and must not be used for new trades: run 1 deployed and initialised the escrow in one transaction
@@ -229,8 +245,9 @@ Reviewer kit for §6–§7 with separate people: [review-kits/inv13-acceptance.m
 ## 7. Run the trade on testnet and keep the evidence
 
 Use the web app throughout and submit every relay from §4. Keep each transaction hash and receipt. Run every
-trade against the current escrow `gnanam1990-dock-escrow2.testnet` (hardened contract, M34), never the superseded
-`gnanam1990-dock-escrow.testnet`; in §5 `<escrow>` is `gnanam1990-dock-escrow2`.
+trade against a current escrow, `gnanam1990-dock-escrow3.testnet` for USDC (M56) or
+`gnanam1990-dock-escrow2.testnet` for native NEAR (M34), never the superseded `gnanam1990-dock-escrow.testnet`; in
+§5 `<escrow>` is one of those two.
 
 1. The buyer creates the trade proposal, the supplier countersigns, then `register_trade` and
    `register_evidence_policy`.
@@ -278,8 +295,9 @@ run T-024 and T-048 with redacted evidence. Only `PASS` supports `DRY_COMPATIBLE
 ## 10. Funded mainnet: separately authorized only
 
 `DOCKSIDE_NETWORK=near-mainnet` and any `DOCKSIDE_FUNDED_PAYOUTS` value other than `BLOCKED` are refused at startup,
-and the deployed contract's `new` accepts only `near-testnet` (the M50 branch, not merged and not deployed, adds a
-capped `near-mainnet` label for the escrow contract alone: [status/M50.md](status/M50.md)). A funded corridor first needs a contract entry point that
+and escrow2's contract accepts only `near-testnet`. The M50 build (merged, and deployed on testnet as escrow3) also
+accepts a capped `near-mainnet` label for the escrow contract alone ([status/M50.md](status/M50.md)); it is **not
+deployed on mainnet**. A funded corridor first needs a contract entry point that
 consumes a FundedPayoutAuthorization atomically, a verified corridor, an exposure cap and your explicit authorization
 of network, wallet, amount, signer and executor (REAL-PRODUCT-GATE "Separate funded-mainnet gate").
 

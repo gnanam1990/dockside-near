@@ -7,13 +7,16 @@ back to whoever paid.
 [![CI](https://github.com/gnanam1990/dockside-near/actions/workflows/ci.yml/badge.svg)](https://github.com/gnanam1990/dockside-near/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Demo video: <added after recording>
+Demo video: **pending** (not recorded yet; it will follow [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)).
+Until the video, the proof page and a hosted app are live, there is **nothing to open without installing**: the
+fastest checks are the one-line `get_ledger` call below (no install) and `pnpm judge` (one command).
 
 - **Proof page** (reads NEAR live in your browser, no install): https://gnanam1990.github.io/dockside-near/ —
   published after the Pages workflow runs ([`.github/workflows/pages.yml`](.github/workflows/pages.yml); not live
   yet). Payment receipt:
   https://gnanam1990.github.io/dockside-near/receipt.html?trade=trd_197c633d724eeb2cddc64d6dabf55976 (same
-  condition). Until then, `pnpm proof:serve` serves the same page locally ([M46](docs/status/M46.md)).
+  condition). Until then, `pnpm proof:serve` serves the same page locally ([M46](docs/status/M46.md)). The page
+  re-checks the native-NEAR escrow2; the USDC escrow3 is re-checked by `pnpm judge` (below), not by the page yet.
 - **Hosted app:** pending (the container is built and verified locally, [M55](docs/status/M55.md); not deployed).
 - Architecture and every developer command: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Item-by-item status:
   [BUILD-STATUS.md](BUILD-STATUS.md).
@@ -110,7 +113,7 @@ Needs Node 22 (`>=22.13 <23`), pnpm 10, git and Rust stable with the wasm target
 (`rustup target add wasm32-unknown-unknown`). Checked for this README from a fresh clone of `main` on Windows 11
 (Git Bash); CI runs the same on `ubuntu-24.04` and `windows-2022`. macOS was not tested.
 
-1. **One command: `pnpm judge`** (about 3–4 minutes).
+1. **One command: `pnpm judge`** (about 3–6 minutes; measured 5 min on a fresh clone with a warm pnpm store).
 
    ```sh
    git clone https://github.com/gnanam1990/dockside-near.git && cd dockside-near
@@ -118,21 +121,25 @@ Needs Node 22 (`>=22.13 <23`), pnpm 10, git and Rust stable with the wasm target
    ```
 
    It installs from the frozen lockfile, runs the unit and integration tests and the contract tests, checks that
-   the proof manifest is derived from the committed evidence, and re-checks the escrow2 deployment, its three trade
-   ledgers and all 26 journey transactions on NEAR testnet (read-only; it holds no key). Expected last line:
+   the proof manifest is derived from the committed evidence, re-checks the escrow2 deployment, its three trade
+   ledgers and all 26 journey transactions on NEAR testnet, and re-checks the USDC escrow3 against
+   [onchain-reverify.json](docs/evidence/M56/onchain-reverify.json): code hash, token config, relayer key, the 3
+   setup and 45 journey transactions with every USDC payout, the 6 refusal codes, the 4 trade ledgers with
+   conservation recomputed, and the supplier, buyer and escrow3 USDC balances at the evidence block (all read-only;
+   it holds no key). Expected last line (the time depends on the machine):
 
    ```text
-   JUDGE: PASS  67 passed, 0 failed, 0 not readable, 1 skipped, 3m 10s
+   JUDGE: PASS  90 passed, 0 failed, 0 not readable, 1 skipped, 5m 0s
    ```
 
-   The table above it shows, for example, `892 passed, 0 failed in 90 files` (vitest), `141 passed, 0 failed in 24
+   The table above it shows, for example, `901 passed, 0 failed in 91 files` (vitest), `141 passed, 0 failed in 24
    suites` (cargo) and every on-chain row with the expected value beside the actual one. The one SKIP is mainnet
-   ("not deployed yet"). Full values go to `.data/judge/judge-report.json`. Measured from the fresh clone: install
-   3 s (warm pnpm store), unit tests 78 s, contract tests 102 s, chain reads 8 s. `pnpm judge` does not yet cover
-   the USDC escrow3; use the command above or [onchain-reverify.json](docs/evidence/M56/onchain-reverify.json).
-   `Ignored build scripts: esbuild` and `ExperimentalWarning: SQLite` lines are harmless.
+   ("not deployed yet"). Full values go to `.data/judge/judge-report.json`. The two test steps take most of the
+   time: unit tests about 80–110 s and contract tests about 100–180 s in our runs; the chain reads take about
+   15 s. `pnpm judge --only chain,usdc` runs only the on-chain checks. `Ignored build scripts: esbuild` and
+   `ExperimentalWarning: SQLite` lines are harmless.
 
-2. **Watch the product run in a browser** (four separately enrolled users, simulated chain; about 3 minutes).
+2. **Watch the product run in a browser** (four separately enrolled users, simulated chain; about 3–5 minutes).
 
    ```sh
    pnpm --filter @dockside/web exec playwright install chromium
@@ -140,7 +147,7 @@ Needs Node 22 (`>=22.13 <23`), pnpm 10, git and Rust stable with the wasm target
    pnpm --filter @dockside/web exec playwright test e2e/product.spec.ts
    ```
 
-   Expected: `7 passed (2.4m)`. The buyer proposes a trade and the supplier countersigns in another session, the
+   Expected: `7 passed` (2.4 to 4.9 minutes in our runs, depending on the machine). The buyer proposes a trade and the supplier countersigns in another session, the
    evidence slots refuse bad content, a policy hold is SET and only the risk session can RESOLVE it, a lost outcome
    stays locked and never shows as paid, the trade reaches PAID and its signed receipt PDF verifies offline; no
    session token or evidence bytes reach the page, and accessibility checks run at four widths and in dark mode.
@@ -198,7 +205,15 @@ Each merged module, one line. "Owner" marks a step that needs the repository own
   NEP-171 and NEP-245 deposits are recorded and never credited.
 - **On-chain signature checks**: every party and service payload is verified with `env::ed25519_verify` against keys
   bound in the agreement.
-- **Function-call access keys**: the relayer key is restricted to the escrow contract and cannot transfer funds.
+- **Function-call access keys**: the relayer key is restricted to the escrow contract and cannot transfer funds:
+  a function-call key cannot attach a deposit, so it cannot fund a trade or send NEAR. Its method list is empty
+  (any escrow method), on purpose: each escrow method either verifies a party's or service's Ed25519 signature on
+  chain, or checks the calling account (a funder-only refund refuses the relayer with `FORBIDDEN`, as the USDC
+  refusal journey shows), or is open to anyone by design and only carries out what the recorded, signed state
+  already allows (`execute_release`, `execute_refund`, `check_payee_storage`, for example), paying only the bound
+  destination or the original funder. A narrower
+  method list would limit a leaked key's gas spending, not what it can authorize; changing it needs a new key on
+  chain (owner, not done). `pnpm judge` checks the key's receiver on both escrows.
 - **NEP-413** signed messages plus `view_access_key` to link a NEAR account to a user.
 - **NEAR JSON-RPC** through the repository's own client (`packages/near`), default `https://test.rpc.fastnear.com`.
 - **NEAR Intents 1Click**: dry quotes and status tracking for the supplier's cash-out (M52); no real swap run.
@@ -250,7 +265,8 @@ exists and the contract journeys ran on testnet, but the full real-product gate 
 | Contract: destination change, NEP-141 recovery, runtime-refunded transfer, the USDC rail | local nearcore node (near-sandbox) |
 | API, worker, web app, four roles, audit export, receipts, cash-out | locally, against a **simulated** NEAR chain (worker relayer custody validated on a local nearcore node, M43) |
 | Who signed on testnet | **one operator** for every role (keys derived from one seed); separate people on separate devices: not run |
-| Hosted app, GitHub Pages proof page | built and verified locally; **not deployed** |
+| Hosted app, GitHub Pages proof page | built and verified locally; **not deployed** (the proof page covers escrow2; `pnpm judge` covers both escrows) |
+| Demo video | **not recorded yet** (script: [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)) |
 | Mainnet | **mainnet-ready, same audited contract, capped at 25 USDC per trade; deployment pending** |
 | 1Click real quote and cash-out | not run (only dry quotes against a local simulator) |
 | Manual accessibility review | not run (automated axe checks pass) |

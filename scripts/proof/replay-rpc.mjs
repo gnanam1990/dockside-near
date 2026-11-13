@@ -96,6 +96,30 @@ export const MUTATIONS = {
   nep141: (req, result) => asNep141(req, result),
   // ... and that `ft_transfer` names another receiver than the paid intent.
   "nep141-recipient": (req, result) => asNep141(req, result, "someone-else.testnet"),
+  // USDC judge step (M61): the escrow refused a replayed nonce with another code than recorded.
+  "refusal-code": (req, result) =>
+    isTx(req)
+      ? JSON.parse(JSON.stringify(result).replaceAll("DOCKSIDE:NONCE_REPLAYED", "DOCKSIDE:FORBIDDEN"))
+      : result,
+  // USDC judge step (M61): an escrow `ft_transfer` paid someone other than the recorded receiver.
+  "ft-recipient": (req, result) =>
+    isTx(req)
+      ? {
+          ...result,
+          receipts: result.receipts.map((r) => {
+            const call = r.receipt?.Action?.actions?.[0]?.FunctionCall;
+            if (call?.method_name !== "ft_transfer") return r;
+            const args = JSON.parse(Buffer.from(call.args, "base64").toString());
+            const moved = {
+              ...call,
+              args: Buffer.from(JSON.stringify({ ...args, receiver_id: "someone-else.testnet" })).toString(
+                "base64",
+              ),
+            };
+            return { ...r, receipt: { Action: { ...r.receipt.Action, actions: [{ FunctionCall: moved }] } } };
+          }),
+        }
+      : result,
 };
 
 /** The token of the NEP-141 variants: Circle's USDC contract on NEAR testnet, 6 decimals. */

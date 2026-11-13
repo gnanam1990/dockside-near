@@ -6,20 +6,24 @@
 //   3. contract tests   pnpm run contract:test   (Rust host tests of the escrow core)
 //   4. proof manifest   site/proof/proof-manifest.json equals what docs/evidence produces
 //   5. on-chain checks  the proof page's verifier (site/proof/lib/verify.mjs) against NEAR
+//   6. USDC escrow3     the NEP-141 escrow of M56 against docs/evidence/M56/onchain-reverify.json
+//                       (scripts/judge/usdc.mjs)
 //
 // The on-chain part only reads (block, query, tx status): it holds no key and cannot send a
 // transaction. Exit status 0 when every row passed, 1 otherwise, 2 on a usage error.
 //
-// Usage: pnpm judge [--only a,b] [--skip a,b] [--no-code-bytes] [--manifest <file>] [--report <file>]
-//        step names: install, unit, contract, manifest, chain
+// Usage: pnpm judge [--only a,b] [--skip a,b] [--no-code-bytes] [--manifest <file>] [--usdc-rpc <url>]
+//                   [--report <file>]
+//        step names: install, unit, contract, manifest, chain, usdc
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyNetwork } from "../../site/proof/lib/verify.mjs";
 import { buildManifest, MANIFEST, ROOT, render, SOURCES } from "../proof/build-manifest.mjs";
+import { loadUsdcEvidence, USDC_RPC, verifyUsdc } from "./usdc.mjs";
 
-export const STEP_NAMES = ["install", "unit", "contract", "manifest", "chain"];
+export const STEP_NAMES = ["install", "unit", "contract", "manifest", "chain", "usdc"];
 const OUT_DIR = join(ROOT, ".data/judge");
 // biome-ignore lint/suspicious/noControlCharactersInRegex: strips terminal colour codes
 const ANSI = /\u001b\[[0-9;]*m/g;
@@ -129,7 +133,7 @@ function commandStep(name, check, command, args, describe) {
 
 const tail = (text, n) => text.replace(ANSI, "").trimEnd().split(/\r?\n/).slice(-n).join("\n");
 
-export function defaultSteps({ manifestPath = MANIFEST, codeBytes = true } = {}) {
+export function defaultSteps({ manifestPath = MANIFEST, codeBytes = true, usdcRpc = USDC_RPC } = {}) {
   return [
     commandStep(
       "install",
@@ -230,6 +234,18 @@ export function defaultSteps({ manifestPath = MANIFEST, codeBytes = true } = {})
         return rows;
       },
     },
+    {
+      name: "usdc",
+      run: async ({ say }) => {
+        const evidence = loadUsdcEvidence(ROOT);
+        say(
+          `reading ${evidence.escrowAccount.account} through ${new URL(usdcRpc[0]).host} (read-only), expected values from docs/evidence/M56/onchain-reverify.json`,
+        );
+        const { rows, rpcCalls } = await verifyUsdc(evidence, { rpc: usdcRpc });
+        say(`usdc: ${rpcCalls} requests`);
+        return rows;
+      },
+    },
   ];
 }
 
@@ -314,6 +330,7 @@ function parseArgs(argv) {
     codeBytes: true,
     manifestPath: MANIFEST,
     reportFile: join(OUT_DIR, "judge-report.json"),
+    usdcRpc: USDC_RPC,
   };
   const list = (v) => {
     const names = String(v ?? "")
@@ -331,6 +348,9 @@ function parseArgs(argv) {
     else if (a === "--report") {
       if (!argv[i + 1]) throw new Error("--report needs a file");
       opts.reportFile = resolve(argv[++i]);
+    } else if (a === "--usdc-rpc") {
+      if (!argv[i + 1]) throw new Error("--usdc-rpc needs a URL");
+      opts.usdcRpc = [argv[++i]];
     } else if (a === "--manifest") {
       opts.manifestPath = resolve(argv[++i] ?? "");
       if (!existsSync(opts.manifestPath)) throw new Error(`no such manifest: ${argv[i]}`);
@@ -345,7 +365,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     opts = parseArgs(process.argv.slice(2));
   } catch (e) {
     process.stderr.write(
-      `judge: ${e.message}\nusage: pnpm judge [--only a,b] [--skip a,b] [--no-code-bytes] [--manifest <file>] [--report <file>]\n`,
+      `judge: ${e.message}\nusage: pnpm judge [--only a,b] [--skip a,b] [--no-code-bytes] [--manifest <file>] [--usdc-rpc <url>] [--report <file>]\n`,
     );
     process.exit(2);
   }

@@ -32,7 +32,11 @@ export function runCommand(
 ): Promise<{ status: number; output: string; ms: number }>;
 export function renderTable(rows: JudgeRow[], options?: { width?: number }): string;
 export function overall(rows: JudgeRow[]): "PASS" | "FAIL";
-export function defaultSteps(options?: { manifestPath?: string; codeBytes?: boolean }): JudgeStep[];
+export function defaultSteps(options?: {
+  manifestPath?: string;
+  codeBytes?: boolean;
+  usdcRpc?: string[];
+}): JudgeStep[];
 export function runJudge(options: {
   steps: JudgeStep[];
   only?: string[];
