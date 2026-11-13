@@ -1,6 +1,6 @@
 // Read-only check that a deployed escrow account runs the locally built artifact.
 // For the USER to run after deploying (see README.md). Not run by the build (no network allowed).
-// Usage: DOCKSIDE_NEAR_RPC_URL=https://rpc.testnet.near.org node scripts/testnet-deploy/verify-deploy.mjs <escrow>.testnet
+// Usage: DOCKSIDE_NEAR_RPC_URL=https://test.rpc.fastnear.com node scripts/testnet-deploy/verify-deploy.mjs <escrow>.testnet
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { base58Encode } from "../../packages/core/dist/index.js";

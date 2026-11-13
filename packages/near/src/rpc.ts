@@ -64,7 +64,7 @@ export interface JsonRpcConfig {
 }
 
 /** Public endpoints for an operator to configure. Never contacted by tests. */
-export const NEAR_TESTNET_RPC_DEFAULT = "https://rpc.testnet.near.org";
+export const NEAR_TESTNET_RPC_DEFAULT = "https://test.rpc.fastnear.com";
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 

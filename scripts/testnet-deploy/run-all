@@ -27,7 +27,7 @@
 #
 # Options:
 #   --network <testnet|sandbox>  required; nothing else is accepted (mainnet is refused)
-#   --rpc-url <url>              default https://rpc.testnet.near.org, or http://127.0.0.1:4521 for sandbox
+#   --rpc-url <url>              default https://test.rpc.fastnear.com, or http://127.0.0.1:4521 for sandbox
 #   --fallback-rpc-urls <a,b>    further RPC URLs for the read-only checks (same rules as --rpc-url)
 #   --wasm <file>                default .data/repro/dockside_escrow.wasm (scripts/container-reproduce.sh)
 #   --manifest <file>            default .data/repro/build-manifest.json
@@ -50,6 +50,9 @@
 #                                mirror, the chain must agree, and the journey continues
 #   --pending-tx <hash|none>     the transaction of a call whose id was lost when the run stopped, or
 #                                none if it never reached the escrow (run-all says when it needs this)
+#   --rpc-url <url>              use this RPC URL instead of the recorded one (for example when the
+#                                recorded endpoint went away); it must pass the same network rules for
+#                                the run's recorded network. Nothing else of the run can be overridden
 #   --no-wait, --stop-after and --fallback-rpc-urls work as above.
 # Environment: NEAR_CLI (near-cli-rs binary; on Windows the real near.exe is found from the npm
 # global prefix or `where near`), CARGO (default `cargo`), DOCKSIDE_FALLBACK_RPC_URLS.
@@ -88,6 +91,7 @@ NO_WAIT=""
 STOP_AFTER=""
 RESUME=""
 PENDING_TX=""
+RPC_OVERRIDE=""
 # Options a resumed run must not take: the run directory decides them.
 FIXED=""
 
@@ -99,7 +103,8 @@ usage() {
 while [ $# -gt 0 ]; do
   case "$1" in
     --network) NETWORK="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
-    --rpc-url) RPC_URL="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    # Not in FIXED: a resumed run may move to another RPC URL (the endpoint, not the network).
+    --rpc-url) RPC_URL="${2:-}"; RPC_OVERRIDE=1; shift 2 ;;
     --fallback-rpc-urls) DOCKSIDE_FALLBACK_RPC_URLS="${2:-}"; export DOCKSIDE_FALLBACK_RPC_URLS; shift 2 ;;
     --wasm) WASM="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --manifest) MANIFEST="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
@@ -128,7 +133,14 @@ if [ -n "$RESUME" ]; then
   [ -d "$RESUME" ] || { say "NOTHING_TO_RESUME: $RESUME is not a directory"; exit 2; }
   OUT=$(CDPATH= cd -- "$RESUME" && pwd)
   NETWORK=$(node "$TOOL" run-params --dir "$OUT" --field network)
-  RPC_URL=$(node "$TOOL" run-params --dir "$OUT" --field rpcUrl)
+  RECORDED_RPC_URL=$(node "$TOOL" run-params --dir "$OUT" --field rpcUrl)
+  if [ -n "$RPC_OVERRIDE" ]; then
+    # Only the endpoint may change; it is checked against the run's recorded network.
+    RPC_URL=$(node "$TOOL" resume-rpc-url --dir "$OUT" --rpc-url "$RPC_URL")
+    say "RPC URL override for the resumed run: $RPC_URL (recorded $RECORDED_RPC_URL)"
+  else
+    RPC_URL="$RECORDED_RPC_URL"
+  fi
   JOURNEY=$(node "$TOOL" run-params --dir "$OUT" --field journey)
   AMOUNT_YOCTO=$(node "$TOOL" run-params --dir "$OUT" --field amountYocto)
   WASM=$(node "$TOOL" run-params --dir "$OUT" --field wasm)

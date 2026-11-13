@@ -34,7 +34,7 @@ function tool(args: string[], env: Record<string, string | undefined> = {}) {
 describe("run-all network guard", () => {
   it("accepts only testnet (https, non-mainnet host) and a loopback sandbox", () => {
     expect(tool(["profile", "--network", "testnet", "--field", "rpcUrl"]).out).toBe(
-      "https://rpc.testnet.near.org",
+      "https://test.rpc.fastnear.com",
     );
     expect(tool(["profile", "--network", "testnet", "--field", "cliNetwork"]).out).toBe("testnet");
     expect(tool(["profile", "--network", "sandbox", "--field", "rpcUrl"]).out).toBe("http://127.0.0.1:4521");
@@ -43,10 +43,10 @@ describe("run-all network guard", () => {
       ["--network", "mainnet"],
       ["--network", "near-mainnet"],
       [],
-      ["--network", "testnet", "--rpc-url", "http://rpc.testnet.near.org"],
+      ["--network", "testnet", "--rpc-url", "http://test.rpc.fastnear.com"],
       ["--network", "testnet", "--rpc-url", "https://rpc.mainnet.near.org"],
       ["--network", "sandbox", "--rpc-url", "http://10.0.0.5:3030"],
-      ["--network", "sandbox", "--rpc-url", "http://rpc.testnet.near.org"],
+      ["--network", "sandbox", "--rpc-url", "http://test.rpc.fastnear.com"],
     ];
     for (const a of refused) {
       const r = tool(["profile", ...a, "--field", "rpcUrl"]);

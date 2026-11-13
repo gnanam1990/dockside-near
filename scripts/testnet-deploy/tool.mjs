@@ -11,6 +11,8 @@
 //   node tool.mjs near-run --near <bin> --out <file> [--attempts <n>] -- <near-cli-rs arguments>
 //   node tool.mjs profile --network <testnet|sandbox> [--rpc-url <url>] --field <cliNetwork|rpcUrl>
 //   node tool.mjs accounts
+//   node tool.mjs resume-rpc-url --dir <run dir> [--rpc-url <url>]   the RPC URL a resumed run uses:
+//                         the recorded one, or the override checked against the recorded network
 //   node tool.mjs verify-artifact --wasm <file> --manifest <file>
 //   node tool.mjs preflight --network <n> [--rpc-url <url>] --wasm <file> --amount-yocto <n> [--skip-deploy]
 //                           [--journey <paid|hold|refund>] [--excess-yocto <n>]
@@ -267,6 +269,23 @@ async function main() {
       if (typeof params[field] !== "string")
         throw new ToolError("NOTHING_TO_RESUME", `${file} has no ${field}`);
       return print(params[field]);
+    }
+    case "resume-rpc-url": {
+      // The RPC URL a resumed run uses: the recorded one, or an explicit --rpc-url checked by the
+      // same rules against the run's recorded network (only the endpoint can change on --resume).
+      const file = join(need(f, "dir"), "run-params.json");
+      let params;
+      try {
+        params = JSON.parse(readFileSync(file, "utf8"));
+      } catch (e) {
+        throw new ToolError("NOTHING_TO_RESUME", `${file}: ${e.message}`);
+      }
+      if (typeof params.network !== "string" || typeof params.rpcUrl !== "string")
+        throw new ToolError("NOTHING_TO_RESUME", `${file} has no network or rpcUrl`);
+      if (f["rpc-url"] === undefined) return print(networkProfile(params.network, params.rpcUrl).rpcUrl);
+      if (typeof f["rpc-url"] !== "string" || !f["rpc-url"])
+        throw new ToolError("USAGE", "--rpc-url needs a URL");
+      return print(networkProfile(params.network, f["rpc-url"]).rpcUrl);
     }
     case "journey": {
       const p = profile();

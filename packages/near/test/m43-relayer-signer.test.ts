@@ -448,7 +448,7 @@ describe("M43 chain preflight", () => {
   ) =>
     preflightEscrow({
       rpc,
-      rpcUrl: extra.rpcUrl ?? "https://rpc.testnet.near.org",
+      rpcUrl: extra.rpcUrl ?? "https://test.rpc.fastnear.com",
       escrowId: extra.escrowId ?? ESCROW,
       manifestPath: manifest,
       expectedChainId: extra.expectedChainId ?? "testnet",
