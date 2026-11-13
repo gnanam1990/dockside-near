@@ -22,9 +22,10 @@ import {
 /**
  * Dedicated audit-export signing key (ADR-0018). The deployment operator generates the key with
  * `export-key generate`; the private key is read only by an isolated signer child process that may
- * sign exactly three purposes (the enrollment proof, export statements and payment receipts, M54). The API holds the public
- * key, proves possession at enrollment and records the key's lifecycle. A newer key retires the
- * older one; an operator revocation makes every signature by that key untrusted.
+ * sign exactly three purposes (the enrollment proof, export statements and, since M54, payment
+ * receipts). The API holds the public key, proves possession at enrollment and records the key's
+ * lifecycle. A newer key retires the older one; an operator revocation makes every signature by
+ * that key untrusted.
  */
 export interface ExportKeySigner {
   readonly publicKey: string;
