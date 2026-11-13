@@ -14,8 +14,16 @@
 // windows-2022 only, both present), SHELL (bash), REQUIRED_COMMANDS, PACKAGE_SCRIPTS (every
 // `pnpm run <name>` exists), TOOLCHAIN (no RUSTUP_TOOLCHAIN in any env: the setup step selects the
 // toolchain with `rustup default`, so a local replay keeps the developer's own toolchain).
+//
+// A file named pages.yml is checked with the "pages" profile (ADR-0027): every rule above still
+// applies, except that the only runner is ubuntu-24.04, the required commands are those of the
+// `build` job below, and one job, `deploy`, may hold exactly {pages: write, id-token: write}. In
+// exchange that job must run on pushes only, need `build`, target the github-pages environment
+// and consist of the single actions/deploy-pages step (no checkout, no script). Additional rules:
+// OFFICIAL_ACTIONS (only the listed actions/* repositories) and PAGES_ARTIFACT (the uploaded
+// directory is site/proof).
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseDocument } from "yaml";
 
@@ -43,6 +51,27 @@ export const REQUIRED = {
     "pnpm run test:sandbox",
   ],
 };
+
+/** The pages profile (ADR-0027). */
+export const PAGES = {
+  runners: ["ubuntu-24.04"],
+  required: { build: ["node scripts/proof/build-manifest.mjs --check"] },
+  actions: [
+    "actions/checkout",
+    "actions/setup-node",
+    "actions/configure-pages",
+    "actions/upload-pages-artifact",
+    "actions/deploy-pages",
+  ],
+  deployJob: "deploy",
+  deployPermissions: { pages: "write", "id-token": "write" },
+  deployIf: "github.event_name == 'push'",
+  environment: "github-pages",
+  artifactPath: "site/proof",
+};
+
+/** The profile a workflow file is checked with. */
+export const profileOf = (file) => (basename(file) === "pages.yml" ? "pages" : "ci");
 
 const isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
@@ -73,7 +102,10 @@ function scripts(pkg) {
   }
 }
 
-export function checkWorkflow(text) {
+export function checkWorkflow(text, profile = "ci") {
+  const pages = profile === "pages";
+  const allowedRunners = pages ? PAGES.runners : ALLOWED_RUNNERS;
+  const required = pages ? PAGES.required : REQUIRED;
   const violations = [];
   const fail = (rule, detail) => violations.push({ rule, detail });
   const doc = parseDocument(text, { uniqueKeys: true });
@@ -157,6 +189,9 @@ export function checkWorkflow(text) {
     if (!/^#\s*v\d+(\.\d+){0,2}\s*$/.test(m?.[2] ?? "")) {
       fail("PINNED_ACTIONS", `${ref || line.trim()} has no "# vX.Y.Z" version comment`);
     }
+    if (pages && !PAGES.actions.includes(ref.split("@")[0])) {
+      fail("OFFICIAL_ACTIONS", `${ref || line.trim()} is not one of ${PAGES.actions.join(", ")}`);
+    }
   }
 
   // Jobs
@@ -168,10 +203,16 @@ export function checkWorkflow(text) {
   for (const [id, job] of Object.entries(jobs)) {
     if (!isObj(job)) continue;
     if (job.uses) fail("PINNED_ACTIONS", `job ${id} calls a reusable workflow`);
-    if (job.permissions !== undefined) {
+    const deploys = pages && id === PAGES.deployJob;
+    if (deploys) {
+      checkDeployJob(job, fail);
+    } else if (job.permissions !== undefined) {
       const p = job.permissions;
       const readOnly = isObj(p) && Object.entries(p).every(([k, v]) => k === "contents" && v === "read");
       if (!readOnly) fail("PERMISSIONS", `job ${id} widens permissions: ${JSON.stringify(p)}`);
+    }
+    if (pages && !deploys && (job.environment !== undefined || job.if !== undefined)) {
+      fail("PERMISSIONS", `job ${id} must not use a deployment environment or a condition`);
     }
     const t = job["timeout-minutes"];
     if (!Number.isInteger(t) || t < 1 || t > MAX_TIMEOUT_MINUTES) {
@@ -180,8 +221,7 @@ export function checkWorkflow(text) {
     const rs = jobRunners(job);
     if (rs.length === 0) fail("RUNNERS", `job ${id} has no resolvable runs-on`);
     for (const r of rs) {
-      if (!ALLOWED_RUNNERS.includes(r))
-        fail("RUNNERS", `job ${id} runs on ${r}; allowed: ${ALLOWED_RUNNERS}`);
+      if (!allowedRunners.includes(r)) fail("RUNNERS", `job ${id} runs on ${r}; allowed: ${allowedRunners}`);
       runners.add(r);
     }
     for (const [i, step] of (job.steps ?? []).entries()) {
@@ -205,10 +245,10 @@ export function checkWorkflow(text) {
       if (w && !(w[1] in webScripts)) fail("PACKAGE_SCRIPTS", `job ${id}: apps/web has no script ${w[1]}`);
     }
   }
-  for (const r of ALLOWED_RUNNERS) {
+  for (const r of allowedRunners) {
     if (!runners.has(r)) fail("RUNNERS", `no job runs on ${r}`);
   }
-  for (const [id, want] of Object.entries(REQUIRED)) {
+  for (const [id, want] of Object.entries(required)) {
     const lines = runLines(jobs[id]);
     let at = 0;
     for (const cmd of want) {
@@ -220,10 +260,51 @@ export function checkWorkflow(text) {
       }
     }
   }
-  if (!jobRunners(jobs.chain).every((r) => r.startsWith("ubuntu-"))) {
+  if (pages) {
+    if (!isObj(jobs[PAGES.deployJob]))
+      fail("REQUIRED_COMMANDS", `the workflow has no ${PAGES.deployJob} job`);
+    const uploads = (jobs.build?.steps ?? []).filter(
+      (s) => typeof s?.uses === "string" && s.uses.startsWith("actions/upload-pages-artifact@"),
+    );
+    if (uploads.length !== 1 || uploads[0].with?.path !== PAGES.artifactPath) {
+      fail("PAGES_ARTIFACT", `the build job must upload exactly ${PAGES.artifactPath}`);
+    }
+  } else if (!jobRunners(jobs.chain).every((r) => r.startsWith("ubuntu-"))) {
     fail("RUNNERS", "the chain job needs a Linux runner (Docker)");
   }
   return violations;
+}
+
+/** The one job that may write: it deploys the artifact the build job uploaded, and nothing else. */
+function checkDeployJob(job, fail) {
+  const id = PAGES.deployJob;
+  const p = job.permissions;
+  const want = PAGES.deployPermissions;
+  const exact =
+    isObj(p) &&
+    Object.keys(p).length === Object.keys(want).length &&
+    Object.entries(want).every(([k, v]) => p[k] === v);
+  if (!exact) {
+    fail(
+      "PERMISSIONS",
+      `job ${id} permissions must be exactly ${JSON.stringify(want)}, found ${JSON.stringify(p)}`,
+    );
+  }
+  if (job.if !== PAGES.deployIf) fail("TRIGGERS", `job ${id} must have if: ${PAGES.deployIf}`);
+  const needs = Array.isArray(job.needs) ? job.needs : [job.needs];
+  if (needs.length !== 1 || needs[0] !== "build") fail("REQUIRED_COMMANDS", `job ${id} must need build`);
+  const env = isObj(job.environment) ? job.environment.name : job.environment;
+  if (env !== PAGES.environment) {
+    fail("PERMISSIONS", `job ${id} must target the ${PAGES.environment} environment`);
+  }
+  const steps = Array.isArray(job.steps) ? job.steps : [];
+  const only =
+    steps.length === 1 &&
+    typeof steps[0]?.uses === "string" &&
+    steps[0].uses.startsWith("actions/deploy-pages@") &&
+    steps[0].run === undefined &&
+    steps[0].with === undefined;
+  if (!only) fail("PERMISSIONS", `job ${id} must consist of the single actions/deploy-pages step`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -232,7 +313,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.stderr.write(`workflow-policy: ${file} does not exist\n`);
     process.exit(2);
   }
-  const violations = checkWorkflow(readFileSync(file, "utf8"));
+  const violations = checkWorkflow(readFileSync(file, "utf8"), profileOf(file));
   process.stdout.write(
     `${JSON.stringify(
       {
