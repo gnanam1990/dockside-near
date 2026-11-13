@@ -113,7 +113,7 @@ Needs Node 22 (`>=22.13 <23`), pnpm 10, git and Rust stable with the wasm target
 (`rustup target add wasm32-unknown-unknown`). Checked for this README from a fresh clone of `main` on Windows 11
 (Git Bash); CI runs the same on `ubuntu-24.04` and `windows-2022`. macOS was not tested.
 
-1. **One command: `pnpm judge`** (about 3–6 minutes; measured 5 min on a fresh clone with a warm pnpm store).
+1. **One command: `pnpm judge`** (about 3–6 minutes; 5m 0s and 5m 36s on two fresh clones with a warm pnpm store).
 
    ```sh
    git clone https://github.com/gnanam1990/dockside-near.git && cd dockside-near
@@ -129,13 +129,13 @@ Needs Node 22 (`>=22.13 <23`), pnpm 10, git and Rust stable with the wasm target
    it holds no key). Expected last line (the time depends on the machine):
 
    ```text
-   JUDGE: PASS  90 passed, 0 failed, 0 not readable, 1 skipped, 5m 0s
+   JUDGE: PASS  90 passed, 0 failed, 0 not readable, 1 skipped, 5m 36s
    ```
 
    The table above it shows, for example, `901 passed, 0 failed in 91 files` (vitest), `141 passed, 0 failed in 24
    suites` (cargo) and every on-chain row with the expected value beside the actual one. The one SKIP is mainnet
    ("not deployed yet"). Full values go to `.data/judge/judge-report.json`. The two test steps take most of the
-   time: unit tests about 80–110 s and contract tests about 100–180 s in our runs; the chain reads take about
+   time: unit tests about 80–140 s and contract tests about 100–180 s in our runs; the chain reads take about
    15 s. `pnpm judge --only chain,usdc` runs only the on-chain checks. `Ignored build scripts: esbuild` and
    `ExperimentalWarning: SQLite` lines are harmless.
 
