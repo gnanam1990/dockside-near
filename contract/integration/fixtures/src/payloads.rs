@@ -440,6 +440,55 @@ pub fn execute_release_args(rec: &TradeRecord, intent_id: &str) -> J {
     json!({ "trade_id": rec.terms.trade_id, "release_intent_id": intent_id })
 }
 
+/* ----------------------------------- holds ----------------------------------- */
+
+/// `set_hold` arguments: a DOC_MISMATCH hold binding the current manifest, issued `now` and
+/// valid for `ttl` ms. `issuer` is `POLICY_SETTER` (the enrolled deterministic-policy service,
+/// with a versioned rule id) or `RISK_RESOLVER`.
+pub fn hold_set_args(fx: &Fixture, rec: &TradeRecord, issuer: &str, now: u64, ttl: u64, n: &str) -> J {
+    let p = with_header(
+        rec,
+        &fx.accounts.contract,
+        vec![
+            ("holdId", s(&fx.id("hld", n))),
+            ("manifestDigest", opt(rec.current_manifest_digest(now).as_deref())),
+            ("reasonCode", s("DOC_MISMATCH")),
+            ("issuerRole", s(issuer)),
+            ("ruleId", if issuer == "POLICY_SETTER" { s("doc-mismatch@1") } else { null() }),
+            ("schema", s("dockside/hold-set@1")),
+            ("issuedAt", u(now)),
+            ("expiresAt", u(now + ttl)),
+            ("nonce", s(&fx.nonce(&format!("hold/{n}")))),
+        ],
+    );
+    let signer = if issuer == "POLICY_SETTER" { "policy" } else { "risk" };
+    json!({ "trade_id": rec.terms.trade_id, "signature": fx.sign(signer, "dockside/hold-set", &p), "payload": p })
+}
+
+/// `resolve_hold` arguments: the risk/policy principal resolves hold `n` with `code`
+/// (`RELEASE_HOLD`, `RESOLVE_TO_REFUND` or `RETRY_INSPECTION`) over the current manifest.
+pub fn hold_resolve_args(fx: &Fixture, rec: &TradeRecord, n: &str, code: &str, now: u64) -> J {
+    let id = fx.id("hld", n);
+    let reason = rec.holds.get(&id).map(|h| h.reason_code.clone()).unwrap_or_else(|| "DOC_MISMATCH".into());
+    let p = with_header(
+        rec,
+        &fx.accounts.contract,
+        vec![
+            ("holdId", s(&id)),
+            ("holdReasonCode", s(&reason)),
+            ("manifestDigest", opt(rec.current_manifest_digest(now).as_deref())),
+            ("resolutionCode", s(code)),
+            ("evidenceDigest", s(&hex::encode(sha256(format!("hold-evidence/{}/{n}", fx.seed).as_bytes())))),
+            ("resolverRole", s("RISK_RESOLVER")),
+            ("schema", s("dockside/hold-resolve@1")),
+            ("issuedAt", u(now)),
+            ("expiresAt", u(now + HOUR)),
+            ("nonce", s(&fx.nonce(&format!("resolve/{n}")))),
+        ],
+    );
+    json!({ "trade_id": rec.terms.trade_id, "signature": fx.sign("risk", "dockside/hold-resolve", &p), "payload": p })
+}
+
 /* ------------------------------ destination change ------------------------------ */
 
 /// The typed terms of the active revision, rebuilt from revision 1 and the activated changes.
