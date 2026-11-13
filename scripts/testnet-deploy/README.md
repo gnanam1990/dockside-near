@@ -38,14 +38,19 @@ You create the accounts. `run-all` does everything after that in one command:
 | 6 | The journey (below), checking the supplier's balance rose by exactly the trade amount | buyer (funding only), relayer function-call key (everything else) |
 | 7 | Write `run-record.json` | nothing |
 
-The journey is one trade: `register_trade`, `register_evidence_policy`, `fund` (from the buyer's
-own account, which makes it the recorded funder), `submit_manifest_attestation`, `submit_inspection`
-(PASS), `create_release_intent`, `approve_release`, `execute_release`, then `PAID` at the bound
-supplier. Its Dockside payloads (terms, policy, attestation, inspection, intent, approval) are built
-and signed by `dockside-journey-mirror` (contract/integration/fixtures) with principal keys derived
-from a fresh random seed for that run; they are not NEAR keys and are not stored. After every
-transaction the mirror replays the call with the same `dockside-escrow-core` code at the receipt's
-block time, and the contract's `get_ledger` must equal the core's.
+The default journey (`--journey paid`) is one trade: `register_trade`, `register_evidence_policy`,
+`fund` (from the buyer's own account, which makes it the recorded funder), `submit_manifest_attestation`,
+`submit_inspection` (PASS), `create_release_intent`, `approve_release`, `execute_release`, then `PAID`
+at the bound supplier. Two more journeys cover the other on-chain outcomes (see "Hold and refund
+journeys" under "Run"): `--journey hold` (a deterministic-policy hold SET and RESOLVED, then `PAID`) and
+`--journey refund` (`MUTUAL_CANCEL` plus `EXCESS_FUNDING_RETURN`, then `REFUNDED` with every
+yoctoNEAR back with the buyer). The Dockside payloads (terms, policy, attestation, inspection,
+holds, refund requests, intent, approval) are built and signed by `dockside-journey-mirror`
+(contract/integration/fixtures) with principal keys derived from a fresh random seed for that run;
+they are not NEAR keys. The seed is kept in the run directory (`journey-seed.json`, mode 0600) so an
+interrupted journey can be finished with `--resume`. After every transaction the mirror replays the
+call with the same `dockside-escrow-core` code at the receipt's block time, and the contract's
+`get_ledger` and `get_refunds` must equal the core's.
 
 The journey is a technical check of the deployed contract on the network, not the product flow: it
 is not the INV-13 acceptance by separate people (docs/USER-NEXT-STEPS.md §6–§7), and it does not use
@@ -80,7 +85,7 @@ the API or the web app.
   | Variable | Account | Needs |
   |---|---|---|
   | `DOCKSIDE_ESCROW_ACCOUNT` | holds the contract | 1 NEAR per 100 kB of wasm (about 8 NEAR for a 0.8 MB build) plus 1 NEAR; the preflight computes the exact amount; fund it with 10 |
-  | `DOCKSIDE_BUYER_ACCOUNT` | buyer party and funder | the trade amount plus 0.1 NEAR |
+  | `DOCKSIDE_BUYER_ACCOUNT` | buyer party and funder | the trade amount plus 0.1 NEAR (refund journey: plus the excess, default 0.01 NEAR) |
   | `DOCKSIDE_SUPPLIER_ACCOUNT` | supplier party and payout destination | exists; it signs nothing |
   | `DOCKSIDE_RELAYER_ACCOUNT` | submits the relayed calls | 2 NEAR |
 
@@ -108,12 +113,17 @@ rules, that the read-only checks use when the primary fails at transport level),
 `--wasm`, `--manifest`, `--amount-yocto` (default 50000000000000000000000, 0.05 NEAR), `--out`
 (default `.data/testnet-run/<network>-<UTC time>`), `--skip-deploy` (reuse an escrow that already runs
 the manifest's code), `--relayer-key-file` (reuse the key file from an earlier run),
-`--allowance` (default `1 NEAR`). `--network` has no default.
+`--allowance` (default `1 NEAR`), `--journey <paid|hold|refund>` (default `paid`), `--excess-yocto`
+(refund journey, default 10000000000000000000000, 0.01 NEAR), `--no-wait` (refund journey: pause
+instead of waiting out the cooling period), `--stop-after <n>` (pause once the journey has n
+transactions on chain), `--resume <run dir>` and `--pending-tx <hash|none>` (see "Finishing a
+stopped journey"). `--network` has no default.
 
 On success it prints `run-all: PASS` and exits 0. Any refusal exits 2 with `run-all: <CODE>: ...`
 before the step that would be wrong (for example `NETWORK_REFUSED`, `WASM_MISMATCH`,
 `ESCROW_NOT_EMPTY`, `CODE_HASH_MISMATCH`, `INSUFFICIENT_BALANCE`); a failed near-cli-rs command
-exits 1 and leaves its output in the record directory.
+exits 1 and leaves its output in the record directory. A journey paused on purpose (`--no-wait`,
+`--stop-after`) exits 3 with `run-all: PAUSED: ...` and the `--resume` command that finishes it.
 
 ### Retries and failures
 
@@ -129,10 +139,97 @@ the record files (`deploy.txt`, `relayer-key.txt`) hold every attempt. near-cli-
 its own `testnet` connection (`near config edit-connection testnet` changes its RPC);
 `--fallback-rpc-urls` covers only run-all's read-only checks.
 
-A journey that stops part way leaves its trade on chain, possibly funded. Its Dockside principal keys
-come from a random seed that run-all never stores, so nobody can sign an approval, cancellation or
-refund for that trade afterwards: its testnet NEAR stays locked in the escrow (testnet trade
-`trd_9aced7e741a0462ac88ef4de0e67ba81`, docs/status/M24.md).
+A journey that stops part way leaves its trade on chain, possibly funded. Since M42 run-all keeps
+the journey's Dockside key seed in the run directory, so such a trade can be finished with
+`--resume` (next section). Runs from before M42 stored no seed: nobody can sign an approval,
+cancellation or refund for their trades, and their testnet NEAR stays locked in the escrow (testnet
+trade `trd_9aced7e741a0462ac88ef4de0e67ba81`, docs/status/M24.md).
+
+### Finishing a stopped journey (`--resume`)
+
+Before its first transaction a journey writes three files to its run directory:
+
+- `run-params.json`: network, RPC URL, journey, trade amount, wasm, manifest and relayer key file
+  path (no secret);
+- `journey-seed.json` (mode 0600): the random seed every Dockside principal key, id and nonce of
+  that trade is derived from. These are test keys of that one trade, not NEAR keys, but whoever
+  holds the file can sign for every role of the trade: keep it private and do not commit it (the
+  default run directory is under the git-ignored `.data/`);
+- `journey-state.json`: every completed step (transaction hash, block time, the exact mirror
+  replay of it) and the call in flight, if any.
+
+`run-all --resume <run dir>` (with the same four account variables) reads them back: it verifies
+the wasm, the on-chain code hash and the relayer key again (read-only), replays the completed
+steps on the mirror, requires the chain's `get_ledger` and `get_refunds` to equal the replay, and
+continues with the next step. It takes no other settings (`--network`, `--journey`, `--out` and the
+like are refused) except `--no-wait`, `--stop-after`, `--fallback-rpc-urls` and `--pending-tx`.
+A call whose transaction id was printed is settled from the chain (included: recorded; refused or
+never included: built and sent again). If the run stopped while near-cli-rs was still sending, so
+the id is unknown, run-all refuses with `PENDING_UNKNOWN`; look the transaction up for the named
+signer in the explorer and pass `--pending-tx <hash>`, or `--pending-tx none` if it never reached
+the escrow. run-all never starts a second journey in a directory that holds one (`RUN_EXISTS`).
+
+### Hold and refund journeys
+
+`--journey hold` runs the paid journey with a hold in the middle: after the inspection, the
+enrolled deterministic-policy service (`POLICY_SETTER`, rule `doc-mismatch@1`, signed with the
+trade's `policySetter` key) SETs a `DOC_MISMATCH` hold bound to the current manifest; the release
+intent is created while the hold is ACTIVE and run-all records that `get_holds` reports it ACTIVE
+and `get_release` lists `HOLD_ACTIVE` among the blockers; then the separate risk/policy principal
+RESOLVEs it with `RELEASE_HOLD`, the buyer approves (over the resolved holds view) and the release
+executes: `PAID`, the supplier receives exactly the trade amount. Ten transactions, all from the
+relayer key except `fund`.
+
+`--journey refund` uses the two refund rows that need nothing but the journey's own keys and one
+hour of chain time (no trade expiry, no inspection FAIL, no 48-hour hold cooling):
+
+| Step | Call | Signed by | Ledger (buyer) |
+|---|---|---|---|
+| fund | `fund` with the trade amount plus the excess | buyer (keychain) | amount AVAILABLE, excess QUARANTINED |
+| `MUTUAL_CANCEL` | `request_refund` with the buyer's and the supplier's signatures over one request, so the one-hour cooling period starts at once | relayer key | AVAILABLE locked for refund |
+| `EXCESS_FUNDING_RETURN` | `request_refund` from the funder's own account (the contract requires it); cooling runs from the overfunding | buyer (keychain) | QUARANTINED locked for refund |
+| wait | until chain time passes both deadlines (about one hour) | nothing | |
+| authorize, execute | `authorize_refund` and `execute_refund` for each | relayer key | REFUNDED |
+
+The checks: both intents `REFUNDED`; the buyer's balance rises by exactly each refund amount across
+its `execute_refund` (the relayer pays those fees); the buyer's ledger shows `funded` = `refunded` =
+amount plus excess and every other bucket 0; nothing released; the supplier's balance unchanged;
+conservation holds. By default run-all waits the hour and prints the minutes left every five
+minutes; with `--no-wait` it pauses (exit 3) after the requests and `--resume` finishes later.
+
+Cost on testnet: the buyer pays the trade amount (returned by the refund journey, paid to the
+supplier by the others) plus fees; each relayed call draws about 0.01 NEAR (100 Tgas at testnet's
+minimum gas price) from the relayer key's 1 NEAR allowance (paid 7 calls, hold 9, refund 6).
+
+#### Owner commands (PowerShell, testnet escrow2)
+
+From the repository root, against the M34 deployment `gnanam1990-dock-escrow2.testnet` and the
+relayer function-call key M34 added (public key `ed25519:4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf`,
+docs/evidence/M34/run-testnet-20261113T022714Z/relayer.json), one line each.
+
+Hold journey:
+
+```powershell
+$env:DOCKSIDE_ESCROW_ACCOUNT="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_BUYER_ACCOUNT="gnanam1990-dock-buyer.testnet"; $env:DOCKSIDE_SUPPLIER_ACCOUNT="gnanam1990-dock-supplier.testnet"; $env:DOCKSIDE_RELAYER_ACCOUNT="gnanam1990-dock-relayer.testnet"; powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet --skip-deploy --relayer-key-file "$HOME\.near-credentials\testnet\gnanam1990-dock-relayer.testnet\ed25519_4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf.json" --journey hold
+```
+
+Refund journey (waits about one hour for the cooling period):
+
+```powershell
+$env:DOCKSIDE_ESCROW_ACCOUNT="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_BUYER_ACCOUNT="gnanam1990-dock-buyer.testnet"; $env:DOCKSIDE_SUPPLIER_ACCOUNT="gnanam1990-dock-supplier.testnet"; $env:DOCKSIDE_RELAYER_ACCOUNT="gnanam1990-dock-relayer.testnet"; powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet --skip-deploy --relayer-key-file "$HOME\.near-credentials\testnet\gnanam1990-dock-relayer.testnet\ed25519_4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf.json" --journey refund
+```
+
+Add `--no-wait` to stop after the two requests instead; then, an hour or more later (or after any
+interruption of either journey), finish it from the run directory the first command printed:
+
+```powershell
+$env:DOCKSIDE_ESCROW_ACCOUNT="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_BUYER_ACCOUNT="gnanam1990-dock-buyer.testnet"; $env:DOCKSIDE_SUPPLIER_ACCOUNT="gnanam1990-dock-supplier.testnet"; $env:DOCKSIDE_RELAYER_ACCOUNT="gnanam1990-dock-relayer.testnet"; powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --resume .data/testnet-run/testnet-<UTC time>
+```
+
+If the key file is not at that path, `near.cmd account list-keys gnanam1990-dock-relayer.testnet
+network-config testnet now` shows the relayer's keys; the file is the one near-cli-rs saved when M34
+added the key (`relayer-key.txt` in that run's local record directory names it). Each run's `run-record.json`, `journey.json`
+and `deployment.json` are the evidence to keep, as for the paid journey.
 
 ### Windows
 
@@ -170,9 +267,12 @@ In the record directory (git-ignored under `.data/`): `artifact.json`, `prefligh
 `deploy.txt` and `deploy-tx.txt`, `deployment.json` (on-chain code hash, `match: true`,
 `get_config`), `relayer-key.txt` and `relayer.json` (public key and permission only),
 `args/` (the exact arguments of every journey call), `journey.json` (every transaction hash, block
-hash and block time, the release and ledger views) and `run-record.json` (summary). No file holds a
-private key; the relayer's function-call key file is the one near-cli-rs wrote in your keychain
-directory.
+hash and block time, the release, ledger, holds and refunds views and the checks),
+`run-record.json` (summary), and for `--resume` `run-params.json`, `journey-state.json` and
+`journey-seed.json` (mode 0600). No file holds a NEAR private key; the relayer's function-call key
+file is the one near-cli-rs wrote in your keychain directory. `journey-seed.json` holds the seed of
+that trade's Dockside principal keys: keep it private, and delete it once the journey has passed if
+nothing about that trade needs signing again.
 
 For gate evidence keep: the commit, `build-manifest.json`, `run-record.json`, `journey.json` and
 `deployment.json`. Then T-007's deploy/fund/read half and the T-019 positive path can move from
@@ -187,9 +287,16 @@ keys in a temporary near-cli-rs keychain and a near-cli-rs connection named `san
 `run-all --network sandbox` and checks the chain itself: the code hash, the relayer's two keys, the
 supplier's balance delta and `PAID`. It also checks that mainnet, a non-loopback sandbox RPC and a
 wrong wasm are refused before any transaction, that a second run refuses to redeploy
-(`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second journey.
+(`ESCROW_NOT_EMPTY`), and that `--skip-deploy --relayer-key-file` runs a second journey. Since M42
+it also runs `--journey hold --stop-after 6` (paused with exit 3 while the hold is ACTIVE on chain,
+`journey-seed.json` mode 0600, a resume with an extra setting refused) and finishes it with
+`--resume` to `PAID` with the hold RESOLVED, and `--journey refund --no-wait` (paused with both
+intents TIMELOCKED), moves the sandbox clock one hour on and finishes it with `--resume`: both
+`REFUNDED`, the buyer's ledger `funded` = `refunded`, every other bucket 0, the supplier's balance
+unchanged; a second journey in the same directory is refused (`RUN_EXISTS`).
 
-Differences you will meet on testnet: real block times (the journey needs no waiting), faucet-funded
+Differences you will meet on testnet: real block times (the paid and hold journeys need no waiting;
+the refund journey waits one real hour, where the sandbox test moves the clock), faucet-funded
 accounts, the OS keychain instead of `~/.near-credentials`, and testnet's protocol version, which can
 differ from the sandbox's (nearcore 2.14.0, protocol 88).
 

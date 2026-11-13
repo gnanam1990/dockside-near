@@ -286,14 +286,18 @@ async function main() {
         (typeof pendingTx !== "string" || !/^(none|[1-9A-HJ-NP-Za-km-z]{43,44})$/.test(pendingTx))
       )
         throw new ToolError("USAGE", "--pending-tx must be a transaction hash or none");
+      // A resumed journey takes these from its seed file; a new one checks them before any call.
+      const journey = resume ? undefined : journeyName(f);
+      const excessYocto = resume ? undefined : excess(f);
+      const amountYocto = resume ? undefined : amount(f);
       const config = await rpc.view(accts.escrow, "get_config", {});
       const result = await runJourney({
-        journey: resume ? undefined : journeyName(f),
+        journey,
         resume,
         wait: !f["no-wait"],
         stopAfter,
         pendingTx,
-        excessYocto: resume ? undefined : excess(f),
+        excessYocto,
         rpc,
         profile: p,
         accounts: accts,
@@ -303,7 +307,7 @@ async function main() {
         relayerKeyFile: need(f, "key-file"),
         mirrorBin: need(f, "mirror"),
         outDir: out,
-        amountYocto: resume ? undefined : amount(f),
+        amountYocto,
         minDepositYocto: config.minDepositYocto,
         log: (m) => process.stderr.write(`run-all:   ${m}\n`),
       });
