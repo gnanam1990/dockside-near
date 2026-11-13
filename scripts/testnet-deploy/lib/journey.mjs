@@ -218,7 +218,9 @@ export async function runJourney(o) {
       // Base units of the asset: yoctoNEAR, or the token's units (the names predate M50).
       amountYocto: String(o.amountYocto),
       excessYocto: String(
-        o.journey === "refund" ? (o.excessYocto ?? (token ? DEFAULT_EXCESS_UNITS : DEFAULT_EXCESS_YOCTO)) : 0n,
+        o.journey === "refund"
+          ? (o.excessYocto ?? (token ? DEFAULT_EXCESS_UNITS : DEFAULT_EXCESS_YOCTO))
+          : 0n,
       ),
       contractNetwork: profile.contractNetwork,
       asset: token ? { kind: "nep141", token: o.asset.token } : { kind: "near", token: null },
@@ -517,7 +519,10 @@ export async function runJourney(o) {
       // A token funding is sent to the token contract; everything else to the escrow.
       const toToken = b.receiver === "token";
       if (toToken && b.token !== tokenId)
-        throw new ToolError("MIRROR_MISMATCH", `the mirror funds through ${b.token}, the run uses ${tokenId}`);
+        throw new ToolError(
+          "MIRROR_MISMATCH",
+          `the mirror funds through ${b.token}, the run uses ${tokenId}`,
+        );
       const receiver = toToken ? tokenId : accounts.escrow;
       state.pending = {
         step: s.id,

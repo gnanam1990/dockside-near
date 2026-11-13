@@ -121,7 +121,10 @@ export function checkExposure({ asset, amounts, caps, realFunds, ceiling }) {
   const unit = token ? "token base units" : "yoctoNEAR";
   if (realFunds) {
     if (!caps || caps.nearYocto === 0n || caps.nep141 === 0n)
-      throw new ToolError("CAP_REQUIRED", "a real-funds run needs a contract with a non-zero cap for every asset");
+      throw new ToolError(
+        "CAP_REQUIRED",
+        "a real-funds run needs a contract with a non-zero cap for every asset",
+      );
     const limit = token ? ceiling.nep141 : ceiling.nearYocto;
     if (cap > limit)
       throw new ToolError(
@@ -139,7 +142,11 @@ export function checkExposure({ asset, amounts, caps, realFunds, ceiling }) {
 
 export function ceilingFromFlags(f) {
   return {
-    nearYocto: uint(f["max-exposure-near-yocto"], "--max-exposure-near-yocto", MAINNET_DEFAULT_CAP_NEAR_YOCTO),
+    nearYocto: uint(
+      f["max-exposure-near-yocto"],
+      "--max-exposure-near-yocto",
+      MAINNET_DEFAULT_CAP_NEAR_YOCTO,
+    ),
     nep141: uint(f["max-exposure-token-units"], "--max-exposure-token-units", MAINNET_DEFAULT_CAP_NEP141),
   };
 }
@@ -156,18 +163,42 @@ export function human(units, decimals) {
  * Every amount a run moves, in the order it happens. `registrations` are the accounts run-all
  * registers with the token first (NEP-145 `storage_deposit`, paid in NEAR by the escrow account).
  */
-export function valuePlan({ journey, asset, amounts, accounts, deploy, relayerKey, registrations = [], storageDepositYocto = 0n }) {
+export function valuePlan({
+  journey,
+  asset,
+  amounts,
+  accounts,
+  deploy,
+  relayerKey,
+  registrations = [],
+  storageDepositYocto = 0n,
+}) {
   const token = asset.kind === "nep141";
   const symbol = token ? `units of ${asset.token.accountId}` : "yoctoNEAR";
   const decimals = token ? asset.token.decimals : 24;
   const show = (n) => `${n} ${symbol} (${human(n, decimals)} ${token ? "tokens" : "NEAR"})`;
   const rows = [];
   if (deploy)
-    rows.push({ what: "deploy and initialise the escrow", from: accounts.escrow, to: accounts.escrow, amount: "0 NEAR attached; the account pays gas and keeps its own balance as storage stake" });
+    rows.push({
+      what: "deploy and initialise the escrow",
+      from: accounts.escrow,
+      to: accounts.escrow,
+      amount: "0 NEAR attached; the account pays gas and keeps its own balance as storage stake",
+    });
   for (const who of registrations)
-    rows.push({ what: `register ${who} with the token (storage_deposit)`, from: accounts.escrow, to: asset.token.accountId, amount: `${storageDepositYocto} yoctoNEAR (${human(storageDepositYocto, 24)} NEAR)` });
+    rows.push({
+      what: `register ${who} with the token (storage_deposit)`,
+      from: accounts.escrow,
+      to: asset.token.accountId,
+      amount: `${storageDepositYocto} yoctoNEAR (${human(storageDepositYocto, 24)} NEAR)`,
+    });
   if (relayerKey)
-    rows.push({ what: "add the relayer's function-call key", from: accounts.relayer, to: accounts.relayer, amount: "0 NEAR attached; gas only" });
+    rows.push({
+      what: "add the relayer's function-call key",
+      from: accounts.relayer,
+      to: accounts.relayer,
+      amount: "0 NEAR attached; gas only",
+    });
   const deposit = amounts.amount + amounts.excess;
   rows.push({
     what: token ? "fund the trade (ft_transfer_call on the token)" : "fund the trade",
@@ -176,14 +207,39 @@ export function valuePlan({ journey, asset, amounts, accounts, deploy, relayerKe
     amount: token ? `${show(deposit)} plus 1 yoctoNEAR` : show(deposit),
   });
   if (journey === "refund") {
-    rows.push({ what: "refund MUTUAL_CANCEL (the trade amount)", from: accounts.escrow, to: accounts.buyer, amount: show(amounts.amount) });
-    rows.push({ what: "refund EXCESS_FUNDING_RETURN (the excess)", from: accounts.escrow, to: accounts.buyer, amount: show(amounts.excess) });
+    rows.push({
+      what: "refund MUTUAL_CANCEL (the trade amount)",
+      from: accounts.escrow,
+      to: accounts.buyer,
+      amount: show(amounts.amount),
+    });
+    rows.push({
+      what: "refund EXCESS_FUNDING_RETURN (the excess)",
+      from: accounts.escrow,
+      to: accounts.buyer,
+      amount: show(amounts.excess),
+    });
   } else {
-    rows.push({ what: journey === "hold" ? "release after the hold is resolved" : "release", from: accounts.escrow, to: accounts.supplier, amount: show(amounts.amount) });
+    rows.push({
+      what: journey === "hold" ? "release after the hold is resolved" : "release",
+      from: accounts.escrow,
+      to: accounts.supplier,
+      amount: show(amounts.amount),
+    });
   }
   if (token)
-    rows.push({ what: "each token transfer the escrow sends", from: accounts.escrow, to: asset.token.accountId, amount: "1 yoctoNEAR (required by NEP-141), from the escrow account's own balance" });
-  rows.push({ what: "every other step", from: accounts.relayer, to: accounts.escrow, amount: "0 attached; gas from the relayer key's allowance" });
+    rows.push({
+      what: "each token transfer the escrow sends",
+      from: accounts.escrow,
+      to: asset.token.accountId,
+      amount: "1 yoctoNEAR (required by NEP-141), from the escrow account's own balance",
+    });
+  rows.push({
+    what: "every other step",
+    from: accounts.relayer,
+    to: accounts.escrow,
+    amount: "0 attached; gas from the relayer key's allowance",
+  });
   return rows;
 }
 

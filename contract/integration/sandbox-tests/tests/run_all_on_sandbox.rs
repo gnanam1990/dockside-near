@@ -1,6 +1,8 @@
 //! Validation of `scripts/testnet-deploy/run-all` end to end against a local near-sandbox node
-//! (`--network sandbox`), so the one-command testnet flow is known to work before anyone runs it
-//! on testnet. It is never pointed at testnet here.
+//! (`--network sandbox`), so the one-command flow is known to work before anyone runs it on
+//! testnet or mainnet. It is never pointed at testnet or mainnet here: the second test runs the
+//! NEP-141 journeys (`--asset usdc --token <id>`) and the `near-mainnet` contract label
+//! (`--contract-network near-mainnet --i-understand-real-funds`) on the same kind of local node.
 //!
 //! The test plays the user's part before the script: it creates the four accounts with real
 //! create-account transactions and puts their keys in a temporary near-cli-rs keychain
@@ -33,7 +35,10 @@ struct Keychain {
 impl Keychain {
     /// A temporary HOME whose near-cli-rs config has only a `sandbox` connection to `rpc`.
     fn new(rpc: &str) -> Result<Keychain> {
-        let home = std::env::temp_dir().join(format!("dockside-run-all-{}", std::process::id()));
+        // One HOME per keychain: the tests of this file run in parallel, each against its own node.
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let home = std::env::temp_dir().join(format!("dockside-run-all-{}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&home);
         std::fs::create_dir_all(home.join(".config/near-cli"))?;
         std::fs::create_dir_all(home.join(".near-credentials/sandbox"))?;

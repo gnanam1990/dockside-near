@@ -16,7 +16,7 @@ use dockside_escrow_core::terms::Asset;
 use dockside_escrow_core::{funding_message, views, Ctx, Error, Limits, TradeRecord, DEFAULT_MIN_DEPOSIT_NEP141, DEFAULT_MIN_DEPOSIT_YOCTO};
 use near_sdk::json_types::U128;
 use near_sdk::store::{LookupMap, Vector};
-use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseError};
 use serde_json::Value as J;
 
 const SETTLE_GAS: Gas = Gas::from_tgas(15);
@@ -28,6 +28,13 @@ const STORAGE_CHECK_GAS: Gas = Gas::from_tgas(10);
 const STORAGE_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 /// NEP-141 `ft_transfer` requires exactly one yoctoNEAR attached.
 const ONE_YOCTO: NearToken = NearToken::from_yoctonear(1);
+
+/// Whether the one awaited transfer promise succeeded. Only a failed promise is a no-transfer
+/// proof: a promise that succeeded has moved the value whatever it returned, so a return value
+/// longer than the callback reads still counts as transferred.
+fn transfer_succeeded() -> bool {
+    env::promise_results_count() == 1 && !matches!(env::promise_result_checked(0, 64), Err(PromiseError::Failed))
+}
 
 /// `new` argument: the per-trade caps, in base units of each asset.
 #[near(serializers = [json])]
@@ -350,15 +357,18 @@ impl Escrow {
             .then(Self::ext(env::current_account_id()).with_static_gas(STORAGE_CALLBACK_GAS).on_payee_storage(trade_id, account_id))
     }
 
-    /// The token's `storage_balance_of` answer: an object means registered, `null` or a failed
-    /// call means not registered.
+    /// The token's `storage_balance_of` answer: a storage balance (an object) means registered
+    /// and `null` means not registered. Anything else (a failed view, another value, an answer
+    /// too long to be a storage balance) says nothing about the payee, so the call fails and the
+    /// recorded confirmations stay as they were.
     #[private]
     pub fn on_payee_storage(&mut self, trade_id: String, account_id: AccountId) -> bool {
-        let registered = env::promise_results_count() == 1
-            && match env::promise_result_checked(0, 256) {
-                Ok(bytes) => serde_json::from_slice::<J>(&bytes).map(|v| v.is_object()).unwrap_or(false),
-                Err(_) => false,
-            };
+        let answer = if env::promise_results_count() == 1 { env::promise_result_checked(0, 256).ok() } else { None };
+        let registered = match answer.as_deref().map(serde_json::from_slice::<J>) {
+            Some(Ok(J::Object(_))) => true,
+            Some(Ok(J::Null)) => false,
+            _ => fail(Error { code: "TOKEN_CALL_FAILED", message: "the token contract did not answer storage_balance_of".into() }),
+        };
         self.mutate(&trade_id, |t, _ctx| t.record_payee_storage(account_id.as_str(), registered))
     }
 
@@ -379,7 +389,7 @@ impl Escrow {
     /// the runtime, or an `ft_transfer` the token contract reverted) is FAILED.
     #[private]
     pub fn on_release_transfer(&mut self, trade_id: String, release_intent_id: String, attempt_id: String) -> bool {
-        let transferred = env::promise_results_count() == 1 && env::promise_result_checked(0, 64).is_ok();
+        let transferred = transfer_succeeded();
         self.mutate(&trade_id, |t, ctx| t.complete_release(ctx, &release_intent_id, &attempt_id, transferred));
         transferred
     }
@@ -469,7 +479,7 @@ impl Escrow {
     /// no-transfer proof for FAILED, and the exact source bucket is restored.
     #[private]
     pub fn on_refund_transfer(&mut self, trade_id: String, refund_intent_id: String) -> bool {
-        let transferred = env::promise_results_count() == 1 && env::promise_result_checked(0, 64).is_ok();
+        let transferred = transfer_succeeded();
         self.mutate(&trade_id, |t, ctx| t.complete_refund(ctx, &refund_intent_id, transferred));
         transferred
     }
@@ -592,7 +602,7 @@ impl Escrow {
     /// no-transfer): the asset returns to review and the executor gets its deposit back.
     #[private]
     pub fn on_asset_recovery_transfer(&mut self, asset_index: u64, recovery_id: String) -> bool {
-        let transferred = env::promise_results_count() == 1 && env::promise_result_checked(0, 64).is_ok();
+        let transferred = transfer_succeeded();
         let mut a = self.asset(asset_index);
         let executor = ok(self.with_ctx(|ctx| assets::complete_recovery(&mut a, ctx, &recovery_id, transferred)));
         self.store_asset(a);

@@ -198,7 +198,11 @@ async function main() {
     }
     case "init-args": {
       const st = settings();
-      return print(JSON.stringify(initArgs({ contractNetwork: st.p.contractNetwork, caps: st.deployCaps, token: st.asset.token })));
+      return print(
+        JSON.stringify(
+          initArgs({ contractNetwork: st.p.contractNetwork, caps: st.deployCaps, token: st.asset.token }),
+        ),
+      );
     }
     case "registrations": {
       const pre = JSON.parse(readFileSync(need(f, "file"), "utf8"));
@@ -256,13 +260,22 @@ async function main() {
       if (skip) {
         const config = await rpc.view(accts.escrow, "get_config", {});
         if (config.network !== p.contractNetwork)
-          throw new ToolError("CONFIG_MISMATCH", `contract network is ${config.network}, not ${p.contractNetwork}`);
+          throw new ToolError(
+            "CONFIG_MISMATCH",
+            `contract network is ${config.network}, not ${p.contractNetwork}`,
+          );
         caps = capsFromConfig(config);
         pinned = config.nep141Token ?? null;
         if (asset.kind === "nep141") {
           if (!pinned && p.realFunds)
-            throw new ToolError("TOKEN_NOT_ENABLED", `${accts.escrow} was initialised without a NEP-141 token`);
-          if (pinned && (pinned.accountId !== asset.token.accountId || pinned.decimals !== asset.token.decimals))
+            throw new ToolError(
+              "TOKEN_NOT_ENABLED",
+              `${accts.escrow} was initialised without a NEP-141 token`,
+            );
+          if (
+            pinned &&
+            (pinned.accountId !== asset.token.accountId || pinned.decimals !== asset.token.decimals)
+          )
             throw new ToolError(
               "TOKEN_NOT_ENABLED",
               `${accts.escrow} accepts ${pinned.accountId} (${pinned.decimals} decimals), not ${asset.token.accountId} (${asset.token.decimals})`,
@@ -281,16 +294,23 @@ async function main() {
         try {
           meta = await rpc.view(token, "ft_metadata", {});
         } catch (e) {
-          throw new ToolError("TOKEN_INVALID", `${token} does not answer ft_metadata on ${p.network}: ${e.message}`);
+          throw new ToolError(
+            "TOKEN_INVALID",
+            `${token} does not answer ft_metadata on ${p.network}: ${e.message}`,
+          );
         }
         if (meta.decimals !== asset.token.decimals)
           throw new ToolError(
             "TOKEN_INVALID",
             `${token} has ${meta.decimals} decimals, not ${asset.token.decimals} (--token-decimals)`,
           );
-        const registered = async (id) => (await rpc.view(token, "storage_balance_of", { account_id: id })) !== null;
+        const registered = async (id) =>
+          (await rpc.view(token, "storage_balance_of", { account_id: id })) !== null;
         if (!(await registered(accts.buyer)))
-          throw new ToolError("INSUFFICIENT_BALANCE", `${accts.buyer} is not registered with ${token} and holds none of it`);
+          throw new ToolError(
+            "INSUFFICIENT_BALANCE",
+            `${accts.buyer} is not registered with ${token} and holds none of it`,
+          );
         const balance = BigInt(await rpc.ftBalance(token, accts.buyer));
         if (balance < deposit)
           throw new ToolError(
@@ -317,7 +337,10 @@ async function main() {
         );
       }
       if (skip && BigInt(views.escrow.amount) < registrationCost + fee) {
-        throw new ToolError("INSUFFICIENT_BALANCE", `${accts.escrow} needs ${registrationCost + fee} yoctoNEAR for token registration and fees`);
+        throw new ToolError(
+          "INSUFFICIENT_BALANCE",
+          `${accts.escrow} needs ${registrationCost + fee} yoctoNEAR for token registration and fees`,
+        );
       }
       // A native run deposits NEAR; a token run only pays fees in NEAR.
       const buyerNear = asset.kind === "nep141" ? fee : deposit + fee;
@@ -346,7 +369,9 @@ async function main() {
         storageDepositYocto,
       });
       const say = (m) => process.stderr.write(`run-all:     ${m}\n`);
-      say(`${p.realFunds ? "REAL FUNDS" : "test funds"}: network ${p.network}, contract label ${p.contractNetwork}`);
+      say(
+        `${p.realFunds ? "REAL FUNDS" : "test funds"}: network ${p.network}, contract label ${p.contractNetwork}`,
+      );
       say(
         `caps: ${caps ? `${caps.nearYocto} yoctoNEAR and ${caps.nep141} token units per trade` : "none (testnet label)"}; ` +
           `this run holds at most ${exposure.heldAtMost} ${exposure.unit} in escrow`,
@@ -389,7 +414,10 @@ async function main() {
       }
       const config = await rpc.view(accts.escrow, "get_config", {});
       if (config.network !== p.contractNetwork)
-        throw new ToolError("CONFIG_MISMATCH", `contract network is ${config.network}, not ${p.contractNetwork}`);
+        throw new ToolError(
+          "CONFIG_MISMATCH",
+          `contract network is ${config.network}, not ${p.contractNetwork}`,
+        );
       // A real-funds contract must be capped, and a token run must find its token enabled.
       const caps = capsFromConfig(config);
       if (p.realFunds && (caps.nearYocto === 0n || caps.nep141 === 0n))
@@ -444,7 +472,8 @@ async function main() {
       }
       const field = need(f, "field");
       // Fields added later (asset, token, contractNetwork) have defaults for older run directories.
-      const value = params[field] ?? (typeof f.default === "string" ? f.default : f.default === true ? "" : undefined);
+      const value =
+        params[field] ?? (typeof f.default === "string" ? f.default : f.default === true ? "" : undefined);
       if (typeof value !== "string") throw new ToolError("NOTHING_TO_RESUME", `${file} has no ${field}`);
       return print(value);
     }
@@ -462,7 +491,8 @@ async function main() {
         throw new ToolError("NOTHING_TO_RESUME", `${file} has no network or rpcUrl`);
       // The recorded network and contract label decide; the real-funds flag must be given again.
       const opts = { contractNetwork: params.contractNetwork, realFunds: f[realFundsFlag] === true };
-      if (f["rpc-url"] === undefined) return print(networkProfile(params.network, params.rpcUrl, [], opts).rpcUrl);
+      if (f["rpc-url"] === undefined)
+        return print(networkProfile(params.network, params.rpcUrl, [], opts).rpcUrl);
       if (typeof f["rpc-url"] !== "string" || !f["rpc-url"])
         throw new ToolError("USAGE", "--rpc-url needs a URL");
       return print(networkProfile(params.network, f["rpc-url"], [], opts).rpcUrl);
@@ -491,7 +521,10 @@ async function main() {
       const amounts = resume ? undefined : amountsFromFlags(f, asset, journey);
       const config = await rpc.view(accts.escrow, "get_config", {});
       if (config.network !== p.contractNetwork)
-        throw new ToolError("CONFIG_MISMATCH", `contract network is ${config.network}, not ${p.contractNetwork}`);
+        throw new ToolError(
+          "CONFIG_MISMATCH",
+          `contract network is ${config.network}, not ${p.contractNetwork}`,
+        );
       const result = await runJourney({
         journey,
         resume,

@@ -405,11 +405,9 @@ fn a_token_release_checks_the_payee_then_schedules_ft_transfer_with_one_yocto() 
     );
     let check = json!({ "trade_id": t, "account_id": SUPPLIER });
     m.apply("check_payee_storage", &check, Call::by(RELAYER, now)).unwrap();
-    // `null` (not registered) and a failed view both leave the payee unconfirmed.
-    for result in [PromiseResult::Successful(b"null".to_vec()), PromiseResult::Failed] {
-        at_with(CONTRACT, now + 100, 0, vec![result]);
-        assert!(!c.on_payee_storage(t.clone(), id(SUPPLIER)));
-    }
+    // `null` is the token saying "not registered": the payee stays unconfirmed.
+    at_with(CONTRACT, now + 100, 0, vec![PromiseResult::Successful(b"null".to_vec())]);
+    assert!(!c.on_payee_storage(t.clone(), id(SUPPLIER)));
     m.apply("on_payee_storage", &check, Call::by(CONTRACT, now + 100).settled(false)).unwrap();
     assert_eq!(c.get_trade(t.clone())["payeeStorage"], json!([]));
     at_with(CONTRACT, now + 200, 0, vec![PromiseResult::Successful(br#"{"total":"1250000000000000000000","available":"0"}"#.to_vec())]);
@@ -509,4 +507,75 @@ fn a_failed_token_refund_restores_the_exact_bucket() {
     assert_eq!(l["funders"][BUYER]["quarantined"], json!(USDC.to_string()));
     assert_eq!(l["funders"][BUYER]["refunded"], json!("0"));
     assert_eq!(c.get_refunds(t)[0]["state"], json!("FAILED"));
+}
+
+/// Funded with 5 USDC, payee confirmed, intent approved; returns (intent id, attempt id) with the
+/// release submitted.
+fn submitted_token_release(c: &mut Escrow, m: &mut Mirror, fx: &Fixture) -> (String, String) {
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    deliver(c, m, TOKEN, BUYER, 5 * USDC, &good, T0 + 1_000);
+    let now = T0 + 10_000;
+    let check = json!({ "trade_id": t, "account_id": SUPPLIER });
+    at_with(CONTRACT, now, 0, vec![PromiseResult::Successful(br#"{"total":"1","available":"0"}"#.to_vec())]);
+    assert!(c.on_payee_storage(t.clone(), id(SUPPLIER)));
+    m.apply("on_payee_storage", &check, Call::by(CONTRACT, now).settled(true)).unwrap();
+    let intent = approved(c, m, fx, now + 1_000);
+    at(RELAYER, now + 2_000, 0);
+    drop(c.execute_release(t.clone(), intent.clone()));
+    let scheduled = m.apply("execute_release", &execute_release_args(m.trade(&t), &intent), Call::by(RELAYER, now + 2_000)).unwrap();
+    (intent, s(&scheduled, "attempt_id"))
+}
+
+#[test]
+fn a_transfer_that_succeeded_with_a_long_return_value_is_settled_as_paid_not_rolled_back() {
+    // A token whose `ft_transfer` succeeds and returns more than the callback reads has still
+    // moved the tokens: rolling the ledger back would let the same value be released twice.
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let (intent, attempt) = submitted_token_release(&mut c, &mut m, &fx);
+    at_with(CONTRACT, T0 + 20_000, 0, vec![PromiseResult::Successful(vec![b'x'; 4_096])]);
+    assert!(c.on_release_transfer(t.clone(), intent.clone(), attempt.clone()), "a successful promise is a transfer");
+    let cb = json!({ "trade_id": t, "release_intent_id": intent, "attempt_id": attempt });
+    m.apply("on_release_transfer", &cb, Call::by(CONTRACT, T0 + 20_000).settled(true)).unwrap();
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!((l["totals"]["released"].clone(), l["totals"]["available"].clone()), (json!((5 * USDC).to_string()), json!("0")));
+    assert!(c.get_release(t).to_string().contains("\"PAID\""));
+}
+
+#[test]
+fn a_failed_token_release_restores_the_reservation() {
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let (intent, attempt) = submitted_token_release(&mut c, &mut m, &fx);
+    at_with(CONTRACT, T0 + 20_000, 0, vec![PromiseResult::Failed]);
+    assert!(!c.on_release_transfer(t.clone(), intent.clone(), attempt.clone()));
+    let cb = json!({ "trade_id": t, "release_intent_id": intent, "attempt_id": attempt });
+    m.apply("on_release_transfer", &cb, Call::by(CONTRACT, T0 + 20_000).settled(false)).unwrap();
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!((l["totals"]["released"].clone(), l["totals"]["available"].clone()), (json!("0"), json!((5 * USDC).to_string())));
+    assert!(c.get_release(t).to_string().contains("\"FAILED\""));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:TOKEN_CALL_FAILED")]
+fn a_failed_storage_view_changes_nothing_about_the_payee() {
+    // Only the token's own answer counts. A view that failed says nothing, so it must not
+    // withdraw an earlier confirmation (nor create one).
+    let (mut c, _m, fx) = token_trade();
+    let t = fx.trade_id();
+    at_with(CONTRACT, T0 + 1_000, 0, vec![PromiseResult::Successful(br#"{"total":"1","available":"0"}"#.to_vec())]);
+    assert!(c.on_payee_storage(t.clone(), id(SUPPLIER)));
+    at_with(CONTRACT, T0 + 2_000, 0, vec![PromiseResult::Failed]);
+    c.on_payee_storage(t, id(SUPPLIER));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:TOKEN_CALL_FAILED")]
+fn a_storage_answer_that_is_neither_a_balance_nor_null_changes_nothing() {
+    let (mut c, _m, fx) = token_trade();
+    at_with(CONTRACT, T0 + 1_000, 0, vec![PromiseResult::Successful(b"true".to_vec())]);
+    c.on_payee_storage(fx.trade_id(), id(SUPPLIER));
 }

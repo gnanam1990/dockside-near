@@ -66,7 +66,12 @@ const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
  * are kept apart by host name here and by the chain id the RPC reports (`chainId`, checked by the
  * preflight and the journey). Fallback RPC URLs must pass the same rules as the primary.
  */
-export function networkProfile(network, rpcUrl, fallbackRpcUrls = [], { contractNetwork, realFunds = false } = {}) {
+export function networkProfile(
+  network,
+  rpcUrl,
+  fallbackRpcUrls = [],
+  { contractNetwork, realFunds = false } = {},
+) {
   let cliNetwork;
   let primary;
   let label;

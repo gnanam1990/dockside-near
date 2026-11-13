@@ -181,7 +181,7 @@ describe("T-044: installed worker and contract artifacts", () => {
     expect(main.out).toContain("CONFIG_INVALID");
   });
 
-  it("the release wasm is a wasm module (its init refuses near-mainnet: m02-escrow-wasm)", () => {
+  it("the release wasm is a wasm module (its init guard is tested in m02-escrow-wasm)", () => {
     expect(existsSync(WASM)).toBe(true);
     const bytes = readFileSync(WASM);
     expect(bytes.subarray(0, 4)).toEqual(Buffer.from([0x00, 0x61, 0x73, 0x6d]));
