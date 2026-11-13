@@ -80,6 +80,9 @@ jobs:
       - name: Browser suites (four local stacks over the simulated chain)
         run: pnpm run web:e2e
 
+      - name: Proof page browser suite (recorded testnet answers, no network)
+        run: pnpm run proof:e2e
+
   chain:
     name: Linux container reproduction and near-sandbox suites
     runs-on: ubuntu-24.04

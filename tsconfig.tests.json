@@ -38,6 +38,9 @@
       ],
       "@dockside/worker": [
         "services/worker/src/index.ts"
+      ],
+      "@dockside/hosted": [
+        "services/hosted/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": false,

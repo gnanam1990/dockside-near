@@ -106,6 +106,12 @@ trade routes only when `DOCKSIDE_ESCROW_CONTRACT_ID` and `DOCKSIDE_NEAR_RPC_URL`
 with one it signs with the relayer's function-call key after a chain preflight and custody checks (M43,
 [ADR-0025](adr/0025-relayer-signer-custody-and-testnet-runtime.md), [runbook](runbooks/testnet-product.md)).
 
+For a public host the same three parts run as one container (`Dockerfile`, M55,
+[ADR-0027](adr/0027-hosted-runtime-container.md), [guide](runbooks/hosted-deploy.md)): the launcher
+`services/hosted` starts the unchanged API and worker on loopback and serves the web build, `/v1`, `/healthz`,
+`/readyz` and `/relay` on one HTTP port behind the host's HTTPS. The relayer key comes from the host's secret
+store at start; the image holds no key.
+
 ### Configuration (environment only, fails closed on unknown `DOCKSIDE_*` names; values are never echoed)
 
 | Variable | Default | Notes |
