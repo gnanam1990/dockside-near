@@ -1,44 +1,100 @@
 /*
- * Dockside semantic tokens (UI-SPEC §4). Components consume only these variables;
+ * Dockside semantic tokens (UI-SPEC §4, ADR-0026). Components consume only these variables;
  * raw colour values live in this file alone. Every text/background and control/background
  * pair used by components is checked for WCAG 2.2 AA in apps/web/test/tokens.test.ts.
+ *
+ * Direction: light-first Minimal Swiss enterprise operations. Flat surfaces, 1 px borders,
+ * one restrained elevation step, 4/8 px rhythm, navy action colour, status colours reserved
+ * for status (never branding).
  */
 :root {
   color-scheme: light dark;
 
+  /* ---- colour: surfaces and text ---- */
   --surface-canvas: #f8fafc;
   --surface-panel: #ffffff;
   --surface-subtle: #e9eef5;
+  --surface-hover: #f4f7fa;
+  --surface-selected: #f2f5fa;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --border-default: #cbd5e1;
+  --border-subtle: #e2e8f0;
   --border-control: #64748b;
+
+  /* ---- colour: actions ---- */
   --action-primary: #1e3a5f;
   --action-primary-hover: #16304f;
   --on-action-primary: #ffffff;
   --action-secondary: #2563eb;
+  --focus-ring: #1e3a5f;
+
+  /* ---- colour: status (text, icon, rule) and their quiet tints (callout and badge fills) ---- */
   --status-positive: #15803d;
   --status-warning: #a16207;
   --status-negative: #b91c1c;
   --status-unknown: #6d28d9;
-  --focus-ring: #1e3a5f;
+  --tint-positive: #f0f9f3;
+  --tint-warning: #fdf8ea;
+  --tint-negative: #fdf3f3;
+  --tint-unknown: #f6f3fe;
+  --tint-neutral: #f4f7fa;
+
   --skeleton: #e2e8f0;
   --backdrop: rgb(15 23 42 / 0.55);
 
+  /* ---- elevation: one step for panels, one for overlays ---- */
+  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 1px rgb(15 23 42 / 0.03);
+  --shadow-control: 0 1px 1px rgb(15 23 42 / 0.06);
+  --shadow-overlay: 0 12px 32px rgb(15 23 42 / 0.18), 0 2px 6px rgb(15 23 42 / 0.08);
+
+  /* ---- typography ---- */
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --text-xs: 0.75rem; /* 12 px: overlines only, 600 weight */
+  --text-sm: 0.8125rem; /* 13 px: metadata */
+  --text-md: 0.875rem; /* 14 px: dense UI text, tables */
+  --text-base: 1rem; /* 16 px: body */
+  --text-lg: 1.125rem; /* 18 px: section title */
+  --text-xl: 1.25rem; /* 20 px: panel title */
+  --text-2xl: 1.75rem; /* 28 px: screen title */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --tracking-overline: 0.04em;
 
+  /* ---- spacing (4/8 rhythm) ---- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;
   --space-4: 24px;
   --space-5: 32px;
   --space-6: 48px;
+  --space-1-5: 12px;
+
+  /* ---- shape ---- */
+  --radius-sm: 4px;
   --radius-control: 8px;
-  --radius-panel: 12px;
+  --radius-panel: 10px;
+
+  /* ---- layers ---- */
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-overlay: 50;
+  --z-skip: 100;
+
+  /* ---- motion: local feedback only (UI-SPEC §7) ---- */
   --duration: 160ms;
-  --nav-width: 232px;
+  --duration-fast: 120ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- layout ---- */
+  --nav-width: 240px;
   --content-max: 1280px;
+  --control-height: 44px;
+  --control-height-sm: 36px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,9 +102,12 @@
     --surface-canvas: #0b1220;
     --surface-panel: #111a2b;
     --surface-subtle: #1b2638;
+    --surface-hover: #172235;
+    --surface-selected: #1c2a40;
     --text-primary: #e2e8f0;
     --text-secondary: #a3b1c6;
     --border-default: #334155;
+    --border-subtle: #233046;
     --border-control: #7c8ca3;
     --action-primary: #9dbce6;
     --action-primary-hover: #b6cdee;
@@ -58,13 +117,30 @@
     --status-warning: #facc15;
     --status-negative: #f87171;
     --status-unknown: #c4b5fd;
+    --tint-positive: #102419;
+    --tint-warning: #241f0d;
+    --tint-negative: #2a1418;
+    --tint-unknown: #1e1a36;
+    --tint-neutral: #152034;
     --focus-ring: #9dbce6;
     --skeleton: #1e293b;
+    --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-control: 0 1px 1px rgb(0 0 0 / 0.3);
+    --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.4);
+  }
+}
+
+/* Coarse pointers keep 44 px targets; precise pointers get a denser 40 px control (WCAG 2.2 minimum is 24). */
+@media (pointer: fine) {
+  :root {
+    --control-height: 40px;
+    --control-height-sm: 32px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration: 0ms;
+    --duration-fast: 0ms;
   }
 }
