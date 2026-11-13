@@ -397,6 +397,14 @@ async fn run_all_refusal_journey_six_calls_are_rejected_on_chain_and_the_trade_i
     }
     assert!(r.log.contains("six calls REFUSED, then PAID"), "{}", r.log);
     let rec = read(&r.out.join("run-record.json"))?;
+    // The run record and the journey record (no key, no seed) are kept when the caller asks for
+    // them: the run directory itself is temporary.
+    if let Ok(keep) = std::env::var("DOCKSIDE_REFUSAL_RECORD_DIR") {
+        std::fs::create_dir_all(&keep)?;
+        for f in ["run-record.json", "journey.json"] {
+            std::fs::copy(r.out.join(f), Path::new(&keep).join(f))?;
+        }
+    }
     assert_eq!(rec["journey"]["kind"], json!("refusal"));
     assert_eq!(rec["journey"]["ok"], json!(true));
     let trade = rec["journey"]["tradeId"].as_str().context("trade id")?.to_string();

@@ -83,6 +83,7 @@ supports `DRY_COMPATIBLE`). Separate funded-mainnet gate: **BLOCKED**.
 | M24 first NEAR testnet run, run-all Windows fixes | escrow deployed on testnet and one trade to PAID (owner's run); run-all fixes unit-tested and validated on near-sandbox; that escrow now superseded (M34) | [docs/status/M24.md](docs/status/M24.md) |
 | M34 hardened contract on testnet | security-hardened contract (`4ff233b`) deployed on `gnanam1990-dock-escrow2.testnet` and one trade to PAID (owner's run); re-verified read-only on chain | [docs/status/M34.md](docs/status/M34.md) |
 | M44 hold and refund journeys on testnet, RPC switch | hold journey to PAID and refund journey to REFUNDED on escrow2 (owner's runs, one operator); an aborted attempt sent no transaction; re-verified read-only through `https://test.rpc.fastnear.com`, now the default testnet RPC (`rpc.testnet.near.org` is deprecated); `run-all --resume` takes an `--rpc-url` override | [docs/status/M44.md](docs/status/M44.md) |
+| M47 refusal journey | `run-all --journey refusal`: six calls the contract must reject (wrong terms digest at funding, relayer asking for a funder-only refund, replayed nonce, payout redirected to an unbound account, release while a hold is active, approval signed by an unbound key), each a failed transaction with its expected code and no state change, then the trade to PAID; validated with real transactions on a local nearcore node against the deployable wasm `7GEti5E6…5h8N`; **testnet run pending (owner)**; contract unchanged | [docs/status/M47.md](docs/status/M47.md) |
 
 ## Test IDs
 
@@ -154,6 +155,7 @@ supports `DRY_COMPATIBLE`). Separate funded-mainnet gate: **BLOCKED**.
 |---|---|---|
 | NEAR testnet accounts, deployment, funding, direct release | **done**: the hardened build deployed on `gnanam1990-dock-escrow2.testnet`, funded and released to PAID (M34); first done for the pre-audit build (M24) | — |
 | Hold (SET/RESOLVE) and refund (MUTUAL_CANCEL, EXCESS_FUNDING_RETURN) journeys on testnet | **done with one operator's keys** on escrow2 (M44); not acceptance under INV-13 | the other hold and refund paths through the product with independently enrolled principals (USER-NEXT-STEPS §6–§7) |
+| Refusal journey (six rejected calls, then PAID) on testnet | validated on a local nearcore node (M47); **not yet run on testnet** | one command, signed by the owner: [docs/status/M47.md](docs/status/M47.md), "Owner run on testnet" |
 | Superseded escrow `gnanam1990-dock-escrow.testnet` (pre-audit code `5wqct3Wx…zHuM`, without the m25–m33 fixes) | must not be used for new trades | point every client and run at `gnanam1990-dock-escrow2.testnet`; optionally delete the old relayer function-call key `ed25519:J9Rv…aidN` |
 | Testnet trade `trd_9aced7e741a0462ac88ef4de0e67ba81` (0.05 testnet NEAR, intent VALUE_LOCKED after an expired approval) | stranded: its principal keys came from a seed run-all does not keep, so no approval, cancel, abandon or refund can be signed | none possible; testnet NEAR only; it stays on the superseded escrow (docs/status/M24.md) |
 | Relayer `TxSigner` with real key custody (worker exits 78) | BLOCKED | USER-NEXT-STEPS §4 |
