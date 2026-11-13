@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { AuthorityService, IsolatedSigner } from "@dockside/authority";
 import { type DocksideConfig, loadConfig, randomIds, redactConfig, systemClock } from "@dockside/core";
@@ -11,10 +12,10 @@ import {
   type PreflightResult,
   preflightEscrow,
 } from "@dockside/near";
-import { BlockedOneClickAdapter } from "@dockside/payout";
+import { BlockedOneClickAdapter, OneClickClient } from "@dockside/payout";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
-import { createApp, type ExportKeySigner, enrollExportKey, hardenServer } from "./app.js";
+import { type CashOutModule, createApp, type ExportKeySigner, enrollExportKey, hardenServer } from "./app.js";
 import type { TradeModules } from "./trades.js";
 
 /**
@@ -65,6 +66,45 @@ function chainAdapter(config: DocksideConfig) {
     maxResponseBytes: 1024 * 1024,
   });
   return { rpc, tx: new NearTxClient(rpc) };
+}
+
+/**
+ * Supplier cash-out (M52, ADR-0027): a 1Click client that can only list tokens, ask for dry quotes
+ * and read statuses, plus read-only NEAR access to reconcile a deposit. No signer is involved.
+ */
+function cashOutModule(config: DocksideConfig): CashOutModule | undefined {
+  const url = config.DOCKSIDE_ONE_CLICK_URL;
+  const endpoint = config.DOCKSIDE_NEAR_RPC_URL;
+  if (url === undefined || endpoint === undefined) return undefined;
+  const rpc = new JsonRpcNearClient({
+    endpoint,
+    allowedHosts: [new URL(endpoint).hostname],
+    timeoutMs: 10_000,
+    maxResponseBytes: 4 * 1024 * 1024,
+  });
+  const tokenFile = config.DOCKSIDE_ONE_CLICK_TOKEN_FILE;
+  let bearer: string | undefined;
+  if (tokenFile !== undefined) {
+    let raw = "";
+    try {
+      raw = readFileSync(tokenFile, "utf8").trim();
+    } catch {
+      raw = "";
+    }
+    // Only the variable's name is ever reported, never the path's content.
+    if (!/^[A-Za-z0-9._~+/=-]{16,4096}$/.test(raw))
+      throw Object.assign(new Error("the 1Click token file is missing or not a token"), {
+        code: "CONFIG_INVALID",
+        details: { name: "DOCKSIDE_ONE_CLICK_TOKEN_FILE" },
+      });
+    bearer = raw;
+  }
+  return {
+    client: new OneClickClient({ baseUrl: url, timeoutMs: 10_000, ...(bearer ? { bearer } : {}) }),
+    nearNetwork: config.DOCKSIDE_ONE_CLICK_NEAR_NETWORK,
+    tx: new NearTxClient(rpc),
+    token: (contract: string) => new Nep141Reader(rpc, contract),
+  };
 }
 
 /**
@@ -149,6 +189,7 @@ async function main(): Promise<void> {
   });
   const modules = tradeModules(config, db, authority);
   const chain = chainAdapter(config);
+  const cashOut = cashOutModule(config);
   const signer = await exportSigner(config, db);
   const log = (line: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(line)}\n`);
   const server = hardenServer(
@@ -163,6 +204,7 @@ async function main(): Promise<void> {
         ...(modules ? { modules } : {}),
         ...(chain ? { chain } : {}),
         ...(signer ? { exportSigner: signer } : {}),
+        ...(cashOut ? { cashOut } : {}),
         oneClick: new BlockedOneClickAdapter(),
       }),
     ),
@@ -178,6 +220,9 @@ async function main(): Promise<void> {
         ? { chainId: preflight.chainId, escrow: preflight.escrowId, codeHash: preflight.codeHash }
         : "NOT_CONFIGURED",
       auditExportKey: signer ? signer.publicKey : "NOT_CONFIGURED",
+      cashOut: cashOut
+        ? { provider: cashOut.client.baseUrl, network: cashOut.nearNetwork }
+        : "NOT_CONFIGURED",
       config: redactConfig(config),
     });
   });

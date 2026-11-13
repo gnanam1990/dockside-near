@@ -284,6 +284,137 @@ export interface PayoutView {
   readonly observedAt: number;
 }
 
+/* ------------------------- supplier cash-out through 1Click (M52) ------------------------- */
+
+export interface CashOutAsset {
+  readonly assetId: string;
+  readonly symbol: string;
+  readonly decimals: number;
+}
+
+export interface CashOutView {
+  readonly tradeId: string;
+  readonly status: "READY" | "NOT_CONFIGURED" | "PROVIDER_UNAVAILABLE";
+  readonly reason?: string;
+  readonly supplierAccountId: string;
+  readonly tradeNetwork: string;
+  readonly providerUrl?: string;
+  readonly providerNetwork?: string;
+  readonly depositEnabled?: boolean;
+  readonly originAssets?: (CashOutAsset & { readonly contract: string })[];
+  readonly destinationAssets?: (CashOutAsset & { readonly blockchain: string })[];
+  readonly observedAt: number;
+}
+
+export interface CashOutQuoteInput {
+  readonly originAsset: string;
+  readonly destinationAsset: string;
+  readonly amount: string;
+  readonly recipient: string;
+  readonly slippageBps: number;
+}
+
+/** The 1Click quote request, exactly as the supplier's own client sends it. */
+export interface OneClickQuoteRequest {
+  readonly dry: boolean;
+  readonly swapType: string;
+  readonly slippageTolerance: number;
+  readonly originAsset: string;
+  readonly depositType: string;
+  readonly destinationAsset: string;
+  readonly amount: string;
+  readonly refundTo: string;
+  readonly refundType: string;
+  readonly recipient: string;
+  readonly recipientType: string;
+  readonly deadline: string;
+}
+
+export interface CashOutDryQuote {
+  readonly tradeId: string;
+  readonly dry: true;
+  readonly committed: string;
+  readonly source: string;
+  readonly observedAt: number;
+  readonly origin: CashOutAsset & { readonly contract: string; readonly signerId: string };
+  readonly destination: CashOutAsset & { readonly blockchain: string; readonly recipient: string };
+  readonly quote: {
+    readonly amountIn: string;
+    readonly amountInFormatted: string;
+    readonly amountInUsd: string;
+    readonly amountOut: string;
+    readonly amountOutFormatted: string;
+    readonly amountOutUsd: string;
+    readonly minAmountOut: string;
+    readonly minAmountOutFormatted: string;
+    readonly cost: { readonly usd: string | null; readonly bps: number | null };
+    readonly withdrawFee: string | null;
+    readonly refundFee: string | null;
+    readonly timeEstimateSeconds: number;
+    readonly slippageBps: number;
+    readonly deadline: number;
+    readonly correlationId: string;
+  };
+  readonly depositEnabled: boolean;
+  readonly realQuote: {
+    readonly url: string;
+    readonly request: OneClickQuoteRequest;
+    readonly powershell: string;
+    readonly curl: string;
+  } | null;
+  readonly depositDisabledReason: string | null;
+}
+
+export interface CashOutDepositCall {
+  readonly tradeId: string;
+  readonly signerId: string;
+  readonly depositAddress: string;
+  readonly depositBefore: number;
+  readonly amountIn: string;
+  readonly amountOut: string;
+  readonly minAmountOut: string;
+  readonly amountOutFormatted: string;
+  readonly call: FunctionCall;
+  readonly nearCli: string;
+  readonly network: string;
+  readonly sentByDockside: false;
+  readonly observedAt: number;
+}
+
+export interface CashOutStatus {
+  readonly tradeId: string;
+  readonly depositAddress: string;
+  readonly txHash: string | null;
+  readonly observedAt: number;
+  readonly state: string;
+  readonly maySendDeposit: boolean;
+  readonly terminal: boolean;
+  readonly reason: string;
+  readonly provider: {
+    readonly read: string;
+    readonly status: string | null;
+    readonly updatedAt?: string;
+    readonly recipient?: string;
+    readonly destinationAsset?: string;
+    readonly amountIn?: string;
+    readonly minAmountOut?: string;
+    readonly amountOut?: string | null;
+    readonly amountOutFormatted?: string | null;
+    readonly depositedAmount?: string | null;
+    readonly refundedAmount?: string | null;
+    readonly refundReason?: string | null;
+    readonly originChainTxHashes?: string[];
+    readonly destinationChainTxHashes?: string[];
+    readonly depositBefore?: number;
+  };
+  readonly deposit: { readonly read: string; readonly balance: string | null };
+  readonly depositCall: {
+    readonly signerId: string;
+    readonly call: FunctionCall;
+    readonly nearCli: string;
+  } | null;
+}
+
 export interface FunderBuckets {
   readonly funded: string;
   readonly partial: string;
@@ -698,6 +829,28 @@ export class TradeApi {
   }
   refund(tradeId: string) {
     return this.call<RefundView>("tradeRefund", { params: { id: tradeId } });
+  }
+  cashOut(tradeId: string) {
+    return this.call<CashOutView>("cashOut", { params: { id: tradeId } });
+  }
+  cashOutDryQuote(tradeId: string, input: CashOutQuoteInput) {
+    return this.call<CashOutDryQuote>("cashOutDryQuote", { params: { id: tradeId }, body: input });
+  }
+  cashOutDepositCall(
+    tradeId: string,
+    request: CashOutQuoteInput & { readonly deadline: string },
+    quoteResponse: Record<string, unknown>,
+  ) {
+    return this.call<CashOutDepositCall>("cashOutDepositCall", {
+      params: { id: tradeId },
+      body: { request, quoteResponse },
+    });
+  }
+  cashOutStatus(tradeId: string, depositAddress: string, txHash: string | null) {
+    return this.call<CashOutStatus>("cashOutStatus", {
+      params: { id: tradeId },
+      query: txHash ? { depositAddress, txHash } : { depositAddress },
+    });
   }
   assetRecoveries(tradeId: string) {
     return this.call<AssetRecoveryListView>("assetRecoveries", { params: { id: tradeId } });

@@ -83,6 +83,7 @@ supports `DRY_COMPATIBLE`). Separate funded-mainnet gate: **BLOCKED**.
 | M24 first NEAR testnet run, run-all Windows fixes | escrow deployed on testnet and one trade to PAID (owner's run); run-all fixes unit-tested and validated on near-sandbox; that escrow now superseded (M34) | [docs/status/M24.md](docs/status/M24.md) |
 | M34 hardened contract on testnet | security-hardened contract (`4ff233b`) deployed on `gnanam1990-dock-escrow2.testnet` and one trade to PAID (owner's run); re-verified read-only on chain | [docs/status/M34.md](docs/status/M34.md) |
 | M44 hold and refund journeys on testnet, RPC switch | hold journey to PAID and refund journey to REFUNDED on escrow2 (owner's runs, one operator); an aborted attempt sent no transaction; re-verified read-only through `https://test.rpc.fastnear.com`, now the default testnet RPC (`rpc.testnet.near.org` is deprecated); `run-all --resume` takes an `--rpc-url` override | [docs/status/M44.md](docs/status/M44.md) |
+| M52 supplier cash-out through NEAR Intents 1Click | payout tab "Move to another chain": server-side `dry: true` quote (amount out, fee, deadline), real quote and deposit from the supplier's own client and wallet, status tracking with reconciliation and no blind resend; tested against a local 1Click simulator and the simulated chain; real dry quote and real cash-out are owner steps, NOT_RUN; no contract change, funded rail still BLOCKED | [docs/status/M52.md](docs/status/M52.md), ADR-0027 |
 
 ## Test IDs
 

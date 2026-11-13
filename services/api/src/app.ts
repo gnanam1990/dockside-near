@@ -18,6 +18,7 @@ import { AuditLog, type Database, isUniqueViolation, loadMigrations, type SqlVal
 import { z } from "zod";
 import type { NearRpc } from "@dockside/near";
 import { assetRoutes } from "./assets.js";
+import { type CashOutModule, cashOutRoutes } from "./cash-out.js";
 import { type ExportKeySigner, exportKeyList } from "./export-signing.js";
 import { addressKey, RateLimiter, sessionKey } from "./limits.js";
 import { nearAccountRoutes } from "./near-accounts.js";
@@ -45,6 +46,7 @@ export {
   type TrustedExportKey,
   verifySignedAuditExport,
 } from "./verify-export.js";
+export { CASH_OUT_DEADLINE_MS, type CashOutModule } from "./cash-out.js";
 export { hardenServer, RateLimiter, SERVER_LIMITS } from "./limits.js";
 export { type Handler, type HandlerInput, type Route, route } from "./routing.js";
 export { relationsOf, type TradeModules } from "./trades.js";
@@ -84,6 +86,12 @@ export interface AppDeps {
     readonly rpc: Pick<NearRpc, "viewAccessKey">;
     readonly tx: { latestBlock(): Promise<{ height: number; hash: string }> };
   };
+  /**
+   * Supplier cash-out through 1Click (M52, ADR-0027): a read-only 1Click client and read-only chain
+   * access. Absent: the cash-out panel reports NOT_CONFIGURED and its other routes answer
+   * INVALID_STATE CASH_OUT_NOT_CONFIGURED.
+   */
+  readonly cashOut?: CashOutModule;
   /** The optional 1Click dry adapter (M06; blocked in this build). */
   readonly oneClick?: {
     readonly id: string;
@@ -390,6 +398,7 @@ export function buildRoutes(d: AppDeps): Route[] {
     ...tradeRoutes(d),
     ...refundRoutes(d),
     ...assetRoutes(d),
+    ...cashOutRoutes(d),
     ...settingsRoutes(d),
     ...nearAccountRoutes(d),
   ];
