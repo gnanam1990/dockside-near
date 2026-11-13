@@ -1,0 +1,8 @@
+1. receipt verifier ignores the transfer recipient ->       Tests  1 failed | 17 passed (18)
+2. receipt verifier accepts any inspection ->       Tests  1 failed | 17 passed (18)
+3. receipt verifier does not compare the code hash ->       Tests  1 failed | 17 passed (18)
+4. PDF verifier skips the byte-for-byte rendering ->       Tests  1 failed | 8 passed (9)
+5. QR encoder with one wrong block count (level M, version 7) ->       Tests  6 passed (6)
+6. hosted front sends a receipt policy without the RPC endpoints ->       Tests  2 failed | 4 passed (6)
+5b. same mutation, after adding the ISO capacity table test ->       Tests  1 failed | 6 passed (7)
+7. QR encoder with mask pattern 0 inverted ->       Tests  1 failed | 6 passed (7)

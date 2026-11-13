@@ -51,6 +51,9 @@ export const SIGNING_DOMAINS = {
   // only by the deployment's dedicated audit-export key in its isolated signer process.
   AUDIT_EXPORT: { domain: "dockside/audit-export", version: 1 },
   AUDIT_EXPORT_KEY_ENROLLMENT: { domain: "dockside/audit-export-key-enrollment", version: 1 },
+  // Signed payment receipt (M54): signed by the same dedicated audit-export key, under its own
+  // domain, so a receipt signature can never be read as an audit export signature or the reverse.
+  PAYMENT_RECEIPT: { domain: "dockside/payment-receipt", version: 1 },
   // Digest-only domains (never signed on their own).
   ORGANIZATION_SETTINGS: { domain: "dockside/organization-settings", version: 1 },
   NEAR_ACCOUNT_LINK: { domain: "dockside/near-account-link", version: 1 },

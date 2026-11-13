@@ -118,3 +118,83 @@ export async function verifySignedExportInBrowser(
   );
   return { ok: checks.every((c) => c.ok), checks };
 }
+
+/**
+ * In-browser check of a signed payment receipt (M54), mirroring services/api/src/receipt.ts: the
+ * statement's DCE-1 digest and Ed25519 signature under `dockside/payment-receipt`, the key against
+ * the list this server publishes, and that the PDF offered for download is the one the server
+ * hashed and carries exactly this signed statement as its attachment. The payment itself is
+ * checked on NEAR by the receipt page (statement.verifyUrl); the offline check of the saved file
+ * is `verify-receipt` with the operator's key list.
+ */
+export async function verifySignedReceiptInBrowser(
+  bundle: unknown,
+  keys: readonly ExportKeyEntry[],
+): Promise<{ ok: boolean; checks: BrowserExportCheck[]; pdf: Uint8Array | null }> {
+  const checks: BrowserExportCheck[] = [];
+  const add = (id: string, ok: boolean, label: string) => checks.push({ id, ok, label });
+  if (!isObj(bundle) || !isObj(bundle["statement"]) || !isObj(bundle["pdf"])) {
+    add("shape", false, "Not a signed payment receipt");
+    return { ok: false, checks, pdf: null };
+  }
+  const st = bundle["statement"];
+  let digestOk = false;
+  let sigOk = false;
+  try {
+    const digest = await canonicalDigest("dockside/payment-receipt", 1, st as CanonicalValue);
+    digestOk = toHex(digest) === bundle["statementDigest"];
+    const pk = String(st["publicKey"] ?? "");
+    const sig = String(bundle["signature"] ?? "");
+    if (pk.startsWith("ed25519:") && sig.startsWith("ed25519:")) {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        copy(base58Decode(pk.slice(8))),
+        { name: "Ed25519" },
+        false,
+        ["verify"],
+      );
+      sigOk = await crypto.subtle.verify(
+        { name: "Ed25519" },
+        key,
+        copy(base58Decode(sig.slice(8))),
+        copy(digest),
+      );
+    }
+  } catch {
+    sigOk = false;
+  }
+  add("digest", digestOk, "Statement digest (DCE-1, dockside/payment-receipt) recomputed");
+  add("signature", sigOk, "Ed25519 signature verifies with the key the statement names");
+  const k = keys.find((x) => x.keyId === st["keyId"] && x.publicKey === st["publicKey"]);
+  const signedAt = typeof st["signedAt"] === "number" ? st["signedAt"] : -1;
+  add(
+    "key",
+    k !== undefined &&
+      k.status !== "REVOKED" &&
+      k.origin === st["origin"] &&
+      signedAt >= k.enrolledAt &&
+      (k.retiredAt === null || signedAt < k.retiredAt),
+    "Signing key is an enrolled, unrevoked export key of this server and was valid when it signed",
+  );
+  let pdf: Uint8Array | null = null;
+  let pdfOk = false;
+  try {
+    const p = bundle["pdf"];
+    const bin = atob(String(p["base64"] ?? ""));
+    pdf = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    const signed = JSON.stringify({
+      schema: bundle["schema"],
+      statement: st,
+      statementDigest: bundle["statementDigest"],
+      signature: bundle["signature"],
+    });
+    pdfOk =
+      bin.startsWith("%PDF-1.4\n") &&
+      toHex(await sha256(pdf)) === p["sha256"] &&
+      bin.includes(`/Length ${signed.length} >>\nstream\n${signed}\nendstream`);
+  } catch {
+    pdfOk = false;
+  }
+  add("pdf", pdfOk, "The PDF matches its digest and carries exactly this signed statement");
+  return { ok: checks.every((c) => c.ok), checks, pdf: pdfOk ? pdf : null };
+}

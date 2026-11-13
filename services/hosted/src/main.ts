@@ -190,6 +190,7 @@ async function main(): Promise<void> {
     await worker.ready;
     const server = createFront({
       webRoot: profile.webRoot,
+      proofRoot: profile.proofRoot,
       origin: profile.origin,
       apiPort: profile.apiPort,
       relayPort: profile.relayPort,

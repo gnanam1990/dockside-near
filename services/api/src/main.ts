@@ -109,13 +109,13 @@ function cashOutModule(config: DocksideConfig): CashOutModule | undefined {
 
 /**
  * The dedicated audit-export key (ADR-0018): read only by an isolated signer child process that may
- * sign the enrollment proof and export statements, nothing else. Enrolled (or confirmed) at startup.
+ * sign the enrollment proof, export statements and payment receipts (M54), nothing else. Enrolled (or confirmed) at startup.
  */
 async function exportSigner(config: DocksideConfig, db: Database): Promise<ExportKeySigner | undefined> {
   const file = config.DOCKSIDE_AUDIT_EXPORT_KEY_FILE;
   if (file === undefined) return undefined;
   const signer = await IsolatedSigner.spawn({
-    allowedPurposes: ["AUDIT_EXPORT_KEY_ENROLLMENT", "AUDIT_EXPORT"],
+    allowedPurposes: ["AUDIT_EXPORT_KEY_ENROLLMENT", "AUDIT_EXPORT", "PAYMENT_RECEIPT"],
     seedFile: file,
   });
   const s: ExportKeySigner = {

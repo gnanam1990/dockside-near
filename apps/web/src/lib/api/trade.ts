@@ -870,6 +870,9 @@ export class TradeApi {
   signedAuditExport(tradeId: string) {
     return this.call<Record<string, unknown>>("signedAuditExport", { params: { id: tradeId } });
   }
+  paymentReceipt(tradeId: string) {
+    return this.call<Record<string, unknown>>("paymentReceipt", { params: { id: tradeId } });
+  }
   auditExportKeys() {
     return this.call<{ keys: import("../export-verify").ExportKeyEntry[] }>("auditExportKeys");
   }

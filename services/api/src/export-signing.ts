@@ -22,14 +22,17 @@ import {
 /**
  * Dedicated audit-export signing key (ADR-0018). The deployment operator generates the key with
  * `export-key generate`; the private key is read only by an isolated signer child process that may
- * sign exactly two purposes (the enrollment proof and export statements). The API holds the public
+ * sign exactly three purposes (the enrollment proof, export statements and payment receipts, M54). The API holds the public
  * key, proves possession at enrollment and records the key's lifecycle. A newer key retires the
  * older one; an operator revocation makes every signature by that key untrusted.
  */
 export interface ExportKeySigner {
   readonly publicKey: string;
   readonly custodyKind: "ISOLATED_SIGNER_PROCESS" | "HSM" | "KMS";
-  sign(purpose: "AUDIT_EXPORT" | "AUDIT_EXPORT_KEY_ENROLLMENT", payload: CanonicalValue): Promise<string>;
+  sign(
+    purpose: "AUDIT_EXPORT" | "AUDIT_EXPORT_KEY_ENROLLMENT" | "PAYMENT_RECEIPT",
+    payload: CanonicalValue,
+  ): Promise<string>;
 }
 
 export interface ExportKeyDeps {

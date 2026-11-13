@@ -17,4 +17,7 @@ neardev
 contract
 fixtures
 docs
-site
+# site/proof stays: the hosted front serves it (proof page, payment receipts) and the API draws
+# the receipt QR code with its encoder (M54).
+site/*
+!site/proof

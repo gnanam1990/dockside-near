@@ -662,6 +662,7 @@ export const ENDPOINTS = {
     "implemented",
     "M17",
   ),
+  paymentReceipt: e("paymentReceipt", "GET", "/v1/trades/:id/payment-receipt", true, "implemented", "M54"),
   nearAccountChallenge: e(
     "nearAccountChallenge",
     "POST",

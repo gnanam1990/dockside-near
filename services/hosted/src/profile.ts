@@ -18,6 +18,8 @@ export interface HostedProfile {
   readonly dataDir: string;
   /** Directory of the production web build. */
   readonly webRoot: string;
+  /** Directory of the static proof site (site/proof): `/proof/` and the receipts at `/receipt/<trade id>` (M54). */
+  readonly proofRoot: string;
   readonly apiPort: number;
   readonly relayPort: number;
   readonly keyFiles: {
@@ -157,6 +159,7 @@ export function resolveHostedProfile(
     origin,
     dataDir,
     webRoot: env["HOSTED_WEB_ROOT"] || join(opts.appRoot, "apps", "web", "dist"),
+    proofRoot: env["HOSTED_PROOF_ROOT"] || join(opts.appRoot, "site", "proof"),
     apiPort,
     relayPort,
     keyFiles,

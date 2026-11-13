@@ -1,0 +1,38 @@
+building the image...
+PASS  the image builds from the Dockerfile
+PASS  the image contains no key file, no seed, no .env, no sources and no development tools
+starting the local nearcore sandbox...
+PASS  without a relayer key from the host the container exits 78 (RELAYER_SIGNER_NOT_PROVISIONED)
+PASS  with a full-access relayer key the container exits 78 (FULL_ACCESS_KEY)
+PASS  the container starts and becomes ready
+PASS  the API passed the chain preflight against the sandbox escrow (code hash equals the manifest)
+PASS  the worker passed the custody checks: nearcore confirms the function-call key restricted to the escrow
+PASS  first start created the three service keys on the volume
+PASS  GET /healthz answers 200 {status: ok}
+PASS  GET /readyz reports the migrated database, near-testnet rules and funded payouts BLOCKED
+PASS  GET / serves the web app with the strict content security policy
+PASS  every script and stylesheet the page names is served
+PASS  an application route (/sign-in) gets the app shell
+PASS  GET /receipt/<trade id> serves the receipt page with a policy naming the manifest's RPC endpoints
+PASS  the receipt's scripts and the proof manifest are served beside it
+PASS  GET /relay/v1/status reaches the worker's relay (relayer and escrow of this deployment)
+PASS  the relay refuses to send the buyer deposit (fund): the answer through the front is its 403
+PASS  an unauthenticated API call is refused by the API (401)
+PASS  every Node.js process of the product runs as the unprivileged user (uid 10001)
+PASS  the relayer key is an owner-only private copy outside the volume; service seeds are on the volume
+PASS  no log line contains the relayer key
+PASS  seed-demo enroll: three organisations, the evidence policy, two active services, four invitations
+PASS  seed-demo enroll again creates nothing and shows no secret
+PASS  a person outside the container accepts an invitation with their own key through the public port
+PASS  seed-demo grant gives that person the invited role and reports the others as pending
+PASS  that person's own session now carries BUYER_APPROVER (proof-signed request through the front)
+PASS  docker stop ends the container cleanly (exit 0)
+PASS  the container restarts on the same volume with the key supplied as a secret variable
+PASS  the restart reuses the service keys and the database (no key created, same audit-export key, no migration)
+PASS  no running process of the container has the secret variable in its environment
+PASS  no log line contains the relayer key after the restart
+PASS  after the restart the organisations, the granted person and the services are still there
+PASS  the person's session from before the restart still authenticates
+
+33/33 checks passed
+exit=0

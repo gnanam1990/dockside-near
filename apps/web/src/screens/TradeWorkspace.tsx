@@ -6,7 +6,11 @@ import { AddressDisplay, IdentityList, TableScroller } from "../components/Data"
 import { Callout, FailureState, LoadingState } from "../components/States";
 import { StatusBadge } from "../components/Status";
 import { isApiIdentifier } from "../lib/api/endpoints";
-import { type BrowserExportCheck, verifySignedExportInBrowser } from "../lib/export-verify";
+import {
+  type BrowserExportCheck,
+  verifySignedExportInBrowser,
+  verifySignedReceiptInBrowser,
+} from "../lib/export-verify";
 import {
   type FunctionCall,
   type PayoutView,
@@ -385,7 +389,115 @@ function PayoutTab() {
       <PayoutSections pay={pay} />
       {/* Outside the refreshing section so the supplier's entries survive the periodic reload. */}
       <CashOut />
+      <PaymentReceiptPanel />
     </>
+  );
+}
+
+/**
+ * Signed payment receipt (M54): the server reads the contract and the journal, signs the receipt
+ * with the audit-export key and renders its PDF; this browser re-checks the signature and the PDF
+ * before offering it. The receipt page named in the statement re-checks the payment on NEAR.
+ */
+function PaymentReceiptPanel() {
+  const t = useTrade();
+  const [state, setState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    checks: BrowserExportCheck[];
+    verifyUrl: string;
+    txHash: string;
+    keyId: string;
+    fileName: string;
+  } | null>(null);
+  const [href, setHref] = useState<string | null>(null);
+  useEffect(
+    () => () => {
+      if (href) URL.revokeObjectURL(href);
+    },
+    [href],
+  );
+  const load = async () => {
+    setState("loading");
+    setError(null);
+    const [b, k] = await Promise.all([t.api.paymentReceipt(t.tradeId), t.api.auditExportKeys()]);
+    if (!b.ok || !k.ok) {
+      const f = !b.ok ? b.error : !k.ok ? k.error : null;
+      setError(
+        f?.kind === "http"
+          ? `${f.code}: ${f.message}${f.details["reason"] ? ` (${String(f.details["reason"])})` : ""}`
+          : (f?.kind ?? "unknown"),
+      );
+      return setState("failed");
+    }
+    const v = await verifySignedReceiptInBrowser(b.data, k.data.keys);
+    const st = (b.data["statement"] ?? {}) as Record<string, unknown>;
+    const release = (st["release"] ?? {}) as Record<string, unknown>;
+    const pdfMeta = (b.data["pdf"] ?? {}) as Record<string, unknown>;
+    setResult({
+      ok: v.ok,
+      checks: v.checks,
+      verifyUrl: String(st["verifyUrl"] ?? ""),
+      txHash: String(release["txHash"] ?? ""),
+      keyId: String(st["keyId"] ?? ""),
+      fileName: String(pdfMeta["fileName"] ?? `dockside-receipt-${t.tradeId}.pdf`),
+    });
+    if (v.pdf) {
+      const bytes = new Uint8Array(v.pdf.byteLength);
+      bytes.set(v.pdf);
+      setHref(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })));
+    }
+    setState("ready");
+  };
+  return (
+    <section aria-labelledby="receipt-title" data-testid="payment-receipt">
+      <h3 id="receipt-title">Payment receipt</h3>
+      <p>
+        Once the release is paid, the server reads the contract, signs a receipt with the deployment's
+        audit-export key and renders it as a PDF. Anyone can check the payment on NEAR from the receipt page
+        in their own browser, and check the saved PDF offline with <code>verify-receipt</code>.
+      </p>
+      <button type="button" className="btn" onClick={() => void load()}>
+        Prepare signed receipt
+      </button>
+      <p role="status">{state === "loading" ? "Reading the contract and signing the receipt…" : null}</p>
+      {state === "failed" ? (
+        <Callout tone="warning" icon="blocked" title="Receipt not available" headingLevel={3}>
+          <p>{error}</p>
+        </Callout>
+      ) : null}
+      {state === "ready" && result ? (
+        <div data-testid="payment-receipt-result">
+          <p data-testid="payment-receipt-verdict">
+            <strong>
+              {result.ok ? "Signature verified in this browser" : "Verification failed in this browser"}
+            </strong>
+            {` — key ${result.keyId}, release transaction ${result.txHash}.`}
+          </p>
+          <ul>
+            {result.checks.map((c) => (
+              <li key={c.id}>
+                {c.ok ? "Holds: " : "Fails: "}
+                {c.label}
+              </li>
+            ))}
+          </ul>
+          {result.ok ? (
+            <p>
+              {href ? (
+                <a className="btn" href={href} download={result.fileName}>
+                  Save signed PDF
+                </a>
+              ) : null}{" "}
+              <a className="btn" href={result.verifyUrl} target="_blank" rel="noopener noreferrer">
+                Open the receipt page (checks NEAR)
+              </a>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
