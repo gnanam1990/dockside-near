@@ -18,8 +18,8 @@
 #     -v <out dir>:/out \
 #     -e CARGO_HOME=/root/.cargo -e RUSTUP_HOME=/root/.rustup \
 #     node:22-trixie-slim@sha256:<IMAGES.trixie digest> sh /repo/scripts/sandbox/container-sandbox.sh <commit>
-# (`pnpm run contract:sandbox` builds this command.) Writes /out/sandbox-report.json and the
-# test logs.
+# (`pnpm run contract:sandbox` builds this command.) Writes /out/sandbox-report.json, the test
+# logs and /out/refusal-journey/ (run-record.json and journey.json of the refusal journey).
 set -eu
 REF="${1:?usage: container-sandbox.sh <commit>}"
 NEAR_SANDBOX_VERSION=2.14.0
@@ -73,6 +73,8 @@ export DOCKSIDE_ESCROW_WASM=/repro/dockside_escrow.wasm
 export DOCKSIDE_ESCROW_WASM_SHA256="$WANT"
 export DOCKSIDE_BUILD_MANIFEST=/repro/build-manifest.json
 export DOCKSIDE_NEAR_CLI="$TOOLS/near"
+# The refusal journey's run record and journey record (M47) are kept next to the logs.
+export DOCKSIDE_REFUSAL_RECORD_DIR=/out/refusal-journey
 set +e
 cargo test --locked >/out/sandbox-tests.log 2>&1
 SUITE=$?

@@ -1,0 +1,143 @@
+// Test tool: a local JSON-RPC server that replays the recorded real NEAR answers of
+// fixtures/proof/<network>-recording.json (see record-fixture.mjs). The unit, judge and browser
+// suites point the real verifier at it, so they need no network.
+//
+// The path selects the variant: /rpc/recorded replays the answers unchanged; every other name in
+// MUTATIONS alters exactly one recorded fact, to prove that the verifier reports a FAIL (or an
+// ERROR) when the chain disagrees with the manifest. A request that was never recorded gets a
+// JSON-RPC error, as an unreachable value should. /rpc/down answers HTTP 503.
+import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
+/** Stable key of a request: the method and its params without the block reference. */
+export function requestKey(req) {
+  const { finality: _f, block_id: _b, ...params } = req.params ?? {};
+  const sorted = Object.fromEntries(Object.entries(params).sort(([a], [b]) => (a < b ? -1 : 1)));
+  return `${req.method} ${JSON.stringify(sorted)}`;
+}
+
+const isView = (req, method) =>
+  req.method === "query" && req.params.request_type === "call_function" && req.params.method_name === method;
+const viewJson = (result) => JSON.parse(Buffer.from(result.result).toString());
+const withJson = (result, value) => ({ ...result, result: [...Buffer.from(JSON.stringify(value))] });
+const isTx = (req) => req.method === "EXPERIMENTAL_tx_status";
+
+/** name -> (request, recorded result) => result to send, or undefined to answer with an error. */
+export const MUTATIONS = {
+  recorded: (_req, result) => result,
+  // The account runs other code than the manifest says.
+  "code-hash": (req, result) =>
+    req.params?.request_type === "view_account"
+      ? { ...result, code_hash: "11111111111111111111111111111111" }
+      : result,
+  // One yoctoNEAR too much in a released bucket: conservation is broken.
+  ledger: (req, result) => {
+    if (!isView(req, "get_ledger")) return result;
+    const ledger = viewJson(result);
+    const funder = Object.values(ledger.funders)[0];
+    funder.released = (BigInt(funder.released) + 1n).toString();
+    return withJson(result, ledger);
+  },
+  // The contract reports a different minimum deposit than the manifest.
+  config: (req, result) =>
+    isView(req, "get_config") ? withJson(result, { ...viewJson(result), minDepositYocto: "1" }) : result,
+  // A journey transaction failed.
+  "tx-failed": (req, result) =>
+    isTx(req) && result.transaction.actions[0]?.FunctionCall?.method_name === "execute_release"
+      ? { ...result, status: { Failure: { ActionError: { index: 0, kind: "FunctionCallError" } } } }
+      : result,
+  // The escrow paid a different account than the contract recorded.
+  "transfer-recipient": (req, result) =>
+    isTx(req)
+      ? {
+          ...result,
+          receipts: result.receipts.map((r) =>
+            r.predecessor_id !== "system" && r.receipt?.Action?.actions?.some((a) => a.Transfer)
+              ? { ...r, receiver_id: "someone-else.testnet" }
+              : r,
+          ),
+        }
+      : result,
+  // The relayer key became a full-access key.
+  "relayer-full-access": (req, result) =>
+    req.params?.request_type === "view_access_key" ? { ...result, permission: "FullAccess" } : result,
+  // A refund intent is not in its final state.
+  "refund-state": (req, result) =>
+    isView(req, "get_refunds")
+      ? withJson(
+          result,
+          viewJson(result).map((r) => ({ ...r, state: "AUTHORIZED" })),
+        )
+      : result,
+  // The node does not know the transactions.
+  "tx-unknown": (req, result) => (isTx(req) ? undefined : result),
+};
+
+export function loadRecording(network = "testnet") {
+  return JSON.parse(readFileSync(join(ROOT, `fixtures/proof/${network}-recording.json`), "utf8"));
+}
+
+/**
+ * @param {{port?: number, recording?: object}} [options]
+ * @returns {Promise<{url: (variant?: string) => string, requests: () => number, methods: () => string[], close: () => Promise<void>}>}
+ */
+export function startReplay({ port = 0, recording = loadRecording() } = {}) {
+  let requests = 0;
+  const methods = new Set();
+  const server = createServer((req, res) => {
+    const cors = {
+      "access-control-allow-origin": "*",
+      "access-control-allow-headers": "*",
+      "access-control-allow-methods": "POST, OPTIONS",
+    };
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, cors).end();
+      return;
+    }
+    const variant = /^\/rpc\/([\w-]+)$/.exec(req.url ?? "")?.[1];
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      requests++;
+      const send = (status, body) =>
+        res.writeHead(status, { "content-type": "application/json", ...cors }).end(JSON.stringify(body));
+      if (req.method !== "POST" || variant === undefined) return send(404, { error: "not found" });
+      if (variant === "down") return send(503, { error: "unavailable" });
+      const mutate = MUTATIONS[variant];
+      if (!mutate) return send(404, { error: `unknown variant ${variant}` });
+      let rpc;
+      try {
+        rpc = JSON.parse(Buffer.concat(chunks).toString());
+      } catch {
+        return send(400, { error: "bad request" });
+      }
+      methods.add(rpc.method);
+      const recorded = recording.answers[requestKey(rpc)];
+      const result = recorded === undefined ? undefined : mutate(rpc, structuredClone(recorded));
+      if (result === undefined) {
+        return send(200, {
+          jsonrpc: "2.0",
+          id: rpc.id,
+          error: { name: "HANDLER_ERROR", cause: { name: "NOT_RECORDED" }, message: "not in the recording" },
+        });
+      }
+      send(200, { jsonrpc: "2.0", id: rpc.id, result });
+    });
+  });
+  return new Promise((ok, no) => {
+    server.once("error", no);
+    server.listen(port, "127.0.0.1", () => {
+      const actual = server.address().port;
+      ok({
+        url: (variant = "recorded") => `http://127.0.0.1:${actual}/rpc/${variant}`,
+        requests: () => requests,
+        methods: () => [...methods].sort(),
+        close: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
+}

@@ -1,0 +1,36 @@
+# Render Blueprint for the hosted Dockside demo (M55). Guide: docs/runbooks/hosted-deploy.md.
+#
+# One web service built from the Dockerfile: control API, worker and web app in one container,
+# HTTPS terminated by Render, SQLite and the evidence objects on a persistent disk. Testnet only:
+# the product refuses to start against anything but NEAR testnet and the escrow whose on-chain code
+# hash equals the manifest in the image.
+#
+# The public origin is taken from RENDER_EXTERNAL_URL, which Render sets by itself.
+# The relayer's function-call key is NOT in this file and not in the image. Render asks for
+# RELAYER_KEY_JSON_B64 when the Blueprint is created (sync: false): paste the base64 of the
+# relayer's function-call key file (guide, step 4). Alternatively leave it empty and add the key
+# file itself as a Secret File named `relayer-key.json`.
+services:
+  - type: web
+    name: dockside-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: frankfurt
+    autoDeploy: false
+    healthCheckPath: /readyz
+    # SQLite on one disk: exactly one instance. Render does not scale a service that has a disk.
+    disk:
+      name: dockside-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DOCKSIDE_ESCROW_CONTRACT_ID
+        value: gnanam1990-dock-escrow2.testnet
+      - key: DOCKSIDE_NEAR_RPC_URL
+        value: https://test.rpc.fastnear.com
+      - key: DOCKSIDE_RELAYER_ACCOUNT_ID
+        value: gnanam1990-dock-relayer.testnet
+      - key: RELAYER_KEY_JSON_B64
+        sync: false

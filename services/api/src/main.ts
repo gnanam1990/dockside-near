@@ -69,7 +69,7 @@ function chainAdapter(config: DocksideConfig) {
 }
 
 /**
- * Supplier cash-out (M52, ADR-0027): a 1Click client that can only list tokens, ask for dry quotes
+ * Supplier cash-out (M52, ADR-0028): a 1Click client that can only list tokens, ask for dry quotes
  * and read statuses, plus read-only NEAR access to reconcile a deposit. No signer is involved.
  */
 function cashOutModule(config: DocksideConfig): CashOutModule | undefined {

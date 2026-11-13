@@ -87,7 +87,7 @@ export interface AppDeps {
     readonly tx: { latestBlock(): Promise<{ height: number; hash: string }> };
   };
   /**
-   * Supplier cash-out through 1Click (M52, ADR-0027): a read-only 1Click client and read-only chain
+   * Supplier cash-out through 1Click (M52, ADR-0028): a read-only 1Click client and read-only chain
    * access. Absent: the cash-out panel reports NOT_CONFIGURED and its other routes answer
    * INVALID_STATE CASH_OUT_NOT_CONFIGURED.
    */

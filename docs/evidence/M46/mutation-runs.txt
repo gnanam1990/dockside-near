@@ -1,0 +1,31 @@
+Mutation runs (M46): each line breaks one behaviour of the implementation and reruns the M46 suites;
+the suites must go red. The implementation is restored after each run.
+
+== conservation always reported ok
+     × fails conservation when one yoctoNEAR is off, whatever the contract's own flag says 308ms
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 39 passed (40)
+
+== code hash never compared
+     × prints FAIL and exits 1 when the chain disagrees with the manifest 354ms
+     × fails the code hash row when the account runs other code 282ms
+ Test Files  2 failed | 1 passed (3)
+      Tests  2 failed | 38 passed (40)
+
+== unreadable value counted as a pass
+     × reports unreadable transactions as ERROR, never as a pass 247ms
+     × checks the downloaded contract bytes against the manifest digest 816ms
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 38 passed (40)
+
+== failed transaction accepted
+     × fails the transaction rows of a failed transaction 255ms
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 39 passed (40)
+
+== transfer cross-check skipped
+     × fails the transfer cross-check when the escrow paid someone else 263ms
+     × fails the refund rows when a refund intent is not REFUNDED 293ms
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 38 passed (40)
+

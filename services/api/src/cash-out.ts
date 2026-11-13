@@ -23,7 +23,7 @@ import { type Route, route } from "./routing.js";
 import { loadTrade, mods, must, relationsOf } from "./trades.js";
 
 /**
- * M52 supplier cash-out ("Move to another chain"), ADR-0027.
+ * M52 supplier cash-out ("Move to another chain"), ADR-0028.
  *
  * After a release the money is in the supplier's own NEAR account. These routes help the supplier
  * move it to another chain through NEAR Intents 1Click without Dockside ever holding or moving it:

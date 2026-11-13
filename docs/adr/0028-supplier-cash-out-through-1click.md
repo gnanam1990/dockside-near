@@ -1,4 +1,4 @@
-# ADR-0027 — Supplier cash-out through NEAR Intents 1Click
+# ADR-0028 — Supplier cash-out through NEAR Intents 1Click
 
 - Decision status: accepted (M52)
 - Date: 2026-11-13, Dockside build stage M52

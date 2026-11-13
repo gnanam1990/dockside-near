@@ -44,7 +44,9 @@ The default journey (`--journey paid`) is one trade: `register_trade`, `register
 at the bound supplier. Two more journeys cover the other on-chain outcomes (see "Hold and refund
 journeys" under "Run"): `--journey hold` (a deterministic-policy hold SET and RESOLVED, then `PAID`) and
 `--journey refund` (`MUTUAL_CANCEL` plus `EXCESS_FUNDING_RETURN`, then `REFUNDED` with every
-yoctoNEAR back with the buyer). The Dockside payloads (terms, policy, attestation, inspection,
+yoctoNEAR back with the buyer). A fourth, `--journey refusal` (M47, see "Refusal journey"), sends six
+calls the contract must reject, checks that each fails with its expected code and changes nothing,
+and then completes the trade to `PAID`. The Dockside payloads (terms, policy, attestation, inspection,
 holds, refund requests, intent, approval) are built and signed by `dockside-journey-mirror`
 (contract/integration/fixtures) with principal keys derived from a fresh random seed for that run;
 they are not NEAR keys. The seed is kept in the run directory (`journey-seed.json`, mode 0600) so an
@@ -115,7 +117,7 @@ rules, that the read-only checks use when the primary fails at transport level),
 `--wasm`, `--manifest`, `--amount-yocto` (default 50000000000000000000000, 0.05 NEAR), `--out`
 (default `.data/testnet-run/<network>-<UTC time>`), `--skip-deploy` (reuse an escrow that already runs
 the manifest's code), `--relayer-key-file` (reuse the key file from an earlier run),
-`--allowance` (default `1 NEAR`), `--journey <paid|hold|refund>` (default `paid`), `--excess-yocto`
+`--allowance` (default `1 NEAR`), `--journey <paid|hold|refund|refusal>` (default `paid`), `--excess-yocto`
 (refund journey, default 10000000000000000000000, 0.01 NEAR), `--no-wait` (refund journey: pause
 instead of waiting out the cooling period), `--stop-after <n>` (pause once the journey has n
 transactions on chain), `--resume <run dir>` and `--pending-tx <hash|none>` (see "Finishing a
@@ -203,9 +205,64 @@ amount plus excess and every other bucket 0; nothing released; the supplier's ba
 conservation holds. By default run-all waits the hour and prints the minutes left every five
 minutes; with `--no-wait` it pauses (exit 3) after the requests and `--resume` finishes later.
 
+### Refusal journey
+
+`--journey refusal` (M47) shows what the contract refuses. It is the hold journey with the trade
+amount paid in two deposits, and six calls placed where exactly one thing is wrong with each. Every
+one is a real transaction that reaches the escrow and fails there; none is simulated or skipped.
+
+| # | Refused call | What is wrong, and only that | Signed by | Expected failure |
+|---|---|---|---|---|
+| 1 | `fund` with half the trade amount attached | the deposit names the digest of the same terms with the payout moved to the relayer account, not the registered revision's digest | buyer (keychain) | `STALE_REVISION` |
+| 2 | `request_refund` `PARTIAL_FUNDING_RETURN` | the request is the one the funder could send from its own account at that moment (its whole PARTIAL value, initiator `FUNDER`); the relayer sends it | relayer key | `FORBIDDEN` |
+| 3 | `submit_inspection` | the inspection attestation the contract has just accepted, byte for byte: its nonce is consumed | relayer key | `NONCE_REPLAYED` |
+| 4 | `create_release_intent` | signed with the bound buyer key, but the destination (and its digest) is the relayer account, not the supplier the terms bind | relayer key | `DESTINATION_MISMATCH` |
+| 5 | `execute_release` of the real intent | the deterministic-policy hold is ACTIVE (no approval exists yet either; the contract reports the hold first: `HOLD_ACTIVE,APPROVAL_MISSING`) | relayer key | `HOLD_ACTIVE` |
+| 6 | `approve_release` | the approval the buyer would sign at that moment, signed with a run key the terms do not bind | relayer key | `SIGNATURE_INVALID` |
+
+Order on chain (17 transactions, 11 accepted and 6 refused): `register_trade`,
+`register_evidence_policy`, **1**, `fund` (first half), **2**, `fund` (second half: fully funded),
+`submit_manifest_attestation`, `submit_inspection`, **3**, `set_hold`, **4**, `create_release_intent`,
+**5**, `resolve_hold`, **6**, `approve_release`, `execute_release`: `PAID`.
+
+For each refused call run-all:
+
+1. asks the core (the mirror, on a copy of its state) before sending: it must refuse with the
+   expected code, otherwise nothing is sent (`REFUSAL_NOT_EXPECTED`);
+2. sends the transaction with near-cli-rs, which exits 1 and prints the transaction id of the
+   failed transaction;
+3. reads the transaction from the RPC: the receipt on the escrow must be a `Failure` whose panic text
+   is `DOCKSIDE:<expected code>: ...` (`REFUSAL_ACCEPTED` if it succeeded, `REFUSAL_MISMATCH` for
+   another code), and the core, given the same call at that receipt's block time, must answer with
+   the same code and the same message (`MIRROR_MISMATCH` otherwise);
+4. compares `get_trade`, `get_ledger`, `get_refunds`, `get_evidence`, `get_holds` and `get_release`
+   with their values from before the call, and with the core's views of a state that never saw the
+   call (`REFUSAL_CHANGED_STATE` if neither holds);
+5. records the transaction hash, block, expected and actual code, the full panic text and the
+   signer's balance before and after in `journey.json`, and `refused: <CODE>` on the transaction in
+   `run-record.json`.
+
+The final checks add: all six refused in order with the expected codes
+(`allRefusedWithExpectedCode`), `refusalsChangedNothing`, the deposit attached to the refused
+funding call is back with the buyer (`refusedDepositReturned`: the buyer paid only the fee), the
+relayer account, which calls 1 and 4 tried to pay, received nothing (`relayerReceivedNothing`), the
+supplier's balance rose by exactly the trade amount over the whole run, the buyer's ledger shows
+funded = released = the trade amount, and the hold and release checks of the hold journey.
+
+Half of `--amount-yocto` must be at least the contract's minimum deposit (0.001 NEAR by default);
+run-all refuses a smaller amount before the first call. `--stop-after` counts refused transactions
+too, and `--resume` settles a refused call that was in flight from the chain (it must be the failed
+transaction with the expected code) instead of sending it twice. Like the hold journey, the trade
+must reach `approve_release` within the manifest attestation's one-hour validity.
+
+What it does not show: the refusals are the six above, sent by one operator with seed-derived keys;
+a refusal is evidence about the deployed contract, not about the API, the UI or separately enrolled
+people. More rejection cases run in the host and sandbox suites (docs/status/M47.md lists where).
+
 Cost on testnet: the buyer pays the trade amount (returned by the refund journey, paid to the
 supplier by the others) plus fees; each relayed call draws about 0.01 NEAR (100 Tgas at testnet's
-minimum gas price) from the relayer key's 1 NEAR allowance (paid 7 calls, hold 9, refund 6).
+minimum gas price) from the relayer key's 1 NEAR allowance (paid 7 calls, hold 9, refund 6,
+refusal 14, of which 5 fail and cost less).
 
 #### Owner commands (PowerShell, testnet escrow2)
 
@@ -223,6 +280,12 @@ Refund journey (waits about one hour for the cooling period):
 
 ```powershell
 $env:DOCKSIDE_ESCROW_ACCOUNT="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_BUYER_ACCOUNT="gnanam1990-dock-buyer.testnet"; $env:DOCKSIDE_SUPPLIER_ACCOUNT="gnanam1990-dock-supplier.testnet"; $env:DOCKSIDE_RELAYER_ACCOUNT="gnanam1990-dock-relayer.testnet"; powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet --skip-deploy --relayer-key-file "$HOME\.near-credentials\testnet\gnanam1990-dock-relayer.testnet\ed25519_4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf.json" --journey refund
+```
+
+Refusal journey (about two minutes; the relayer key file argument is the one in the two commands above):
+
+```powershell
+$env:DOCKSIDE_ESCROW_ACCOUNT="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_BUYER_ACCOUNT="gnanam1990-dock-buyer.testnet"; $env:DOCKSIDE_SUPPLIER_ACCOUNT="gnanam1990-dock-supplier.testnet"; $env:DOCKSIDE_RELAYER_ACCOUNT="gnanam1990-dock-relayer.testnet"; powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet --rpc-url https://test.rpc.fastnear.com --skip-deploy --relayer-key-file "<relayer key file>" --journey refusal
 ```
 
 Add `--no-wait` to stop after the two requests instead; then, an hour or more later (or after any
@@ -294,6 +357,18 @@ intents TIMELOCKED, the test moves the sandbox clock one hour on (on testnet the
 waits one real hour instead) and `--resume` finishes it: both `REFUNDED`, the buyer's ledger
 `funded` = `refunded`, every other bucket 0, the supplier's balance unchanged; a second journey
 in the same directory is refused (`RUN_EXISTS`).
+
+The refusal journey (M47) has its own test in the same file, on its own node and accounts: one
+`run-all --network sandbox --journey refusal` deploys, adds the relayer key and runs the journey;
+the test then reads all 17 transactions back from the node with `EXPERIMENTAL_tx_status` (curl, not
+run-all's reader) and requires the six refused ones to be failed transactions whose escrow receipt
+panicked with the expected `DOCKSIDE:<CODE>:`, the replayed inspection to carry the same argument
+bytes as the accepted one, the refused intent to name the relayer and the accepted one the
+supplier, no refund intent, no intent naming the relayer, the supplier's balance up by exactly the
+trade amount and the buyer out the trade amount plus fees only. A second refusal journey is stopped
+after its fifth transaction (`--stop-after 5`, trade half funded) and finished with `--resume`; an
+amount too small for two deposits is refused before any call. The same sequence also runs on the
+host core without a chain in `contract/integration/fixtures/tests/m47_refusal_journey.rs`.
 
 `contract/integration/sandbox-tests/tests/run_all_on_sandbox.rs`, run by `pnpm run contract:sandbox`
 (scripts/sandbox/container-sandbox.sh, `node:22-trixie-slim`), plays the user's part on a local

@@ -134,7 +134,7 @@ const schema = z
     /** Transaction validity period of the chain in blocks (NEAR testnet: 86400). */
     DOCKSIDE_TX_VALIDITY_BLOCKS: z.coerce.number().int().min(10).max(1_000_000).default(86_400),
     DOCKSIDE_WORKER_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(2_000),
-    /* ---------------- supplier cash-out through 1Click (M52, ADR-0027) ---------------- */
+    /* ---------------- supplier cash-out through 1Click (M52, ADR-0028) ---------------- */
     /**
      * Origin of the NEAR Intents 1Click service the API asks for token lists, `dry: true` quotes and
      * statuses. Unset: the cash-out panel reports NOT_CONFIGURED. https, or http on a loopback host

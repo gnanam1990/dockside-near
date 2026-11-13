@@ -1,0 +1,17 @@
+M47 refusal journey: records of the near-sandbox validation (pnpm run contract:sandbox, container
+node:22-trixie-slim, near-sandbox 2.14.0, near-cli-rs 0.31.1). Nothing here comes from NEAR testnet or mainnet.
+
+sandbox-report.json          the suite's report: commit under test, wasm SHA-256 (the deployable wasm, rebuilt from
+                             that commit inside the container and equal to the manifest's), tool pins, results
+sandbox-tests-summary.txt    the "test ..." and "test result" lines of the suite's log (17 passed, the 2 run-all
+                             validations are the ignored ones, run separately)
+run-all-validation.txt       the log of the two run-all validations (both passed)
+refusal-journey-sandbox/     run-record.json and journey.json of the first refusal journey of that run, copied
+                             unchanged: every transaction hash, the six refused calls with expected and actual code,
+                             the full panic text, block hash and time, the signer's balance before and after, the
+                             final ledger, release and holds views and the checks
+
+The transaction and block hashes in refusal-journey-sandbox/ belong to a throwaway local node that existed only for
+the test; they cannot be looked up anywhere. The accounts (no-escrow.testnet and so on) are sandbox accounts, not
+testnet accounts. No key file, no journey key-seed file and no args/ directory was copied; the signatures in journey.json
+were made with keys derived from that run's discarded seed.
