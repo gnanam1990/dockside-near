@@ -54,7 +54,7 @@ function tool(args: string[]) {
 
 describe("journey plans", () => {
   it("paid is the unchanged eight-transaction release", () => {
-    expect(j.JOURNEYS).toEqual(["paid", "hold", "refund"]);
+    expect(j.JOURNEYS.slice(0, 3)).toEqual(["paid", "hold", "refund"]);
     expect(j.planMethods("paid").map((s) => s.what)).toEqual([
       "register",
       "policy",

@@ -11,6 +11,9 @@
 //           request_refund EXCESS_FUNDING_RETURN (the buyer's own account) -> one-hour cooling
 //           on chain time -> authorize_refund and execute_refund for both -> REFUNDED, every
 //           yoctoNEAR back with the buyer
+//   refusal six calls the contract must reject, each sent as a real transaction that must fail
+//           with its expected DOCKSIDE code and change nothing (REFUSALS below), placed along one
+//           trade that then completes: the hold journey with the trade amount in two deposits
 //
 // With a NEP-141 trade asset (`--asset usdc --token <id>`, M50) the same journeys run in the token:
 // `fund` is the buyer's own `ft_transfer_call` on the token contract (the escrow's `ft_on_transfer`
@@ -43,7 +46,7 @@ import {
 import { DEFAULT_EXCESS_UNITS, DEFAULT_EXCESS_YOCTO } from "./plan.mjs";
 
 const HOUR = 3_600_000;
-export const JOURNEYS = ["paid", "hold", "refund"];
+export const JOURNEYS = ["paid", "hold", "refund", "refusal"];
 /** Excess the refund journey deposits on top of the trade amount (0.01 NEAR, or 1 USDC). */
 export { DEFAULT_EXCESS_YOCTO };
 export const SEED_FILE = "journey-seed.json";
@@ -58,6 +61,66 @@ const MAX_WAIT_MS = 2 * HOUR;
  */
 const intentOf = (done) => done.find((s) => s.step === "intent")?.returned?.releaseIntentId;
 const refundOf = (label) => (done) => done.find((s) => s.step === `refund:${label}`)?.returned;
+
+/**
+ * The calls the refusal journey sends that the contract must reject, in journey order. Each is
+ * built so that only the named thing is wrong:
+ *
+ * - fund_wrong_terms: the buyer's own deposit, naming the digest of the same terms with the payout
+ *   moved to the relayer account instead of the registered revision's digest;
+ * - relayer_refund: the PARTIAL_FUNDING_RETURN request the funder could send from its own account
+ *   at that moment (its whole PARTIAL value), sent by the relayer;
+ * - replayed_nonce: the inspection attestation the contract has just accepted, byte for byte;
+ * - payout_redirect: a release intent signed with the bound buyer key that names the relayer
+ *   account (and that account's digest) as the destination;
+ * - release_while_held: `execute_release` of the real intent while the deterministic-policy hold
+ *   is ACTIVE (no approval exists yet either; the contract reports the hold first);
+ * - unbound_approval: the approval the buyer would sign at that moment, signed with a run key the
+ *   terms do not bind.
+ */
+export const REFUSALS = [
+  {
+    id: "refuse:fund_wrong_terms",
+    method: "fund",
+    expect: "STALE_REVISION",
+    title: "funding with a wrong terms digest",
+  },
+  {
+    id: "refuse:relayer_refund",
+    method: "request_refund",
+    expect: "FORBIDDEN",
+    title: "a relayer attempting a funder-only refund",
+  },
+  {
+    id: "refuse:replayed_nonce",
+    method: "submit_inspection",
+    expect: "NONCE_REPLAYED",
+    title: "a replayed nonce (the accepted inspection sent again)",
+  },
+  {
+    id: "refuse:payout_redirect",
+    method: "create_release_intent",
+    expect: "DESTINATION_MISMATCH",
+    title: "payout redirected to an unbound account",
+  },
+  {
+    id: "refuse:release_while_held",
+    method: "execute_release",
+    expect: "HOLD_ACTIVE",
+    title: "release while a hold is active",
+  },
+  {
+    id: "refuse:unbound_approval",
+    method: "approve_release",
+    expect: "SIGNATURE_INVALID",
+    title: "approval signed by an unbound key",
+  },
+];
+const refusal = (name, step) => {
+  const r = REFUSALS.find((x) => x.id === `refuse:${name}`);
+  return { id: r.id, kind: "refuse", expect: r.expect, ...step };
+};
+
 const PLANS = {
   paid: [
     { id: "register", what: "register" },
@@ -93,7 +156,77 @@ const PLANS = {
     { id: "authorize:excess", what: "authorize_refund", extra: (d) => ({ refundId: refundOf("excess")(d) }) },
     { id: "execute:excess", what: "execute_refund", extra: (d) => ({ refundId: refundOf("excess")(d) }) },
   ],
+  refusal: [
+    { id: "register", what: "register" },
+    { id: "policy", what: "policy" },
+    refusal("fund_wrong_terms", {
+      what: "fund_other_terms",
+      extra: (_d, p, a) => ({ redirect: a.relayer, depositYocto: String(p.first) }),
+    }),
+    { id: "fund:1", what: "fund", extra: (_d, p) => ({ depositYocto: String(p.first) }) },
+    refusal("relayer_refund", { what: "refund_partial", label: "refused", as: "relayer" }),
+    { id: "fund:2", what: "fund", extra: (_d, p) => ({ depositYocto: String(p.rest) }) },
+    { id: "attestation", what: "attestation" },
+    { id: "inspection", what: "inspection" },
+    refusal("replayed_nonce", { replay: "inspection" }),
+    { id: "hold_set", what: "hold_set", extra: () => ({ hold: "h1", issuer: "POLICY_SETTER" }) },
+    refusal("payout_redirect", {
+      what: "intent",
+      label: "redirect",
+      extra: (_d, _p, a) => ({ destination: a.relayer }),
+    }),
+    { id: "intent", what: "intent" },
+    { id: "observe:held", kind: "observe" },
+    refusal("release_while_held", { what: "execute_release", extra: (d) => ({ intentId: intentOf(d) }) }),
+    { id: "hold_resolve", what: "hold_resolve", extra: () => ({ hold: "h1", code: "RELEASE_HOLD" }) },
+    refusal("unbound_approval", {
+      what: "approval",
+      label: "unbound",
+      extra: (d) => ({ intentId: intentOf(d), signKey: "intruder" }),
+    }),
+    { id: "approval", what: "approval", extra: (d) => ({ intentId: intentOf(d) }) },
+    { id: "execute_release", what: "execute_release", extra: (d) => ({ intentId: intentOf(d) }) },
+  ],
 };
+
+/** The views a refused call must leave exactly as they were. */
+const TRADE_VIEWS = ["get_trade", "get_ledger", "get_refunds", "get_evidence", "get_holds", "get_release"];
+
+/**
+ * The contract's own refusal in a failed receipt status: the wrapper panics with
+ * `DOCKSIDE:<CODE>: <message>`. `code` is null for a success or any other failure.
+ */
+export function contractRefusal(status) {
+  const failure = status && typeof status === "object" ? status.Failure : undefined;
+  const text = failure?.ActionError?.kind?.FunctionCallError?.ExecutionError;
+  if (typeof text !== "string")
+    return { code: null, message: null, error: JSON.stringify(failure ?? status ?? null) };
+  const m = /DOCKSIDE:([A-Z0-9_]+): (.*)$/s.exec(text);
+  return { code: m ? m[1] : null, message: m ? m[2] : null, error: text };
+}
+
+/**
+ * The escrow's refusal of a NEP-141 funding. That call does not fail: `ft_on_transfer` returns the
+ * whole amount to the token contract and logs why (`nep141_funding_returned`). `code` is null
+ * when the receipt logged no such event.
+ */
+export function fundingRefusal(logs) {
+  for (const line of logs ?? []) {
+    if (typeof line !== "string" || !line.startsWith("EVENT_JSON:")) continue;
+    try {
+      const e = JSON.parse(line.slice("EVENT_JSON:".length));
+      if (e?.standard === "dockside" && e.event === "nep141_funding_returned")
+        return {
+          code: e.data?.code ?? null,
+          message: e.data?.message ?? null,
+          amount: e.data?.amount ?? null,
+        };
+    } catch {
+      // not an event of ours
+    }
+  }
+  return { code: null, message: null, amount: null };
+}
 
 /**
  * The steps of `journey` for `asset`. A NEP-141 release first confirms the payee's registration
@@ -192,6 +325,8 @@ function loadState(outDir) {
 export async function runJourney(o) {
   const { rpc, profile, accounts, near, relayerKeyFile, mirrorBin, outDir, log } = o;
   mkdirSync(join(outDir, "args"), { recursive: true });
+  // The contract's network label; a profile without one is the testnet label.
+  const contractNetwork = profile.contractNetwork ?? "near-testnet";
   let seed;
   if (o.resume) {
     seed = readSeed(outDir);
@@ -205,6 +340,15 @@ export async function runJourney(o) {
   } else {
     planMethods(o.journey);
     const token = o.asset?.kind === "nep141";
+    // The refusal journey funds in two deposits; each must be one the contract accepts.
+    const minDeposit = BigInt(
+      (token ? o.config?.minDepositNep141 : (o.config?.minDepositYocto ?? o.minDepositYocto)) ?? 0,
+    );
+    if (o.journey === "refusal" && BigInt(o.amountYocto) / 2n < minDeposit)
+      throw new ToolError(
+        "USAGE",
+        `the refusal journey funds the trade in two deposits; half of the trade amount is below the contract's minimum deposit ${minDeposit}`,
+      );
     const t0 = await rpc.blockTimeMs();
     seed = {
       schema: "dockside/journey-seed@1",
@@ -222,7 +366,8 @@ export async function runJourney(o) {
           ? (o.excessYocto ?? (token ? DEFAULT_EXCESS_UNITS : DEFAULT_EXCESS_YOCTO))
           : 0n,
       ),
-      contractNetwork: profile.contractNetwork,
+      contractNetwork: contractNetwork,
+      minDepositYocto: o.config?.minDepositYocto ?? o.minDepositYocto ?? null,
       asset: token ? { kind: "nep141", token: o.asset.token } : { kind: "near", token: null },
     };
     writeSeed(outDir, seed);
@@ -230,13 +375,15 @@ export async function runJourney(o) {
   const journey = seed.journey;
   const asset = seed.asset ?? { kind: "near", token: null };
   const tokenId = asset.kind === "nep141" ? asset.token.accountId : null;
-  if ((seed.contractNetwork ?? "near-testnet") !== profile.contractNetwork)
+  if ((seed.contractNetwork ?? "near-testnet") !== contractNetwork)
     throw new ToolError(
       "RESUME_MISMATCH",
-      `the run's contract label is ${seed.contractNetwork ?? "near-testnet"}, this invocation uses ${profile.contractNetwork}`,
+      `the run's contract label is ${seed.contractNetwork ?? "near-testnet"}, this invocation uses ${contractNetwork}`,
     );
   const plan = planMethods(journey, asset);
-  const params = { amount: BigInt(seed.amountYocto), excess: BigInt(seed.excessYocto) };
+  const amount = BigInt(seed.amountYocto);
+  // `first` and `rest`: the two deposits of the refusal journey.
+  const params = { amount, excess: BigInt(seed.excessYocto), first: amount / 2n, rest: amount - amount / 2n };
   /** What `account` holds of the trade asset, in base units. */
   const balanceOf = async (account) =>
     tokenId ? await rpc.ftBalance(tokenId, account) : (await rpc.viewAccount(account)).amount;
@@ -268,6 +415,7 @@ export async function runJourney(o) {
     if (state.steps.length > 0) log(`${state.steps.length} completed step(s) replayed`);
     if (state.supplierStartYocto === undefined) {
       state.supplierStartYocto = await balanceOf(accounts.supplier);
+      state.relayerStartYocto = await balanceOf(accounts.relayer);
       save();
     }
 
@@ -297,7 +445,10 @@ export async function runJourney(o) {
             `--pending-tx ${txHash} is not ${p.method} with the arguments in ${p.argsFile}, signed by ${p.signer}`,
           );
         const main = tx.receipts_outcome.find((x) => x.outcome.executor_id === accounts.escrow);
-        if (main && !isFailure(main.outcome.status)) {
+        if (main && p.refuse) {
+          log(`settling ${p.method} ${txHash} sent before the interruption (must be refused)`);
+          await finalizeRefusal(p, txHash, tx);
+        } else if (main && !isFailure(main.outcome.status)) {
           log(`settling ${p.method} ${txHash} sent before the interruption`);
           await finalize(p, txHash, tx);
         } else {
@@ -503,48 +654,23 @@ export async function runJourney(o) {
         log(`cooling period over at chain time ${new Date(now).toISOString()}`);
         continue;
       }
-      await submit(s);
+      if (s.kind === "refuse") await refuse(s);
+      else await submit(s);
     }
 
-    async function submit(s) {
-      const now = await rpc.blockTimeMs();
-      const extra = s.extra ? s.extra(state.steps, params) : {};
-      const b = await mirror.must({ op: "build", what: s.what, now, label: s.label ?? "j", ...extra });
-      const argsFile = join(outDir, "args", `${state.steps.length + 1}-${b.method}.json`);
-      writeFileSync(argsFile, JSON.stringify(b.args));
-      const signer = b.signer === "funder" ? accounts.buyer : accounts.relayer;
+    /** One call through near-cli-rs, signed by the buyer's keychain key or the relayer key file. */
+    async function send(b, who) {
+      const signer = who === "funder" ? accounts.buyer : accounts.relayer;
       const signing =
-        b.signer === "funder" ? ["sign-with-keychain"] : ["sign-with-access-key-file", relayerKeyFile];
-      const payee = { execute_release: accounts.supplier, execute_refund: accounts.buyer }[b.method];
-      // A token funding is sent to the token contract; everything else to the escrow.
-      const toToken = b.receiver === "token";
-      if (toToken && b.token !== tokenId)
-        throw new ToolError(
-          "MIRROR_MISMATCH",
-          `the mirror funds through ${b.token}, the run uses ${tokenId}`,
-        );
-      const receiver = toToken ? tokenId : accounts.escrow;
-      state.pending = {
-        step: s.id,
-        method: b.method,
-        args: b.args,
-        deposit: b.deposit,
-        signer,
-        receiver,
-        ...(toToken ? { onEscrow: b.onEscrow } : {}),
-        argsFile,
-        startedAt: new Date().toISOString(),
-        ...(payee ? { payee, payeeBeforeYocto: await balanceOf(payee) } : {}),
-      };
-      save();
+        who === "funder" ? ["sign-with-keychain"] : ["sign-with-access-key-file", relayerKeyFile];
       const r = await near([
         "contract",
         "call-function",
         "as-transaction",
-        receiver,
+        state.pending.receiver ?? accounts.escrow,
         b.method,
         "file-args",
-        argsFile,
+        state.pending.argsFile,
         "prepaid-gas",
         "100.0 Tgas",
         "attached-deposit",
@@ -571,6 +697,260 @@ export async function runJourney(o) {
           `${b.method}: ${describeNearFailure(r)}\n${tail(r.clean ?? "")}`,
         );
       }
+      return r;
+    }
+
+    /**
+     * A token funding is the funder's `ft_transfer_call` on the token contract; what the escrow
+     * runs (and the mirror replays) is the `ft_on_transfer` the token delivers. Everything else
+     * is a call on the escrow itself.
+     */
+    function tokenCall(b) {
+      if (b.receiver !== "token") return { receiver: accounts.escrow };
+      if (b.token !== tokenId)
+        throw new ToolError(
+          "MIRROR_MISMATCH",
+          `the mirror funds through ${b.token}, the run uses ${tokenId}`,
+        );
+      return { receiver: tokenId, onEscrow: b.onEscrow };
+    }
+
+    function argsFileFor(method) {
+      return join(outDir, "args", `${state.steps.length + 1}-${method}.json`);
+    }
+
+    async function tradeViews() {
+      const out = {};
+      for (const v of TRADE_VIEWS) out[v] = await rpc.view(accounts.escrow, v, { trade_id: tradeId });
+      return out;
+    }
+
+    /** Every trade view of the contract equals the core's view of the mirror, which never applied a refused call. */
+    async function viewsEqualCore() {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        // Views read the clock; a second pass covers a block boundary between the two reads.
+        const now = await rpc.blockTimeMs();
+        let same = true;
+        for (const v of TRADE_VIEWS) {
+          const chain = await rpc.view(accounts.escrow, v, { trade_id: tradeId });
+          const host = (await mirror.must({ op: "view", method: v, args: { trade_id: tradeId }, now })).value;
+          same = same && sameJson(chain, host);
+        }
+        if (same) return true;
+      }
+      return false;
+    }
+
+    /**
+     * A call the contract must reject. The core must refuse it with the expected code before it
+     * is sent; it is then sent as a real transaction, which must fail on the escrow with that
+     * code and the core's exact message, and leave every view of the trade as it was.
+     */
+    async function refuse(s) {
+      const now = await rpc.blockTimeMs();
+      let b;
+      if (s.replay) {
+        const src = state.steps.find((x) => x.step === s.replay && x.txHash && !x.refused);
+        if (!src) throw new ToolError("JOURNEY_FAILED", `${s.id}: step ${s.replay} is not recorded`);
+        const sent = src.mirror[0];
+        b = {
+          method: sent.method,
+          args: sent.args,
+          deposit: sent.deposit ?? "0",
+          signer: src.signer === accounts.buyer ? "funder" : "relayer",
+        };
+      } else {
+        const extra = s.extra ? s.extra(state.steps, params, accounts) : {};
+        b = await mirror.must({ op: "build", what: s.what, now, label: s.label ?? "j", ...extra });
+      }
+      const who = s.as ?? b.signer;
+      const signer = who === "funder" ? accounts.buyer : accounts.relayer;
+      const target = tokenCall(b);
+      if (target.onEscrow) {
+        // The escrow refuses a token funding by returning the whole amount to the token contract:
+        // the core must return it all, for the expected reason, before anything is sent.
+        const pre = await mirror.send({
+          op: "probe",
+          method: target.onEscrow.method,
+          args: target.onEscrow.args,
+          now,
+          predecessor: tokenId,
+          deposit: "0",
+        });
+        if (!pre.ok || pre.value !== target.onEscrow.args.amount || pre.refusal?.code !== s.expect)
+          throw new ToolError(
+            "REFUSAL_NOT_EXPECTED",
+            `${s.id}: the core answers ${pre.ok ? (pre.refusal?.code ?? "accepted") : pre.code} to ${b.method}, not ${s.expect}; nothing was sent`,
+          );
+      } else {
+        const call = { method: b.method, args: b.args, predecessor: signer, deposit: b.deposit };
+        const pre = await mirror.send({ op: "probe", ...call, now });
+        if (pre.ok || pre.code !== s.expect)
+          throw new ToolError(
+            "REFUSAL_NOT_EXPECTED",
+            `${s.id}: the core answers ${pre.ok ? "accepted" : pre.code} to ${b.method}, not ${s.expect}; nothing was sent`,
+          );
+      }
+      const argsFile = argsFileFor(b.method);
+      writeFileSync(argsFile, JSON.stringify(b.args));
+      state.pending = {
+        step: s.id,
+        refuse: s.expect,
+        method: b.method,
+        args: b.args,
+        deposit: b.deposit,
+        signer,
+        ...target,
+        argsFile,
+        startedAt: new Date().toISOString(),
+        before: await tradeViews(),
+        // A refused token funding is measured in the token (the units must all come back); every
+        // other refused call in the signer's NEAR (it pays the fee only).
+        signerBeforeYocto: target.onEscrow ? await balanceOf(signer) : (await rpc.viewAccount(signer)).amount,
+      };
+      save();
+      const r = await send(b, who);
+      return finalizeRefusal(state.pending, r.txHash, await rpc.txStatus(r.txHash, signer));
+    }
+
+    async function finalizeRefusal(p, txHash, tx) {
+      const onEscrow = tx.receipts_outcome.filter((x) => x.outcome.executor_id === accounts.escrow);
+      const main = onEscrow[0];
+      if (!main) throw new ToolError("SUBMIT_FAILED", `${p.method}: no receipt ran on the escrow`);
+      let got;
+      if (p.onEscrow) {
+        // A token funding: the escrow's `ft_on_transfer` must hand the whole amount back and log
+        // the reason, and the token must report that the escrow used none of it.
+        const amount = p.onEscrow.args.amount;
+        const returned = isFailure(main.outcome.status) ? null : successValue(main.outcome.status);
+        const event = fundingRefusal(main.outcome.logs);
+        const used = successValue(tx.status);
+        if (returned !== amount || used !== "0")
+          throw new ToolError(
+            "REFUSAL_ACCEPTED",
+            `${p.step}: ${p.method} ${txHash} had to be returned whole (${p.refuse}); the escrow returned ${returned} of ${amount} units and the token reports ${used} used`,
+          );
+        got = {
+          code: event.code,
+          message: event.message,
+          error: `returned ${returned} units: ${event.code}: ${event.message}`,
+          returnedUnits: returned,
+        };
+      } else {
+        if (!isFailure(main.outcome.status))
+          throw new ToolError(
+            "REFUSAL_ACCEPTED",
+            `${p.step}: ${p.method} ${txHash} had to be refused with ${p.refuse} and the contract accepted it`,
+          );
+        got = contractRefusal(main.outcome.status);
+      }
+      if (got.code !== p.refuse)
+        throw new ToolError(
+          "REFUSAL_MISMATCH",
+          `${p.step}: ${p.method} ${txHash} expected ${p.refuse}, the contract answered ${got.error}`,
+        );
+      if (onEscrow.length !== 1)
+        throw new ToolError(
+          "REFUSAL_MISMATCH",
+          `${p.step}: ${txHash} ran ${onEscrow.length} receipts on the escrow`,
+        );
+      // The same call on the core, at the block time the contract saw: same code, same message.
+      const at = await rpc.blockTimeMs(main.block_hash);
+      const host = p.onEscrow
+        ? await mirror.send({
+            op: "probe",
+            method: p.onEscrow.method,
+            args: p.onEscrow.args,
+            now: at,
+            predecessor: p.receiver,
+            deposit: "0",
+          })
+        : await mirror.send({
+            op: "probe",
+            method: p.method,
+            args: p.args,
+            now: at,
+            predecessor: p.signer,
+            deposit: p.deposit,
+          });
+      // A returned token funding is an accepted call whose reason is in `refusal`.
+      const hostRefusal = p.onEscrow ? (host.ok ? host.refusal : null) : host.ok ? null : host;
+      if (!hostRefusal || hostRefusal.code !== got.code || hostRefusal.message !== got.message)
+        throw new ToolError(
+          "MIRROR_MISMATCH",
+          `${p.step}: chain answered ${got.error}, the core ${hostRefusal ? `${hostRefusal.code}: ${hostRefusal.message}` : "accepted"}`,
+        );
+      const signerAfterYocto = p.onEscrow
+        ? await balanceOf(p.signer)
+        : (await rpc.viewAccount(p.signer)).amount;
+      if (p.onEscrow && signerAfterYocto !== p.signerBeforeYocto)
+        throw new ToolError(
+          "REFUSAL_CHANGED_STATE",
+          `${p.step}: ${p.signer} held ${p.signerBeforeYocto} token units before the returned funding ${txHash} and ${signerAfterYocto} after`,
+        );
+      await compareViews(rpc, mirror, accounts, tradeId, at, outDir, `${p.method} (refused)`);
+      const after = await tradeViews();
+      const sameAsBefore = sameJson(p.before, after);
+      const equalCore = await viewsEqualCore();
+      // `before` can be hours old when an interrupted run is settled; the core's views decide then.
+      if (!sameAsBefore && !equalCore) {
+        writeFileSync(
+          join(outDir, "mismatch.json"),
+          JSON.stringify({ after: `${p.method} (refused)`, before: p.before, now: after }, null, 2),
+        );
+        throw new ToolError(
+          "REFUSAL_CHANGED_STATE",
+          `${p.step}: the trade's views differ after the refused ${p.method} ${txHash} (see mismatch.json)`,
+        );
+      }
+      state.steps.push({
+        step: p.step,
+        method: p.method,
+        signer: p.signer,
+        txHash,
+        blockHash: main.block_hash,
+        blockTimeMs: at,
+        refused: {
+          expected: p.refuse,
+          code: got.code,
+          message: got.message,
+          error: got.error,
+          ...(p.onEscrow ? { returnedUnits: got.returnedUnits } : {}),
+        },
+        stateUnchanged: true,
+        viewsSameAsBefore: sameAsBefore,
+        viewsEqualCore: equalCore,
+        // For a token funding: the token units sent and the funder's token balances around it.
+        depositYocto: p.onEscrow ? p.onEscrow.args.amount : p.deposit,
+        signerBeforeYocto: p.signerBeforeYocto,
+        signerAfterYocto,
+      });
+      state.pending = null;
+      save();
+      log(`${p.method.padEnd(28)} ${txHash} REFUSED ${got.code}`);
+    }
+
+    async function submit(s) {
+      const now = await rpc.blockTimeMs();
+      const extra = s.extra ? s.extra(state.steps, params, accounts) : {};
+      const b = await mirror.must({ op: "build", what: s.what, now, label: s.label ?? "j", ...extra });
+      const argsFile = argsFileFor(b.method);
+      writeFileSync(argsFile, JSON.stringify(b.args));
+      const signer = b.signer === "funder" ? accounts.buyer : accounts.relayer;
+      const payee = { execute_release: accounts.supplier, execute_refund: accounts.buyer }[b.method];
+      state.pending = {
+        step: s.id,
+        method: b.method,
+        args: b.args,
+        deposit: b.deposit,
+        signer,
+        ...tokenCall(b),
+        argsFile,
+        startedAt: new Date().toISOString(),
+        ...(payee ? { payee, payeeBeforeYocto: await balanceOf(payee) } : {}),
+      };
+      save();
+      const r = await send(b, b.signer);
       const tx = await rpc.txStatus(r.txHash, signer);
       if (r.status !== 0) {
         const main = tx.receipts_outcome.find((x) => x.outcome.executor_id === accounts.escrow);
@@ -627,7 +1007,8 @@ async function compareViews(rpc, mirror, accounts, tradeId, at, outDir, what) {
 const big = (x) => BigInt(x ?? 0);
 
 async function checks({ rpc, accounts, journey, tradeId, state, params, balanceOf }) {
-  const steps = state.steps.filter((s) => s.txHash);
+  // Accepted transactions; the refusal journey's refused ones are checked on their own below.
+  const steps = state.steps.filter((s) => s.txHash && !s.refused);
   const ledger = await rpc.view(accounts.escrow, "get_ledger", { trade_id: tradeId });
   const intentId = steps.find((s) => s.step === "intent")?.returned?.releaseIntentId ?? null;
   const base = { journey, tradeId, releaseIntentId: intentId, steps: state.steps, ledger };
@@ -688,7 +1069,7 @@ async function checks({ rpc, accounts, journey, tradeId, state, params, balanceO
   };
   let ok = c.settledTrue && c.releasePaid && c.supplierReceivedExactAmount && c.ledgerConservation;
   const out = { ...base, release };
-  if (journey === "hold") {
+  if (journey === "hold" || journey === "refusal") {
     const holds = await rpc.view(accounts.escrow, "get_holds", { trade_id: tradeId });
     const held = state.observed["observe:held"] ?? {};
     const h = holds[0] ?? {};
@@ -699,6 +1080,57 @@ async function checks({ rpc, accounts, journey, tradeId, state, params, balanceO
     c.deterministicPolicyHold = h.issuerRole === "POLICY_SETTER" && typeof h.ruleId === "string";
     ok = ok && c.holdWasActive && c.releaseBlockedByHold && c.holdResolved && c.deterministicPolicyHold;
     out.holds = holds;
+  }
+  if (journey === "refusal") {
+    const refused = state.steps.filter((s) => s.refused);
+    c.refusals = refused.map((s) => ({
+      step: s.step,
+      what: REFUSALS.find((r) => r.id === s.step)?.title ?? null,
+      method: s.method,
+      signer: s.signer,
+      expected: s.refused.expected,
+      code: s.refused.code,
+      message: s.refused.message,
+      txHash: s.txHash,
+      stateUnchanged: s.stateUnchanged === true,
+    }));
+    // A token trade is funded through the token's `ft_transfer_call`, not the escrow's `fund`.
+    const token = ledger.asset?.kind === "NEP141";
+    const methodOf = (r) => (token && r.method === "fund" ? "ft_transfer_call" : r.method);
+    c.allRefusedWithExpectedCode =
+      refused.length === REFUSALS.length &&
+      REFUSALS.every(
+        (r, i) =>
+          refused[i].step === r.id &&
+          refused[i].method === methodOf(r) &&
+          refused[i].refused.code === r.expect,
+      );
+    c.refusalsChangedNothing = refused.length > 0 && refused.every((s) => s.stateUnchanged === true);
+    // The deposit attached to the refused funding call is back with the buyer (it paid the fee only).
+    // (For a token trade the balances are token units, and every unit must be back.)
+    const fund = refused.find((s) => s.step === "refuse:fund_wrong_terms");
+    c.refusedDepositReturned =
+      !!fund &&
+      big(fund.depositYocto) > 0n &&
+      (token
+        ? fund.signerBeforeYocto === fund.signerAfterYocto && fund.refused.returnedUnits === fund.depositYocto
+        : big(fund.signerBeforeYocto) - big(fund.signerAfterYocto) < big(fund.depositYocto));
+    // Nothing reached the account the redirected calls named, and the supplier got the amount once.
+    c.relayerReceivedNothing = big(await balanceOf(accounts.relayer)) <= big(state.relayerStartYocto);
+    c.supplierTotalDeltaYocto = (
+      big(await balanceOf(accounts.supplier)) - big(state.supplierStartYocto)
+    ).toString();
+    const buyer = ledger.funders[accounts.buyer] ?? {};
+    c.fundedExactlyTheTradeAmount =
+      big(buyer.funded) === params.amount && big(buyer.released) === params.amount;
+    ok =
+      ok &&
+      c.allRefusedWithExpectedCode &&
+      c.refusalsChangedNothing &&
+      c.refusedDepositReturned &&
+      c.relayerReceivedNothing &&
+      big(c.supplierTotalDeltaYocto) === params.amount &&
+      c.fundedExactlyTheTradeAmount;
   }
   return { ok, ...out, checks: c };
 }

@@ -1,0 +1,27 @@
+{
+  "schema": "dockside/proof-sources@1",
+  "networks": {
+    "testnet": {
+      "label": "NEAR testnet",
+      "rpc": ["https://test.rpc.fastnear.com", "https://archival-rpc.testnet.fastnear.com"],
+      "explorer": {
+        "tx": "https://testnet.nearblocks.io/txns/{hash}",
+        "account": "https://testnet.nearblocks.io/address/{account}"
+      },
+      "runs": [
+        "docs/evidence/M34/run-testnet-20261113T022714Z/run-record.json",
+        "docs/evidence/M44/run-hold-testnet-20261113T040345Z/run-record.json",
+        "docs/evidence/M44/run-refund-testnet-20261113T041648Z/run-record.json"
+      ]
+    },
+    "mainnet": {
+      "label": "NEAR mainnet",
+      "rpc": ["https://rpc.mainnet.fastnear.com", "https://archival-rpc.mainnet.fastnear.com"],
+      "explorer": {
+        "tx": "https://nearblocks.io/txns/{hash}",
+        "account": "https://nearblocks.io/address/{account}"
+      },
+      "runs": []
+    }
+  }
+}

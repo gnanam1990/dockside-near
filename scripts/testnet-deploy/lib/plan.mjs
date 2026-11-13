@@ -200,6 +200,13 @@ export function valuePlan({
       amount: "0 NEAR attached; gas only",
     });
   const deposit = amounts.amount + amounts.excess;
+  if (journey === "refusal")
+    rows.push({
+      what: "refused funding attempt with a wrong terms digest (must come back whole)",
+      from: accounts.buyer,
+      to: accounts.buyer,
+      amount: `${show(amounts.amount / 2n)}, returned by the ${token ? "token contract" : "failed call"}`,
+    });
   rows.push({
     what: token ? "fund the trade (ft_transfer_call on the token)" : "fund the trade",
     from: accounts.buyer,
@@ -221,7 +228,7 @@ export function valuePlan({
     });
   } else {
     rows.push({
-      what: journey === "hold" ? "release after the hold is resolved" : "release",
+      what: journey === "paid" ? "release" : "release after the hold is resolved",
       from: accounts.escrow,
       to: accounts.supplier,
       amount: show(amounts.amount),

@@ -1,0 +1,256 @@
+{
+  "schema": "dockside/testnet-run@1",
+  "network": "sandbox",
+  "scriptCommit": "05222602ffa7aca26396eb10dde0f1a0781e75f7",
+  "artifact": {
+    "bytes": 812902,
+    "sha256": "5d0d8a777e85a8ef823a583bf4b8e8813518b5ceb133016b46604d440cb3a3fb",
+    "nearCodeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
+    "commit": "4ff233b6ae6c895f362a09db67307a6c24feee62",
+    "platform": "linux-x64"
+  },
+  "deployTx": "BedHZjgnEALfZrRV9t3YDDt23umJbUz9WRyP8LyYSY1Z",
+  "deployment": {
+    "contractId": "no-escrow.testnet",
+    "onChainCodeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
+    "match": true,
+    "blockHeight": 116,
+    "config": {
+      "network": "near-testnet",
+      "minDepositYocto": "1000000000000000000000",
+      "trades": 0,
+      "unexpectedAssets": 0,
+      "refundPolicy": {
+        "id": "dockside-refund-v1",
+        "revision": 1
+      }
+    }
+  },
+  "relayer": {
+    "relayer": "no-relayer.testnet",
+    "publicKey": "ed25519:G5koNnPA2gfQaVrRuXnxNthv65yD44e26qXKLiRF4cp1",
+    "receiverId": "no-escrow.testnet",
+    "methodNames": [],
+    "allowance": "1000000000000000000000000"
+  },
+  "journey": {
+    "kind": "refusal",
+    "ok": true,
+    "tradeId": "trd_b4d367419e5c66a8c5be34c38ff572f6",
+    "releaseIntentId": "rli_e3767018906d8dcbc87a2bed823da691",
+    "checks": {
+      "settledTrue": true,
+      "releasePaid": true,
+      "supplierDeltaYocto": "50000000000000000000000",
+      "supplierReceivedExactAmount": true,
+      "ledgerConservation": true,
+      "releasedTotal": "50000000000000000000000",
+      "holdWasActive": true,
+      "releaseBlockedByHold": true,
+      "holdSetBy": "POLICY_SETTER (doc-mismatch@1)",
+      "holdResolved": true,
+      "deterministicPolicyHold": true,
+      "refusals": [
+        {
+          "step": "refuse:fund_wrong_terms",
+          "what": "funding with a wrong terms digest",
+          "method": "fund",
+          "signer": "no-buyer.testnet",
+          "expected": "STALE_REVISION",
+          "code": "STALE_REVISION",
+          "message": "deposit names another trade revision digest",
+          "txHash": "6HEEAqx88jyLkZSgcuk2tyu1DywVcxZzhm81AMsggQHd",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:relayer_refund",
+          "what": "a relayer attempting a funder-only refund",
+          "method": "request_refund",
+          "signer": "no-relayer.testnet",
+          "expected": "FORBIDDEN",
+          "code": "FORBIDDEN",
+          "message": "caller is not the original funder",
+          "txHash": "AxFGtZFGZFSd33VgRNXBTzAaAPLfSNmRN2fh95cvVhN2",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:replayed_nonce",
+          "what": "a replayed nonce (the accepted inspection sent again)",
+          "method": "submit_inspection",
+          "signer": "no-relayer.testnet",
+          "expected": "NONCE_REPLAYED",
+          "code": "NONCE_REPLAYED",
+          "message": "nonce already consumed",
+          "txHash": "Bne1Yb5unarYKtFuTHJLvVKDmxc33Y7idS8bz9UYjd3Y",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:payout_redirect",
+          "what": "payout redirected to an unbound account",
+          "method": "create_release_intent",
+          "signer": "no-relayer.testnet",
+          "expected": "DESTINATION_MISMATCH",
+          "code": "DESTINATION_MISMATCH",
+          "message": "intent destination is not the revision-bound destination",
+          "txHash": "FyMZw6wpyd89k1TC9S1M7k4ges5hf5MaX9AT1n7Dsh9L",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:release_while_held",
+          "what": "release while a hold is active",
+          "method": "execute_release",
+          "signer": "no-relayer.testnet",
+          "expected": "HOLD_ACTIVE",
+          "code": "HOLD_ACTIVE",
+          "message": "release conjunction incomplete: HOLD_ACTIVE,APPROVAL_MISSING",
+          "txHash": "3suNNR223YFCAwy6oFUXa5nNNrD2FpMp5Axt6Pq5xV9D",
+          "stateUnchanged": true
+        },
+        {
+          "step": "refuse:unbound_approval",
+          "what": "approval signed by an unbound key",
+          "method": "approve_release",
+          "signer": "no-relayer.testnet",
+          "expected": "SIGNATURE_INVALID",
+          "code": "SIGNATURE_INVALID",
+          "message": "signature does not verify for the bound key and domain",
+          "txHash": "89aubVbaKrciAkHc6oYsmhHDSrX7mJACbj8mcVqjGDne",
+          "stateUnchanged": true
+        }
+      ],
+      "allRefusedWithExpectedCode": true,
+      "refusalsChangedNothing": true,
+      "refusedDepositReturned": true,
+      "relayerReceivedNothing": true,
+      "supplierTotalDeltaYocto": "50000000000000000000000",
+      "fundedExactlyTheTradeAmount": true
+    },
+    "transactions": [
+      {
+        "step": "register",
+        "method": "register_trade",
+        "signer": "no-relayer.testnet",
+        "txHash": "B1CSeTvu3b9UNW6zEvb3bcQt2tus8VHdJGTRFsevZjNn",
+        "blockTimeMs": 1794563759931
+      },
+      {
+        "step": "policy",
+        "method": "register_evidence_policy",
+        "signer": "no-relayer.testnet",
+        "txHash": "2hHkSiVDs5DBuBokXihKUQE6E8WHr3XihhZUWPMLCSZK",
+        "blockTimeMs": 1794563761160
+      },
+      {
+        "step": "refuse:fund_wrong_terms",
+        "method": "fund",
+        "signer": "no-buyer.testnet",
+        "txHash": "6HEEAqx88jyLkZSgcuk2tyu1DywVcxZzhm81AMsggQHd",
+        "blockTimeMs": 1794563763407,
+        "refused": "STALE_REVISION"
+      },
+      {
+        "step": "fund:1",
+        "method": "fund",
+        "signer": "no-buyer.testnet",
+        "txHash": "AP1McoLFjafcvJPGfhJvUnSHNyv7Wvwh94YcacVS4QtD",
+        "blockTimeMs": 1794563765656
+      },
+      {
+        "step": "refuse:relayer_refund",
+        "method": "request_refund",
+        "signer": "no-relayer.testnet",
+        "txHash": "AxFGtZFGZFSd33VgRNXBTzAaAPLfSNmRN2fh95cvVhN2",
+        "blockTimeMs": 1794563766874,
+        "refused": "FORBIDDEN"
+      },
+      {
+        "step": "fund:2",
+        "method": "fund",
+        "signer": "no-buyer.testnet",
+        "txHash": "B7Wdpuf1wd4gTxD5y1GNsccgk42mNh6b73z1QPLUMw7n",
+        "blockTimeMs": 1794563769118
+      },
+      {
+        "step": "attestation",
+        "method": "submit_manifest_attestation",
+        "signer": "no-relayer.testnet",
+        "txHash": "6DcTxAyapEThDz5MHVz59aqE4fXnSxaVHBy5fNxyyJ8X",
+        "blockTimeMs": 1794563770342
+      },
+      {
+        "step": "inspection",
+        "method": "submit_inspection",
+        "signer": "no-relayer.testnet",
+        "txHash": "4mWUE9GRktKxFd69XtCoKKKrdWm1RT26MsqR5MCniMU5",
+        "blockTimeMs": 1794563771569
+      },
+      {
+        "step": "refuse:replayed_nonce",
+        "method": "submit_inspection",
+        "signer": "no-relayer.testnet",
+        "txHash": "Bne1Yb5unarYKtFuTHJLvVKDmxc33Y7idS8bz9UYjd3Y",
+        "blockTimeMs": 1794563772796,
+        "refused": "NONCE_REPLAYED"
+      },
+      {
+        "step": "hold_set",
+        "method": "set_hold",
+        "signer": "no-relayer.testnet",
+        "txHash": "9FGSX3jSXgANAdp48aSKxbQH5LtnyYdwBCtAtEYaA9pT",
+        "blockTimeMs": 1794563774022
+      },
+      {
+        "step": "refuse:payout_redirect",
+        "method": "create_release_intent",
+        "signer": "no-relayer.testnet",
+        "txHash": "FyMZw6wpyd89k1TC9S1M7k4ges5hf5MaX9AT1n7Dsh9L",
+        "blockTimeMs": 1794563775251,
+        "refused": "DESTINATION_MISMATCH"
+      },
+      {
+        "step": "intent",
+        "method": "create_release_intent",
+        "signer": "no-relayer.testnet",
+        "txHash": "6NPaoNYzHPQiF6fJqmk7Q1NrbPfZ64RjBrXZwTWXzHaN",
+        "blockTimeMs": 1794563776476
+      },
+      {
+        "step": "refuse:release_while_held",
+        "method": "execute_release",
+        "signer": "no-relayer.testnet",
+        "txHash": "3suNNR223YFCAwy6oFUXa5nNNrD2FpMp5Axt6Pq5xV9D",
+        "blockTimeMs": 1794563777704,
+        "refused": "HOLD_ACTIVE"
+      },
+      {
+        "step": "hold_resolve",
+        "method": "resolve_hold",
+        "signer": "no-relayer.testnet",
+        "txHash": "9j7vDW2UdYBfZkj7iP9A7iw7sqoBBV2Xjq25sjEMhCeH",
+        "blockTimeMs": 1794563778937
+      },
+      {
+        "step": "refuse:unbound_approval",
+        "method": "approve_release",
+        "signer": "no-relayer.testnet",
+        "txHash": "89aubVbaKrciAkHc6oYsmhHDSrX7mJACbj8mcVqjGDne",
+        "blockTimeMs": 1794563780165,
+        "refused": "SIGNATURE_INVALID"
+      },
+      {
+        "step": "approval",
+        "method": "approve_release",
+        "signer": "no-relayer.testnet",
+        "txHash": "HiemVe9sYQk2zErJNoFqZC2K4E6aqsM98q8r4EZzQYq5",
+        "blockTimeMs": 1794563781393
+      },
+      {
+        "step": "execute_release",
+        "method": "execute_release",
+        "signer": "no-relayer.testnet",
+        "txHash": "41wkKSxzDQkLPSHSudxdChXiMLEoVD9zCcvrSPmmpe4e",
+        "blockTimeMs": 1794563782626
+      }
+    ]
+  }
+}

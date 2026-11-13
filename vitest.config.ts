@@ -15,6 +15,7 @@ export default defineConfig({
       "@dockside/journal": src("./packages/journal/src/index.ts"),
       "@dockside/payout": src("./packages/payout/src/index.ts"),
       "@dockside/worker": src("./services/worker/src/index.ts"),
+      "@dockside/hosted": src("./services/hosted/src/index.ts"),
       "@dockside/api": src("./services/api/src/app.ts"),
     },
   },

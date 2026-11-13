@@ -16,12 +16,18 @@
 //!     hold_set ("hold", "issuer" POLICY_SETTER|RISK_RESOLVER, "ttlMs") |
 //!     hold_resolve ("hold", "code") | refund_mutual_cancel | refund_excess |
 //!     authorize_refund ("refundId") | execute_refund ("refundId")
+//!   and, for the refusal journey (calls the contract must reject):
+//!     fund_other_terms ("redirect": the deposit names the digest of the same terms paying that
+//!     account; "depositYocto") | refund_partial (the funder's PARTIAL_FUNDING_RETURN request) |
+//!     intent with "destination" (a buyer-signed intent paying that account) |
+//!     approval with "signKey" (the approval signed with that run key instead of the bound one)
 //!   The response names the method, its arguments, the attached deposit and who signs it:
 //!   "signer":"funder" (the buyer's own account, the recorded funder) or "relayer". For a NEP-141
 //!   trade `fund` is the funder's `ft_transfer_call` on the token contract ("receiver":"token",
 //!   one yoctoNEAR attached); "onEscrow" is then the `ft_on_transfer` the token delivers to the
 //!   escrow, which is what the mirror replays.
 //!   {"op":"apply","method":"<m>","args":{...},"now":<ms>,"predecessor":"<acct>","deposit":"<u128>","promiseOk":<bool|null>}
+//!   {"op":"probe", ...as apply}   the outcome `apply` would have, on a copy: nothing is recorded
 //!   {"op":"view","method":"<get_*>","args":{...},"now":<ms>}
 //! Responses: {"ok":true,...} or {"ok":false,"code":"<CODE>","message":"..."}.
 
@@ -136,10 +142,40 @@ fn build(st: &State, req: &J) -> Result<J, String> {
             }
         }
         "payee_storage" => ("check_payee_storage", check_payee_args(rec()?), 0),
+        // The trade's own id with the digest of terms that pay `redirect`: not the registered revision.
+        "fund_other_terms" => {
+            let deposit = match req.get("depositYocto") {
+                None | Some(J::Null) => st.fx.amount_yocto,
+                _ => yocto(req, "depositYocto")?,
+            };
+            rec()?;
+            let digest = redirected_terms_digest(&st.fx, &text(req, "redirect")?);
+            match &st.fx.token {
+                None => ("fund", fund_args(&t, &digest), deposit),
+                // The same wrong digest in the `msg` of the funder's `ft_transfer_call`: the escrow
+                // refuses the funding and the token returns the whole amount.
+                Some(_) => {
+                    let msg = funding_msg(&t, &digest);
+                    on_escrow = json!({
+                        "method": "ft_on_transfer",
+                        "args": { "sender_id": buyer, "amount": deposit.to_string(), "msg": msg },
+                    });
+                    let args = json!({ "receiver_id": st.fx.accounts.contract, "amount": deposit.to_string(), "memo": null, "msg": msg });
+                    ("ft_transfer_call", args, 1)
+                }
+            }
+        }
         "attestation" => ("submit_manifest_attestation", attestation_args(&st.fx, rec()?, next_manifest_revision(rec()?), now, &label), 0),
         "inspection" => ("submit_inspection", inspection_args(&st.fx, rec()?, "PASS", now, &label), 0),
-        "intent" => ("create_release_intent", intent_args(&st.fx, rec()?, now, &label), 0),
-        "approval" => ("approve_release", approval_args(&st.fx, rec()?, &text(req, "intentId")?, now, &label), 0),
+        "intent" => {
+            let r = rec()?;
+            let dest = text(req, "destination").unwrap_or_else(|_| r.terms.payout_destination.clone());
+            ("create_release_intent", intent_args_to(&st.fx, r, now, &label, &dest), 0)
+        }
+        "approval" => {
+            let key = text(req, "signKey").unwrap_or_else(|_| "buyer".into());
+            ("approve_release", approval_args_signed_by(&st.fx, rec()?, &text(req, "intentId")?, now, &label, &key), 0)
+        }
         "execute_release" => ("execute_release", execute_release_args(rec()?, &text(req, "intentId")?), 0),
         "hold_set" => {
             let issuer = text(req, "issuer").unwrap_or_else(|_| "POLICY_SETTER".into());
@@ -162,11 +198,18 @@ fn build(st: &State, req: &J) -> Result<J, String> {
             let p = refund_request(&st.fx, r, &label, "EXCESS_FUNDING_RETURN", &buyer, amount, "QUARANTINED", "FUNDER", now);
             ("request_refund", request_refund_args(&st.fx, r, &p, &[]), 0)
         }
+        // PARTIAL_FUNDING_RETURN of the buyer's PARTIAL value: only the funder's own account may send it.
+        "refund_partial" => {
+            let r = rec()?;
+            let p = partial_return_request(&st.fx, r, &label, &buyer, now);
+            ("request_refund", request_refund_args(&st.fx, r, &p, &[]), 0)
+        }
         "authorize_refund" => ("authorize_refund", refund_op_args(rec()?, &text(req, "refundId")?), 0),
         "execute_refund" => ("execute_refund", refund_op_args(rec()?, &text(req, "refundId")?), 0),
         other => return Err(format!("unknown payload {other}")),
     };
-    let signer = if what == "fund" || what == "refund_excess" { "funder" } else { "relayer" };
+    let own = ["fund", "fund_other_terms", "refund_excess", "refund_partial"];
+    let signer = if own.contains(&what.as_str()) { "funder" } else { "relayer" };
     let receiver = if method == "ft_transfer_call" { "token" } else { "escrow" };
     Ok(json!({
         "ok": true, "method": method, "args": args, "deposit": deposit.to_string(), "tradeId": t, "signer": signer,
@@ -191,7 +234,7 @@ fn handle(state: &mut Option<State>, req: &J) -> J {
     let Some(st) = state.as_mut() else { return fail("init first".into()) };
     match op {
         "build" => build(st, req).unwrap_or_else(fail),
-        "apply" => {
+        "apply" | "probe" => {
             let (Ok(method), Ok(pred)) = (text(req, "method"), text(req, "predecessor")) else {
                 return fail("apply needs method and predecessor".into());
             };
@@ -203,7 +246,15 @@ fn handle(state: &mut Option<State>, req: &J) -> J {
             let args = req.get("args").unwrap_or(&J::Null);
             // A refused NEP-141 funding is a successful call that returns the amount; say why.
             let refusal = if method == "ft_on_transfer" { st.mirror.funding_refusal(args, call) } else { None };
-            match st.mirror.apply(&method, args, call) {
+            // A probe runs on a copy: the mirror keeps only what the chain accepted.
+            let mut copy;
+            let target = if op == "probe" {
+                copy = st.mirror.clone();
+                &mut copy
+            } else {
+                &mut st.mirror
+            };
+            match target.apply(&method, args, call) {
                 Ok(v) => json!({ "ok": true, "value": v, "refusal": refusal.map(|e| json!({ "code": e.code, "message": e.message })) }),
                 Err(e) => json!({ "ok": false, "code": e.code, "message": e.message }),
             }
