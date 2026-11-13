@@ -1,0 +1,10 @@
+{
+  "schema": "dockside/run-params@1",
+  "network": "testnet",
+  "rpcUrl": "https://rpc.testnet.near.org",
+  "journey": "hold",
+  "amountYocto": "50000000000000000000000",
+  "wasm": "<repo>/.data/repro/dockside_escrow.wasm",
+  "manifest": "<repo>/.data/repro/build-manifest.json",
+  "relayerKeyFile": "<home>/.near-credentials/testnet/gnanam1990-dock-relayer.testnet/ed25519_4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf.json"
+}

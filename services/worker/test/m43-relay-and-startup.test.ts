@@ -141,7 +141,7 @@ describe("M43 worker startup is fail-closed", () => {
       DOCKSIDE_RELAYER_ACCOUNT_ID: "relayer.testnet",
       DOCKSIDE_RELAYER_KEY_FILE: join(dir, "absent-key.json"),
       DOCKSIDE_ESCROW_CONTRACT_ID: ESCROW,
-      DOCKSIDE_NEAR_RPC_URL: "https://rpc.testnet.near.org",
+      DOCKSIDE_NEAR_RPC_URL: "https://test.rpc.fastnear.com",
     });
     expect(noManifest.status).toBe(78);
     expect(noManifest.out).toContain('"event":"worker.refused"');

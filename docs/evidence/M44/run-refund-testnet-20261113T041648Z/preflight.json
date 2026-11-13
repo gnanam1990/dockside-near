@@ -1,0 +1,19 @@
+{
+  "network": "testnet",
+  "rpcUrl": "https://test.rpc.fastnear.com",
+  "journey": "refund",
+  "depositYocto": "60000000000000000000000",
+  "accounts": {
+    "escrow": "gnanam1990-dock-escrow2.testnet",
+    "buyer": "gnanam1990-dock-buyer.testnet",
+    "supplier": "gnanam1990-dock-supplier.testnet",
+    "relayer": "gnanam1990-dock-relayer.testnet"
+  },
+  "escrowCodeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
+  "balancesYocto": {
+    "escrow": "9993933895369290800000000",
+    "buyer": "9798724110977981900000000",
+    "supplier": "10150000000000000000000000",
+    "relayer": "9984337228446037100000000"
+  }
+}

@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { win32 } from "node:path";
 
-export const TESTNET_RPC_DEFAULT = "https://rpc.testnet.near.org";
+export const TESTNET_RPC_DEFAULT = "https://test.rpc.fastnear.com";
 export const SANDBOX_RPC_DEFAULT = "http://127.0.0.1:4521";
 /** Contract `new` accepts only this corridor label, on testnet and on the local sandbox alike. */
 export const CONTRACT_NETWORK = "near-testnet";

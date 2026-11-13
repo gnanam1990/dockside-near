@@ -167,7 +167,7 @@ The worker (`services/worker`) exits with code 78 and `RELAYER_SIGNER_NOT_PROVIS
    a `DOCKSIDE_*` variable. Load it only in the worker process. The function-call key `run-all` created is a
    near-cli-rs key file; move it into your custody or create a new one.
 4. Change `services/worker/src/main.ts` to build `WorkerLoop` with that signer, `JsonRpcNearClient` pointed at
-   `https://rpc.testnet.near.org` and `txValidityBlocks: 86400`.
+   `https://test.rpc.fastnear.com` and `txValidityBlocks: 86400`.
 5. Add a test that the worker still refuses to start when the signer is absent.
 
 One relayer key serves the outbox and asset-recovery engines through the `withRelayerKey` lease (M15); more
@@ -188,7 +188,7 @@ DOCKSIDE_OBJECT_STORE_DIR=<private dir>/objects \
 DOCKSIDE_AUDIT_EXPORT_KEY_FILE=<private dir>/audit-export.seed \
 DOCKSIDE_ORIGIN=https://<your web origin> \
 DOCKSIDE_ESCROW_CONTRACT_ID=<escrow>.testnet \
-DOCKSIDE_NEAR_RPC_URL=https://rpc.testnet.near.org \
+DOCKSIDE_NEAR_RPC_URL=https://test.rpc.fastnear.com \
 DOCKSIDE_RATE_LIMIT_UNAUTH_PER_MIN=60 \
 pnpm run api
 ```

@@ -77,7 +77,7 @@ Each prints a public key; keep the two service public keys for step 2.
 The shared profile (run it at the top of each terminal):
 
 ```powershell
-$D = "$HOME\dockside-testnet"; $env:DOCKSIDE_DB_PATH="$D\dockside.sqlite"; $env:DOCKSIDE_OBJECT_STORE_DIR="$D\objects"; $env:DOCKSIDE_ORIGIN="http://127.0.0.1:4391"; $env:DOCKSIDE_NETWORK="near-testnet"; $env:DOCKSIDE_ESCROW_CONTRACT_ID="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_NEAR_RPC_URL="https://rpc.testnet.near.org"; $env:DOCKSIDE_NEAR_CHAIN_ID="testnet"; $env:DOCKSIDE_ESCROW_MANIFEST="docs\evidence\M34\run-testnet-20261113T022714Z\artifact.json"
+$D = "$HOME\dockside-testnet"; $env:DOCKSIDE_DB_PATH="$D\dockside.sqlite"; $env:DOCKSIDE_OBJECT_STORE_DIR="$D\objects"; $env:DOCKSIDE_ORIGIN="http://127.0.0.1:4391"; $env:DOCKSIDE_NETWORK="near-testnet"; $env:DOCKSIDE_ESCROW_CONTRACT_ID="gnanam1990-dock-escrow2.testnet"; $env:DOCKSIDE_NEAR_RPC_URL="https://test.rpc.fastnear.com"; $env:DOCKSIDE_NEAR_CHAIN_ID="testnet"; $env:DOCKSIDE_ESCROW_MANIFEST="docs\evidence\M34\run-testnet-20261113T022714Z\artifact.json"
 ```
 
 Terminal 1, API (port 8787):

@@ -52,7 +52,7 @@ const bytes = (v: unknown) => [...Buffer.from(JSON.stringify(v))];
 
 describe("JsonRpcNearClient", () => {
   it("refuses endpoints outside the allowlist, plain http off loopback and embedded credentials", () => {
-    expect(() => client({ allowedHosts: ["rpc.testnet.near.org"] })).toThrow(
+    expect(() => client({ allowedHosts: ["test.rpc.fastnear.com"] })).toThrow(
       expect.objectContaining({ code: "WRONG_ORIGIN" }),
     );
     expect(
