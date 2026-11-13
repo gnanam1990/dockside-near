@@ -91,6 +91,14 @@ pub fn terms(fx: &Fixture) -> J {
     ])
 }
 
+/// Digest of terms that differ from the run's revision 1 only in the payout destination: terms
+/// the parties did not sign and the contract never registered (M47 refusal journey).
+pub fn redirected_terms_digest(fx: &Fixture, destination: &str) -> String {
+    let mut t = terms(fx);
+    set(&mut t, &["payout", "destination"], s(destination));
+    digest_hex("dockside/trade-revision", &t)
+}
+
 /// `register_trade` arguments: terms plus both party signatures over the revision digest.
 pub fn register_args(fx: &Fixture) -> J {
     let t = terms(fx);
@@ -384,6 +392,12 @@ pub fn inspection_args(fx: &Fixture, rec: &TradeRecord, decision: &str, now: u64
 
 /// `create_release_intent` arguments locking the current available slices.
 pub fn intent_args(fx: &Fixture, rec: &TradeRecord, now: u64, n: &str) -> J {
+    intent_args_to(fx, rec, now, n, &rec.terms.payout_destination)
+}
+
+/// A buyer-signed release intent that names `destination` (and its digest) as the payout. Any
+/// destination but the revision-bound one must be refused (M47 refusal journey).
+pub fn intent_args_to(fx: &Fixture, rec: &TradeRecord, now: u64, n: &str, destination: &str) -> J {
     let slices = rec.ledger.available_slices();
     let p = with_header(
         rec,
@@ -393,8 +407,8 @@ pub fn intent_args(fx: &Fixture, rec: &TradeRecord, now: u64, n: &str) -> J {
             ("releaseIntentId", s(&fx.id("rli", n))),
             ("amountYocto", big(rec.terms.amount_yocto)),
             ("executionProfile", s("DIRECT_TESTNET")),
-            ("destination", s(&rec.terms.payout_destination)),
-            ("destinationDigest", s(&destination_digest(NETWORK, &rec.terms.payout_destination).expect("destination"))),
+            ("destination", s(destination)),
+            ("destinationDigest", s(&destination_digest(NETWORK, destination).expect("destination"))),
             ("sourceBucketDigest", s(&source_bucket_digest(&slices).expect("slices"))),
             ("intentExpiresAt", u(now + 3 * DAY)),
             ("signerRole", s("BUYER_APPROVER")),
@@ -408,6 +422,12 @@ pub fn intent_args(fx: &Fixture, rec: &TradeRecord, now: u64, n: &str) -> J {
 
 /// `approve_release` arguments bound to the intent, current manifest, inspection and holds view.
 pub fn approval_args(fx: &Fixture, rec: &TradeRecord, intent_id: &str, now: u64, n: &str) -> J {
+    approval_args_signed_by(fx, rec, intent_id, now, n, "buyer")
+}
+
+/// The same approval payload signed with the run key `key_label`. Only `buyer` is the key the
+/// terms bind to the approver role; any other label is an unbound key (M47 refusal journey).
+pub fn approval_args_signed_by(fx: &Fixture, rec: &TradeRecord, intent_id: &str, now: u64, n: &str, key_label: &str) -> J {
     let i = &rec.release.intents[intent_id];
     let m = rec.evidence.current.as_ref();
     let ins = rec.evidence.inspection.as_ref();
@@ -433,7 +453,7 @@ pub fn approval_args(fx: &Fixture, rec: &TradeRecord, intent_id: &str, now: u64,
             ("nonce", s(&fx.nonce(&format!("approval/{n}")))),
         ],
     );
-    json!({ "trade_id": rec.terms.trade_id, "signature": fx.sign("buyer", "dockside/buyer-approval", &p), "payload": p })
+    json!({ "trade_id": rec.terms.trade_id, "signature": fx.sign(key_label, "dockside/buyer-approval", &p), "payload": p })
 }
 
 pub fn execute_release_args(rec: &TradeRecord, intent_id: &str) -> J {
@@ -578,6 +598,13 @@ pub fn refund_request(fx: &Fixture, rec: &TradeRecord, label: &str, reason: &str
             ("nonce", s(&fx.nonce(&format!("refund/{label}")))),
         ],
     )
+}
+
+/// The PARTIAL_FUNDING_RETURN request `funder` may send from its own account while the trade is
+/// not fully funded: its whole PARTIAL bucket, initiator `FUNDER`, no party signature.
+pub fn partial_return_request(fx: &Fixture, rec: &TradeRecord, label: &str, funder: &str, now: u64) -> J {
+    let amount = rec.ledger.funder(funder).partial;
+    refund_request(fx, rec, label, "PARTIAL_FUNDING_RETURN", funder, amount, "PARTIAL", "FUNDER", now)
 }
 
 /// `request_refund` arguments. Party signatures are added for the roles named in `signers`.
