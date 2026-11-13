@@ -162,16 +162,19 @@ function formatUnits(v: string, decimals: number): string {
   return `${s.slice(0, s.length - decimals)}${frac ? `.${frac}` : ""}`;
 }
 
-/** Does this transaction, signed by the supplier, carry exactly the quoted `ft_transfer`? */
-function isQuotedTransfer(
+/**
+ * The receipt of this transaction that carries exactly the quoted `ft_transfer` from the supplier,
+ * as its own execution status; ABSENT when there is none, null when the node returned no receipts.
+ */
+function quotedTransfer(
   o: Extract<TxOutcome, { receipts: unknown }>,
   supplier: string,
   token: string,
   depositAddress: string,
   amount: string,
-): boolean | null {
+): "SUCCESS" | "FAILURE" | "PENDING" | "ABSENT" | null {
   if (o.receipts === null) return null;
-  return o.receipts.some(
+  const hit = o.receipts.find(
     (rc) =>
       rc.predecessorId === supplier &&
       rc.receiverId === token &&
@@ -185,6 +188,7 @@ function isQuotedTransfer(
         }
       }),
   );
+  return hit ? hit.status : "ABSENT";
 }
 
 /**
@@ -221,11 +225,18 @@ async function observeDeposit(
     }
     if (tx.kind === "NOT_FOUND") return obs({ kind: "NOT_FOUND" });
     if (tx.kind === "EXECUTING") return obs({ kind: "EXECUTING" });
-    const quoted = isQuotedTransfer(tx, supplier, token, depositAddress, amount);
+    const quoted = quotedTransfer(tx, supplier, token, depositAddress, amount);
     if (quoted === null)
       return obs({ kind: "UNREADABLE", why: "the node returned no receipts for the transaction" });
-    if (!quoted) return obs({ kind: "DIFFERENT_TRANSACTION" });
-    if (tx.kind === "FINAL_SUCCESS") return obs({ kind: "CONFIRMED" });
+    if (quoted === "ABSENT") return obs({ kind: "DIFFERENT_TRANSACTION" });
+    if (quoted === "PENDING") return obs({ kind: "EXECUTING" });
+    if (quoted === "SUCCESS")
+      return obs(
+        tx.kind === "FINAL_SUCCESS"
+          ? { kind: "CONFIRMED" }
+          : { kind: "UNREADABLE", why: "the transaction failed but its transfer receipt reads successful" },
+      );
+    // The transfer receipt itself failed: nothing moved in it. The balance read below still decides.
   }
   // From here a deposit could be allowed (nothing named, or the named transfer failed), so the
   // deposit address itself must be read and must hold none of the token.
