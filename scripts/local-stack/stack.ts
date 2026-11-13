@@ -70,7 +70,7 @@ import {
   NearTxClient,
   Nep141Reader,
 } from "@dockside/near";
-import { BlockedOneClickAdapter } from "@dockside/payout";
+import { BlockedOneClickAdapter, OneClickClient } from "@dockside/payout";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
 import { WorkerLoop } from "@dockside/worker";
@@ -83,6 +83,11 @@ const API_PORT = Number(env["DOCKSIDE_STACK_API_PORT"] ?? 8791);
 const CONTROL_PORT = Number(env["DOCKSIDE_STACK_CONTROL_PORT"] ?? 8792);
 const ORIGIN = env["DOCKSIDE_ORIGIN"] ?? "http://127.0.0.1:4391";
 const HOST = "127.0.0.1";
+/**
+ * Optional loopback 1Click simulator for the supplier cash-out panel (M52). When set, the API gets a
+ * read-only 1Click client pointed at it and the simulated supplier account holds simulated tokens.
+ */
+const ONE_CLICK_URL = env["DOCKSIDE_STACK_ONE_CLICK_URL"];
 
 export const CONTRACT = "dockside-escrow.testnet";
 export const BUYER_ACCT = "acme-buyer.testnet";
@@ -255,6 +260,7 @@ async function main(): Promise<void> {
   const token = new SimFungibleToken(TOKEN);
   token.mint(TOKEN_SENDER, 1_000_000_000_000n);
   token.register(CLAIMANT);
+  if (ONE_CLICK_URL) token.mint(SUPPLIER_ACCT, 50_000_000n);
   token.register(CONTRACT);
   sim.externals.set(TOKEN, token);
   if (!sim.call("new", { network: "near-testnet", min_deposit_yocto: null }, { predecessor: CONTRACT }).ok)
@@ -282,6 +288,10 @@ async function main(): Promise<void> {
     DOCKSIDE_ESCROW_CONTRACT_ID: CONTRACT,
     DOCKSIDE_NEAR_RPC_URL: rpcUrl,
     DOCKSIDE_OBJECT_STORE_DIR: join(dir, "objects"),
+    // A loopback simulator stands in for 1Click and "settles" on this simulated chain.
+    ...(ONE_CLICK_URL
+      ? { DOCKSIDE_ONE_CLICK_URL: ONE_CLICK_URL, DOCKSIDE_ONE_CLICK_NEAR_NETWORK: "near-testnet" }
+      : {}),
     ...(env["DOCKSIDE_RECOVERY_DELAY_MS"] === undefined
       ? {}
       : { DOCKSIDE_RECOVERY_DELAY_MS: env["DOCKSIDE_RECOVERY_DELAY_MS"] }),
@@ -528,6 +538,17 @@ async function main(): Promise<void> {
         chain: { rpc: rpc(), tx: new NearTxClient(rpc()) },
         exportSigner,
         oneClick: new BlockedOneClickAdapter(),
+        // Supplier cash-out (M52): read-only 1Click client and read-only chain access.
+        ...(config.DOCKSIDE_ONE_CLICK_URL
+          ? {
+              cashOut: {
+                client: new OneClickClient({ baseUrl: config.DOCKSIDE_ONE_CLICK_URL, timeoutMs: 3_000 }),
+                nearNetwork: config.DOCKSIDE_ONE_CLICK_NEAR_NETWORK,
+                tx: new NearTxClient(rpc()),
+                token: (contract: string) => new Nep141Reader(rpc(), contract),
+              },
+            }
+          : {}),
       }),
     ),
   );
@@ -684,6 +705,17 @@ async function main(): Promise<void> {
             depositYocto: "1",
           };
           return json(res, 200, await submit(from, call, [TOKEN]));
+        }
+        if (req.method === "POST" && url.pathname === "/control/supplier-wallet-call") {
+          // The supplier's own simulated wallet sends the cash-out deposit the API showed it (M52):
+          // only an ft_transfer on the simulated token, signed as the supplier account.
+          const b = await readBody(req);
+          const call = b["call"] as FunctionCall;
+          if (call?.methodName !== "ft_transfer" || call.receiverId !== TOKEN)
+            throw Object.assign(new Error("only ft_transfer on the simulated token"), {
+              code: "VALIDATION_FAILED",
+            });
+          return json(res, 200, await submit(SUPPLIER_ACCT, call, [TOKEN]));
         }
         if (req.method === "POST" && url.pathname === "/control/nft-transfer") {
           // A simulated NFT contract delivers nft_on_transfer (there is no NFT recovery adapter).

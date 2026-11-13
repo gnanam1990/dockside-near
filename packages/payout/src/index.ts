@@ -139,3 +139,11 @@ export function fundedAuthorizationGate(): never {
     "funded payouts are BLOCKED: no verified corridor or explicit authorization",
   );
 }
+
+/**
+ * M52 supplier cash-out: a read-only 1Click client (tokens, dry quotes, status), the request the
+ * supplier sends from their own client, the check of the quote the supplier obtained, the deposit
+ * call for the supplier wallet and the reconciliation rule. Separate from the M06 funded rail above,
+ * which stays BLOCKED: nothing here lets the escrow, the relayer or the server pay through 1Click.
+ */
+export * from "./one-click.js";

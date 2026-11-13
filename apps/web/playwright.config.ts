@@ -46,7 +46,12 @@ export default defineConfig({
   // and race spec does the same, and the stale evidence spec moves the simulated trade and chain
   // clocks a week; each runs on its own stack (playwright.assets.config.ts,
   // playwright.reasons.config.ts, playwright.clock.config.ts) so this suite's clocks are untouched.
-  testIgnore: ["asset-recovery.spec.ts", "refund-reasons.spec.ts", "evidence-stale.spec.ts"],
+  testIgnore: [
+    "asset-recovery.spec.ts",
+    "refund-reasons.spec.ts",
+    "evidence-stale.spec.ts",
+    "cash-out.spec.ts",
+  ],
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
