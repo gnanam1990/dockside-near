@@ -38,7 +38,11 @@
     "hosted": "node services/hosted/dist/main.js",
     "hosted:verify": "node scripts/hosted/verify-container.mjs",
     "ci:policy": "node scripts/ci/workflow-policy.mjs",
-    "ci:local": "node scripts/ci/local-run.mjs"
+    "ci:local": "node scripts/ci/local-run.mjs",
+    "judge": "node scripts/judge/judge.mjs",
+    "proof:manifest": "node scripts/proof/build-manifest.mjs",
+    "proof:serve": "node scripts/proof/serve.mjs",
+    "proof:e2e": "pnpm --filter @dockside/web exec playwright test -c playwright.proof.config.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://rpc.mainnet.fastnear.com https://archival-rpc.mainnet.fastnear.com; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Dockside proof page: the deployed escrow, its config, every trade ledger and every journey transaction, read live from NEAR by your browser."
+    />
+    <title>Dockside proof</title>
+    <link rel="stylesheet" href="./proof.css" />
+  </head>
+  <body>
+    <a class="skip" href="#panel">Skip to the checks</a>
+    <header class="top">
+      <div class="wrap">
+        <p class="brand"><span class="mark" aria-hidden="true">D</span> Dockside</p>
+        <h1>Proof, read live from NEAR</h1>
+        <p class="lede">
+          Your browser asks a public NEAR RPC endpoint for the deployed escrow contract, its config, each trade's
+          ledger and every journey transaction, and compares the answers with the values this repository expects.
+          Nothing on this page is stored or computed in advance, and the page cannot send a transaction.
+        </p>
+      </div>
+    </header>
+    <main class="wrap">
+      <div id="tabs" class="tabs" role="tablist" aria-label="Network"></div>
+      <div id="panel" class="tabpanel" role="tabpanel" tabindex="-1">
+        <noscript>
+          <div class="verdict verdict-none">
+            <p class="verdict-title">This page needs JavaScript</p>
+            <p>
+              It reads NEAR from your browser. Without JavaScript, run <code>pnpm judge</code> in a checkout of
+              the repository: it performs the same checks.
+            </p>
+          </div>
+        </noscript>
+      </div>
+
+      <section class="panel notes" aria-labelledby="notes-title">
+        <h2 id="notes-title">What is checked, and what is not</h2>
+        <ul>
+          <li>
+            <strong>Code.</strong> The code hash of the escrow account equals the hash in the build manifest, the
+            manifest's SHA-256 is the same digest, and the contract bytes downloaded from the chain hash to it.
+          </li>
+          <li>
+            <strong>Ledger conservation.</strong> For every trade the page recomputes the invariant from
+            <code>get_ledger</code>: each funder's buckets sum to what that funder funded, the deposits sum to the
+            funded total, and committed value stays within the trade amount. The contract's own flag is shown
+            beside it.
+          </li>
+          <li>
+            <strong>Payouts.</strong> The transfers the escrow account emitted in the journey transactions equal
+            the release and refund intents the contract recorded as paid, to the same accounts.
+          </li>
+          <li>
+            <strong>Transactions.</strong> Every journey transaction exists, is final, succeeded, and called the
+            stated method from the stated signer.
+          </li>
+          <li>
+            <strong>Not checked here.</strong> The chain shows which account signed, not which person held the
+            key, and it does not show the off-chain documents. Rebuilding the wasm from source is a separate,
+            longer step (<code>pnpm run contract:reproduce</code>).
+          </li>
+        </ul>
+        <h2>Check it yourself</h2>
+        <p>
+          <code>pnpm judge</code> in a checkout runs the install, the unit tests, the contract tests and these same
+          on-chain checks, and prints one PASS or FAIL table with the expected values. The expected values live in
+          <code>site/proof/proof-manifest.json</code>, generated from the run records under
+          <code>docs/evidence/</code>.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>
