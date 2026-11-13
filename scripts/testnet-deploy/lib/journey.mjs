@@ -256,6 +256,11 @@ export async function runJourney(o) {
       const txHash = p.txHash ?? (o.pendingTx && o.pendingTx !== "none" ? o.pendingTx : null);
       if (txHash) {
         const tx = await rpc.txStatus(txHash, p.signer);
+        if (!p.txHash && !isTheCall(tx, p, accounts.escrow))
+          throw new ToolError(
+            "PENDING_MISMATCH",
+            `--pending-tx ${txHash} is not ${p.method} with the arguments in ${p.argsFile}, signed by ${p.signer}`,
+          );
         const main = tx.receipts_outcome.find((x) => x.outcome.executor_id === accounts.escrow);
         if (main && !isFailure(main.outcome.status)) {
           log(`settling ${p.method} ${txHash} sent before the interruption`);
@@ -485,6 +490,19 @@ export async function runJourney(o) {
     return { paused: false, ...(await checks({ rpc, accounts, journey, tradeId, state, params })) };
   } finally {
     mirror.close();
+  }
+}
+
+/** A transaction id the user supplied must be exactly the call that was in flight. */
+function isTheCall(tx, p, escrow) {
+  const t = tx.transaction ?? {};
+  const call = (t.actions ?? []).map((a) => a?.FunctionCall).find(Boolean);
+  if (!call || t.signer_id !== p.signer || t.receiver_id !== escrow || call.method_name !== p.method)
+    return false;
+  try {
+    return sameJson(JSON.parse(Buffer.from(call.args, "base64").toString("utf8")), p.args);
+  } catch {
+    return false;
   }
 }
 
