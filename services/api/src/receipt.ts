@@ -16,7 +16,7 @@ import type { TradeModules } from "./trades.js";
 import { addKeyChecks, type ExportCheck, type TrustedExportKey } from "./verify-export.js";
 
 /**
- * Signed payment receipt (M54, ADR-0029). A receipt states what the escrow contract and the
+ * Signed payment receipt (M54, ADR-0030). A receipt states what the escrow contract and the
  * journal record for one paid release: parties, asset and amount, the inspection the release was
  * approved on, the release intent and the transaction that paid it, and the address of the page
  * that re-checks all of it on NEAR in the reader's browser. The statement is signed by the

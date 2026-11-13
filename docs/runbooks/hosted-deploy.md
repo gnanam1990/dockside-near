@@ -126,6 +126,11 @@ lines (`attestor.submitted`, `relay.submitted`) are in the host's log view.
 - **Another escrow deployment:** replace `deploy/escrow-manifest.json` with that deployment's artifact record
   (the `artifact.json` of its run), set `DOCKSIDE_ESCROW_CONTRACT_ID` on the host and redeploy. The container
   refuses to start if the two do not match on chain.
+- **Attack console (M53):** the image also serves the proof page at `/proof/` and the attack console at
+  `/proof/attack/` (`/attack` redirects there). Its relay sends attempts only when the host has the secret
+  `ATTACK_KEY_JSON_B64` (the base64 of the demo account's function-call key file) and the image's
+  `site/proof/attack/attack-demo.json` describes a live demo; otherwise it answers `RELAY_OFF` and the page
+  replays recorded attempts. Setup: [attack-console.md](attack-console.md).
 - **Take it down:** R: delete the service and its disk. F: `fly apps destroy dockside-demo`. Then remove the
   relayer's function-call key on chain if it will not be used again.
 

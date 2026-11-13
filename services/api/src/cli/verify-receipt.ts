@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Offline verifier for signed Dockside payment receipts (M54, ADR-0029).
+ * Offline verifier for signed Dockside payment receipts (M54, ADR-0030).
  *
  *   verify-receipt <receipt.pdf> --trusted-keys <keys.json> [--json]
  *

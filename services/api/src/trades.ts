@@ -1357,7 +1357,7 @@ export function tradeRoutes(d: AppDeps): Route[] {
     }),
 
     /**
-     * Signed payment receipt of a paid release (M54, ADR-0029): the contract's and the journal's
+     * Signed payment receipt of a paid release (M54, ADR-0030): the contract's and the journal's
      * record, signed by the audit-export key under PAYMENT_RECEIPT, with its PDF. The trade's buyer
      * and supplier and their organisations' members may have it; anyone else gets "not found".
      */

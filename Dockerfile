@@ -19,8 +19,8 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm run build && pnpm --filter @dockside/web run build
 
 # Runtime tree: production dependencies only, the compiled packages, the SQL migrations, the
-# isolated signer script, the web build and the static proof site (payment receipts, M54). No
-# sources, no tests, no development tools.
+# isolated signer script, the web build and the static proof site with the attack console (M53)
+# and the payment receipts (M54). No sources, no tests, no development tools.
 RUN set -eu; mkdir /out; \
     cp package.json pnpm-lock.yaml pnpm-workspace.yaml /out/; \
     find packages services apps -mindepth 2 -maxdepth 2 -name package.json -exec cp --parents {} /out/ \; ; \
@@ -30,7 +30,7 @@ RUN set -eu; mkdir /out; \
     cp -r packages/store/migrations /out/packages/store/migrations; \
     cp -r packages/authority/signer /out/packages/authority/signer; \
     cp -r apps/web/dist /out/apps/web/dist; \
-    mkdir /out/site; cp -r site/proof /out/site/proof; \
+    mkdir -p /out/site; cp -r site/proof /out/site/proof; \
     mkdir /out/deploy; \
     cp deploy/entrypoint.sh deploy/escrow-manifest.json /out/deploy/; chmod 0755 /out/deploy/entrypoint.sh
 

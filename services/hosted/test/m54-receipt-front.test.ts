@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createFront, FRONT_CSP, proofCsp } from "../src/front.js";
+import { createFront, FRONT_CSP, PROOF_CSP } from "../src/front.js";
 
 const PROOF = fileURLToPath(new URL("../../../site/proof/", import.meta.url));
 const manifest = JSON.parse(readFileSync(join(PROOF, "proof-manifest.json"), "utf8"));
@@ -27,7 +27,7 @@ beforeAll(async () => {
   // Nothing listens on the API and relay ports: these routes must not need them.
   front = createFront({
     webRoot: join(dir, "web"),
-    proofRoot: PROOF,
+    proof: { root: PROOF, attackPort: 9 },
     origin: "https://dockside.example",
     apiPort: 9,
     relayPort: 9,
@@ -66,7 +66,7 @@ describe("M54 hosted front: payment receipts and the proof site", () => {
     expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(await res.text()).toBe(readFileSync(join(PROOF, "receipt.html"), "utf8"));
     const csp = res.headers.get("content-security-policy") ?? "";
-    expect(csp).toBe(proofCsp(manifest));
+    expect(csp).toBe(PROOF_CSP);
     for (const n of Object.values(manifest.networks as Record<string, { rpc: string[] }>))
       for (const u of n.rpc) expect(csp).toContain(new URL(u).origin);
     expect(csp).toContain("frame-ancestors 'none'");
@@ -76,9 +76,7 @@ describe("M54 hosted front: payment receipts and the proof site", () => {
 
   it("sends the same policy as the pages' own meta policy, plus no framing", () => {
     for (const file of ["receipt.html", "index.html"])
-      expect(proofCsp(manifest)).toBe(`${metaCsp(file)}; frame-ancestors 'none'`);
-    expect(() => proofCsp({ networks: { testnet: { rpc: ["http://rpc.example"] } } })).toThrow(/https/);
-    expect(() => proofCsp({ networks: {} })).toThrow(/no RPC endpoint/);
+      expect(PROOF_CSP).toBe(`${metaCsp(file)}; frame-ancestors 'none'`);
   });
 
   it("serves the receipt's scripts, styles and manifest beside it, as module scripts", async () => {
@@ -89,12 +87,13 @@ describe("M54 hosted front: payment receipts and the proof site", () => {
       ["/receipt/proof.css", "text/css; charset=utf-8"],
       ["/receipt/proof-manifest.json", "application/json; charset=utf-8"],
       ["/proof/", "text/html; charset=utf-8"],
+      ["/proof/receipt.html", "text/html; charset=utf-8"],
       ["/proof/app.mjs", "text/javascript; charset=utf-8"],
     ] as const) {
       const res = await fetch(`${base}${path}`);
       expect(res.status, path).toBe(200);
       expect(res.headers.get("content-type"), path).toBe(type);
-      expect(res.headers.get("content-security-policy")).toBe(proofCsp(manifest));
+      expect(res.headers.get("content-security-policy")).toBe(PROOF_CSP);
     }
     expect(await (await fetch(`${base}/proof/`)).text()).toBe(
       readFileSync(join(PROOF, "index.html"), "utf8"),
@@ -125,17 +124,5 @@ describe("M54 hosted front: payment receipts and the proof site", () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('<div id="root">');
     expect(res.headers.get("content-security-policy")).toBe(FRONT_CSP);
-  });
-
-  it("refuses to start with a proof root that is not the proof site", () => {
-    expect(() =>
-      createFront({
-        webRoot: join(dir, "web"),
-        proofRoot: join(dir, "web"),
-        origin: "https://x.example",
-        apiPort: 9,
-        relayPort: 9,
-      }),
-    ).toThrow(/proof site/);
   });
 });

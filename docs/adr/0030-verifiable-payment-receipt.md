@@ -1,10 +1,10 @@
-# ADR-0029 — Verifiable payment receipt
+# ADR-0030 — Verifiable payment receipt
 
 - Decision status: accepted (M54)
 - Date: 2026-11-13, Dockside platform team (M54)
 - Affected IDs: FR-15 (export), NFR-02 (no secrets), NFR-06 (verifiable records); amends ADR-0018 §5 (the
-  audit-export key may sign a third purpose) and ADR-0027 (the proof site gains a receipt page; the hosted front
-  serves the proof site)
+  audit-export key may sign a third purpose) and ADR-0027 (the proof site gains a receipt page) and ADR-0029 (the hosted
+  front also serves `/receipt/`)
 - Beyond the spec: `docs/spec/` asks for no payment receipt. The receipt is an addition for the buyer, the supplier
   and whoever they show it to. It changes no contract, no trade state and no claim level.
 
@@ -60,11 +60,11 @@ someone who has only the paper or the file.
    edit of the visible text fails the last check even though the signature still holds. A PDF re-saved by another
    program fails too; the file must be kept as downloaded. The web app re-checks digest, signature, key and that the
    PDF carries exactly the signed statement before it offers the download.
-7. **Hosted front.** `/proof/` serves the proof site and `/receipt/<trade id>` the receipt page with the site's files
-   beside it, under a policy computed from the manifest (`connect-src 'self'` plus exactly its RPC origins, which
-   must be HTTPS; otherwise the page's meta policy, plus `frame-ancestors 'none'`). Only files a browser loads are
-   served (no type declarations); ids follow the page's own rule; paths cannot leave the proof site. The web app's
-   policy is unchanged.
+7. **Hosted front.** M53 (ADR-0029) serves the proof site under `/proof/` with `PROOF_CSP`. M54 adds
+   `/receipt/<trade id>`: the receipt page, with the site's files beside it so its relative imports resolve, under
+   the same policy (the page's meta policy plus `frame-ancestors 'none'`; a test keeps them equal). Only files a
+   browser loads are served (no type declarations); ids follow the page's own rule; paths cannot leave the proof
+   site. The web app's policy is unchanged.
 8. **Tests on recorded real data.** `scripts/proof/record-receipt-fixture.mjs` ran the real verifier against
    testnet once (read-only) and stored the answers in `fixtures/proof/testnet-receipt-recording.json`; the replay
    server gains two one-fact variants (`inspection-fail`, `release-unpaid`). The QR encoder is checked by decoding

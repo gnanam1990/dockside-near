@@ -24,10 +24,28 @@ export const FRONT_CSP = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+/**
+ * Policy of the proof site and the attack console under /proof/ (M53) and of the payment receipts
+ * under /receipt/ (M54): the same as the pages' own meta policy, with the public NEAR RPC endpoints
+ * they read the chain from; the relay is 'self'.
+ */
+export const PROOF_CSP = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self'",
+  "connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://rpc.mainnet.fastnear.com https://archival-rpc.mainnet.fastnear.com",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+/** A receipt address `/receipt/<trade id>`; the same id rule as site/proof/lib/receipt.mjs. */
+const RECEIPT_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
 const TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".map": "application/json; charset=utf-8",
   ".json": "application/json; charset=utf-8",
@@ -37,6 +55,7 @@ const TYPES: Readonly<Record<string, string>> = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
   ".txt": "text/plain; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
 };
 
 /** Request headers that describe one hop and are not forwarded. */
@@ -51,52 +70,19 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
-/**
- * Policy of the static proof site (site/proof, ADR-0027) and the payment receipt (M54) when the
- * front serves them under `/proof/` and `/receipt/`: the browser itself reads NEAR, so
- * `connect-src` names exactly the RPC endpoints of the proof manifest, and nothing else differs from
- * the page's own meta policy except that it may not be framed.
- */
-export function proofCsp(manifest: unknown): string {
-  const networks = (manifest as { networks?: Record<string, { rpc?: unknown }> })?.networks ?? {};
-  const origins: string[] = [];
-  for (const n of Object.values(networks)) {
-    if (!Array.isArray(n.rpc)) continue;
-    for (const u of n.rpc) {
-      const url = new URL(String(u));
-      if (url.protocol !== "https:") throw new Error("proof manifest RPC endpoints must be https");
-      if (!origins.includes(url.origin)) origins.push(url.origin);
-    }
-  }
-  if (origins.length === 0) throw new Error("the proof manifest names no RPC endpoint");
-  return [
-    "default-src 'none'",
-    "script-src 'self'",
-    "style-src 'self'",
-    "img-src 'self'",
-    `connect-src 'self' ${origins.join(" ")}`,
-    "base-uri 'none'",
-    "form-action 'none'",
-    "frame-ancestors 'none'",
-  ].join("; ");
-}
-
-/** A receipt address `/receipt/<trade id>`; the same id rule as site/proof/lib/receipt.mjs. */
-const RECEIPT_ID = /^[A-Za-z0-9_-]{1,64}$/;
-
 export interface FrontOptions {
   readonly webRoot: string;
-  /**
-   * The static proof site (site/proof). When set, it is served under `/proof/`, and the payment
-   * receipt of a trade at `/receipt/<trade id>` (M54) with the site's files beside it.
-   */
-  readonly proofRoot?: string;
   /** Public origin; HSTS is sent when it is HTTPS. */
   readonly origin: string;
   readonly apiPort: number;
   readonly relayPort: number;
   /** Upstream response timeout. The relay waits for transaction finality, so this is generous. */
   readonly upstreamTimeoutMs?: number;
+  /**
+   * The proof site (site/proof) served under /proof/ and the attack console's relay on loopback
+   * (M53): /proof/attack/api/* is forwarded to it as /attack/api/*.
+   */
+  readonly proof?: { readonly root: string; readonly attackPort: number };
 }
 
 /** Every file of the web build, by URL path. Requests can only ever name one of these. */
@@ -120,16 +106,9 @@ function apiRoute(path: string): boolean {
 
 export function createFront(opts: FrontOptions): Server {
   const files = indexWebRoot(opts.webRoot);
+  const proofFiles = opts.proof ? indexWebRoot(opts.proof.root) : new Map<string, string>();
   const shell = files.get("/index.html");
   if (shell === undefined) throw new Error("the web build has no index.html");
-  const proof = opts.proofRoot === undefined ? undefined : indexWebRoot(opts.proofRoot);
-  const proofManifest = proof?.get("/proof-manifest.json");
-  if (proof && (proofManifest === undefined || !proof.has("/receipt.html") || !proof.has("/index.html")))
-    throw new Error("the proof site has no proof-manifest.json, index.html or receipt.html");
-  const proofHeaders =
-    proofManifest === undefined
-      ? undefined
-      : { "Content-Security-Policy": proofCsp(JSON.parse(readFileSync(proofManifest, "utf8"))) };
   const secure = opts.origin.startsWith("https://");
   const baseHeaders: Record<string, string> = {
     "Content-Security-Policy": FRONT_CSP,
@@ -150,7 +129,7 @@ export function createFront(opts: FrontOptions): Server {
     res: ServerResponse,
     file: string,
     cache: string,
-    extra: Record<string, string> = {},
+    csp?: string,
   ) => {
     let body: Buffer;
     try {
@@ -163,12 +142,12 @@ export function createFront(opts: FrontOptions): Server {
       "Content-Type": TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
       "Content-Length": String(body.byteLength),
       "Cache-Control": cache,
-      ...extra,
+      ...(csp ? { "Content-Security-Policy": csp } : {}),
     };
     send(res, 200, headers, req.method === "HEAD" ? undefined : body);
   };
 
-  const proxy = (req: IncomingMessage, res: ServerResponse, upstreamPort: number) => {
+  const proxy = (req: IncomingMessage, res: ServerResponse, upstreamPort: number, path = req.url) => {
     const headers: Record<string, string | string[]> = {};
     for (const [k, v] of Object.entries(req.headers))
       if (v !== undefined && !HOP_BY_HOP.has(k.toLowerCase())) headers[k] = v;
@@ -195,7 +174,7 @@ export function createFront(opts: FrontOptions): Server {
         host: "127.0.0.1",
         port: upstreamPort,
         method: req.method,
-        path: req.url,
+        path,
         headers,
         timeout: opts.upstreamTimeoutMs ?? 120_000,
       },
@@ -227,6 +206,10 @@ export function createFront(opts: FrontOptions): Server {
       proxy(req, res, opts.relayPort);
       return;
     }
+    if (opts.proof && rawPath.startsWith("/proof/attack/api/")) {
+      proxy(req, res, opts.proof.attackPort, rawUrl.slice("/proof".length));
+      return;
+    }
     if (req.method !== "GET" && req.method !== "HEAD") {
       req.resume();
       send(res, 405, { Allow: "GET, HEAD", "Content-Type": "text/plain; charset=utf-8" });
@@ -238,23 +221,42 @@ export function createFront(opts: FrontOptions): Server {
     } catch {
       path = "\0";
     }
-    // The proof site and the payment receipt: static files only, read by the browser from NEAR.
-    if (proof && proofHeaders && (path.startsWith("/proof/") || path.startsWith("/receipt/"))) {
-      const prefix = path.startsWith("/proof/") ? "/proof" : "/receipt";
-      const rest = path.slice(prefix.length);
-      const named = proof.get(rest === "/" ? (prefix === "/proof" ? "/index.html" : "/receipt.html") : rest);
-      const receipt =
-        named === undefined && prefix === "/receipt" && RECEIPT_ID.test(rest.slice(1))
-          ? proof.get("/receipt.html")
-          : undefined;
-      // Only files a browser loads (no type declarations or other build leftovers).
-      const target = named !== undefined && TYPES[extname(named).toLowerCase()] ? named : receipt;
-      if (target === undefined) {
-        send(res, 404, { "Content-Type": "text/plain; charset=utf-8" }, Buffer.from("not found\n"));
+    if (opts.proof) {
+      if (path === "/attack" || path === "/attack/" || path === "/proof") {
+        send(res, 302, {
+          Location: path === "/proof" ? "/proof/" : "/proof/attack/",
+          "Cache-Control": "no-cache",
+        });
         return;
       }
-      serveFile(req, res, target, "no-cache", proofHeaders);
-      return;
+      if (path.startsWith("/proof/")) {
+        const rel = path.slice("/proof".length);
+        const pf = proofFiles.get(rel.endsWith("/") ? `${rel}index.html` : rel);
+        if (pf === undefined) {
+          send(res, 404, { "Content-Type": "text/plain; charset=utf-8" }, Buffer.from("not found\n"));
+          return;
+        }
+        serveFile(req, res, pf, "no-cache", PROOF_CSP);
+        return;
+      }
+      // Payment receipts (M54): /receipt/<trade id> is the receipt page, with the proof site's files
+      // beside it so its relative imports resolve. Only files a browser loads are served.
+      if (path.startsWith("/receipt/")) {
+        const rest = path.slice("/receipt".length);
+        const named = proofFiles.get(rest === "/" ? "/receipt.html" : rest);
+        const target =
+          named !== undefined && TYPES[extname(named).toLowerCase()]
+            ? named
+            : named === undefined && RECEIPT_ID.test(rest.slice(1))
+              ? proofFiles.get("/receipt.html")
+              : undefined;
+        if (target === undefined) {
+          send(res, 404, { "Content-Type": "text/plain; charset=utf-8" }, Buffer.from("not found\n"));
+          return;
+        }
+        serveFile(req, res, target, "no-cache", PROOF_CSP);
+        return;
+      }
     }
     const file = files.get(path === "/" ? "/index.html" : path);
     if (file !== undefined) {

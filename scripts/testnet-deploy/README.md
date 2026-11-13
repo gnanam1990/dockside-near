@@ -117,7 +117,7 @@ rules, that the read-only checks use when the primary fails at transport level),
 `--wasm`, `--manifest`, `--amount-yocto` (default 50000000000000000000000, 0.05 NEAR), `--out`
 (default `.data/testnet-run/<network>-<UTC time>`), `--skip-deploy` (reuse an escrow that already runs
 the manifest's code), `--relayer-key-file` (reuse the key file from an earlier run),
-`--allowance` (default `1 NEAR`), `--journey <paid|hold|refund|refusal>` (default `paid`), `--excess-yocto`
+`--allowance` (default `1 NEAR`), `--journey <paid|hold|refund|refusal|attack-demo>` (default `paid`), `--excess-yocto`
 (refund journey, default 10000000000000000000000, 0.01 NEAR), `--no-wait` (refund journey: pause
 instead of waiting out the cooling period), `--stop-after <n>` (pause once the journey has n
 transactions on chain), `--resume <run dir>` and `--pending-tx <hash|none>` (see "Finishing a
@@ -299,6 +299,18 @@ If the key file is not at that path, `near.cmd account list-keys gnanam1990-dock
 network-config testnet now` shows the relayer's keys; the file is the one near-cli-rs saved when M34
 added the key (`relayer-key.txt` in that run's local record directory names it). Each run's `run-record.json`, `journey.json`
 and `deployment.json` are the evidence to keep, as for the paid journey.
+
+### Attack demo journey (M53)
+
+`--journey attack-demo` creates the attack console's demo trade and stops on purpose: register, policy,
+fund, attestation, inspection, release intent, the buyer's approval, then a deterministic-policy hold with
+a 28-day lifetime (8 transactions, all accepted). The amount stays reserved for the bound supplier and the
+release stays blocked; nothing is resolved, released or refunded. Its checks: one ACTIVE policy hold that
+blocks the release, the approval recorded, the intent paying the bound supplier, funded = reserved = the
+amount, nothing released or refunded, conservation. The PASS line ends
+`attack-demo journey demo trade FUNDED, APPROVED and HELD`. What to do with the run afterwards (the page's
+config, the five attacks, the hosted relay): [docs/runbooks/attack-console.md](../../docs/runbooks/attack-console.md).
+Validated on a local nearcore node by `services/hosted/test/m53-attack-sandbox.test.ts`.
 
 ### Windows
 
