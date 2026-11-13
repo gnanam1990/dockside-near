@@ -6,7 +6,7 @@ use crate::error::{ensure, err, R};
 use crate::holds::Hold;
 use crate::ledger::Ledger;
 use crate::refund::RefundIntent;
-use crate::terms::{parse_terms, Terms};
+use crate::terms::{parse_terms, valid_account, Asset, Terms, MAX_TOKEN_DECIMALS, NETWORK_MAINNET, NETWORK_TESTNET};
 use crate::typed::{decode, hex_encode, is_nonce, Obj};
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::format;
@@ -18,6 +18,79 @@ use serde_json::Value as J;
 /// Tolerated clock skew for `issuedAt` in the future.
 pub const MAX_SKEW_MS: u64 = 5 * 60_000;
 
+/// Mainnet default cap on native NEAR per trade (5 NEAR).
+pub const MAINNET_DEFAULT_MAX_NATIVE: u128 = 5_000_000_000_000_000_000_000_000;
+/// Mainnet default cap on a NEP-141 trade, in the token's base units (25 USDC at 6 decimals).
+pub const MAINNET_DEFAULT_MAX_NEP141: u128 = 25_000_000;
+
+/// Deployment limits fixed by `new` and never changed afterwards.
+///
+/// A cap bounds both the trade amount a registration may name and the value one trade may hold in
+/// escrow at any time (deposits minus what was released or refunded), so excess deposits count.
+/// Zero means no cap, which only `near-testnet` accepts.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Limits {
+    /// Cap per native-NEAR trade in yoctoNEAR; 0 = none.
+    pub max_native: u128,
+    /// Cap per NEP-141 trade in the token's base units; 0 = none.
+    pub max_nep141: u128,
+    /// When set, the only NEP-141 contract (and its decimals) a trade may name.
+    pub nep141_token: Option<(String, u8)>,
+}
+
+impl Limits {
+    /// Validate the limits `new` was given for `network` and apply the mainnet defaults.
+    /// `near-mainnet` is accepted only with non-zero caps: an omitted cap takes its default, an
+    /// explicit zero is refused.
+    pub fn configure(network: &str, max_native: Option<u128>, max_nep141: Option<u128>, token: Option<(String, u64)>) -> R<Limits> {
+        let mainnet = match network {
+            NETWORK_TESTNET => false,
+            NETWORK_MAINNET => true,
+            _ => return err("FUNDED_RAIL_BLOCKED", "only near-testnet and near-mainnet are enabled"),
+        };
+        let (max_native, max_nep141) = if mainnet {
+            (max_native.unwrap_or(MAINNET_DEFAULT_MAX_NATIVE), max_nep141.unwrap_or(MAINNET_DEFAULT_MAX_NEP141))
+        } else {
+            (max_native.unwrap_or(0), max_nep141.unwrap_or(0))
+        };
+        ensure(!mainnet || (max_native > 0 && max_nep141 > 0), "CAP_REQUIRED", "near-mainnet needs a non-zero cap for every asset")?;
+        let nep141_token = match token {
+            None => None,
+            Some((id, decimals)) => {
+                ensure(valid_account(&id, network, false), "INVALID_ADDRESS", "token account id invalid for network")?;
+                ensure(decimals <= MAX_TOKEN_DECIMALS, "VALIDATION_FAILED", "token decimals out of range")?;
+                Some((id, decimals as u8))
+            }
+        };
+        Ok(Limits { max_native, max_nep141, nep141_token })
+    }
+
+    /// The cap that applies to `asset`; 0 = none.
+    pub fn cap_for(&self, asset: &Asset) -> u128 {
+        match asset {
+            Asset::NearNative => self.max_native,
+            Asset::Nep141 { .. } => self.max_nep141,
+        }
+    }
+
+    /// Registration-time checks: the asset is one this deployment accepts and the trade amount is
+    /// within the cap. On mainnet a NEP-141 trade needs the token `new` pinned.
+    pub fn check_terms(&self, network: &str, t: &Terms) -> R<()> {
+        if let Asset::Nep141 { token_account_id, decimals } = &t.asset {
+            match &self.nep141_token {
+                Some((id, dec)) => ensure(
+                    id == token_account_id && dec == decimals,
+                    "UNSUPPORTED_ASSET",
+                    "this deployment accepts one NEP-141 token and the terms name another token or other decimals",
+                )?,
+                None => ensure(network != NETWORK_MAINNET, "UNSUPPORTED_ASSET", "no NEP-141 token is enabled on this deployment")?,
+            }
+        }
+        let cap = self.cap_for(&t.asset);
+        ensure(cap == 0 || t.amount_yocto <= cap, "CAP_EXCEEDED", "trade amount exceeds the deployment cap")
+    }
+}
+
 /// Per-call execution context supplied by the host.
 pub struct Ctx<'a> {
     pub now_ms: u64,
@@ -25,6 +98,7 @@ pub struct Ctx<'a> {
     pub contract_id: &'a str,
     pub network: &'a str,
     pub verifier: &'a dyn Verifier,
+    pub limits: &'a Limits,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq)]
@@ -48,6 +122,10 @@ pub struct TradeRecord {
     pub destination: crate::destination::DestinationState,
     /// Pending and historical dual-signed key-rebinding revisions.
     pub rebinding: crate::rebinding::RebindingState,
+    /// NEP-141 trades only: destinations the token contract reported as storage-registered
+    /// (`storage_balance_of`). At most the active and the pending destination are kept. A release
+    /// intent cannot lock the value for a destination that is not in this set.
+    pub payee_storage: BTreeSet<String>,
 }
 
 pub fn digest_hex(domain: &str, v: &Value) -> R<(String, [u8; 32])> {
@@ -66,6 +144,7 @@ pub fn register(ctx: &Ctx<'_>, terms_typed: &J, buyer_signature: &str, supplier_
         return err("NOT_SUPPORTED", "successor revisions are activated only through the destination-change or key-rebinding protocol");
     }
     ensure(terms.expires_at > ctx.now_ms, "EXPIRED", "trade has already expired")?;
+    ctx.limits.check_terms(ctx.network, &terms)?;
     let (hex, d) = digest_hex(domains::TRADE_REVISION, &v)?;
     verify(ctx.verifier, &terms.key_of("buyer")?, &d, buyer_signature)?;
     verify(ctx.verifier, &terms.key_of("supplier")?, &d, supplier_signature)?;
@@ -83,6 +162,7 @@ pub fn register(ctx: &Ctx<'_>, terms_typed: &J, buyer_signature: &str, supplier_
         revisions: alloc::vec![crate::destination::RevisionEntry { revision: 1, digest: hex.clone(), activated_at: ctx.now_ms }],
         destination: Default::default(),
         rebinding: Default::default(),
+        payee_storage: BTreeSet::new(),
     })
 }
 
@@ -111,6 +191,47 @@ impl TradeRecord {
         ensure(!self.nonces.contains(&k), "NONCE_REPLAYED", "nonce already consumed")?;
         self.nonces.insert(k);
         Ok(())
+    }
+
+    /// The token contract to ask whether `account` is storage-registered: the trade asset must be
+    /// NEP-141 and `account` the active payout destination or the destination of a pending change.
+    pub fn payee_check_target(&self, account: &str) -> R<String> {
+        let token = self.terms.asset.token().ok_or_else(|| crate::error::Error {
+            code: "ASSET_MISMATCH",
+            message: "a native NEAR payout needs no storage registration".into(),
+        })?;
+        let pending = self.destination.pending.as_ref().map(|p| p.to_destination.as_str());
+        ensure(
+            account == self.terms.payout_destination || pending == Some(account),
+            "DESTINATION_MISMATCH",
+            "only the active or the pending payout destination can be checked",
+        )?;
+        Ok(token.into())
+    }
+
+    /// Record the token contract's answer for `account` (the host calls this from its private
+    /// callback only). `registered = false` removes an earlier confirmation.
+    pub fn record_payee_storage(&mut self, account: &str, registered: bool) -> R<bool> {
+        self.payee_check_target(account)?;
+        let active = self.terms.payout_destination.clone();
+        let pending = self.destination.pending.as_ref().map(|p| p.to_destination.clone());
+        self.payee_storage.retain(|a| *a == active || Some(a) == pending.as_ref());
+        if registered {
+            self.payee_storage.insert(account.into());
+        } else {
+            self.payee_storage.remove(account);
+        }
+        Ok(registered)
+    }
+
+    /// NEP-141 trades: `destination` must be confirmed storage-registered before value is locked
+    /// for it. Native trades pass.
+    pub fn require_payee_storage(&self, destination: &str) -> R<()> {
+        ensure(
+            self.terms.asset.is_native() || self.payee_storage.contains(destination),
+            "PAYEE_NOT_REGISTERED",
+            "the payout destination is not confirmed as registered with the token contract; call check_payee_storage first",
+        )
     }
 
     pub fn nonce_used(&self, domain: &str, nonce: &str) -> bool {

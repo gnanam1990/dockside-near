@@ -1,4 +1,5 @@
-//! Native-NEAR per-funder ledger (FR-02, INV-02, INV-12).
+//! Per-funder ledger of the trade asset, native NEAR or one NEP-141 token (FR-02, INV-02, INV-12).
+//! Amounts are base units of that asset; the bucket rules are the same for both.
 //!
 //! Every accepted deposit records its original funder. Value sits in exactly one bucket:
 //!
@@ -121,6 +122,11 @@ impl Ledger {
     /// Value that counts toward the trade amount (quarantined/refunded/refund-locked do not).
     pub fn committed(&self) -> u128 {
         self.sum(|f| f.partial + f.available + f.reserved + f.released)
+    }
+
+    /// Value this trade still holds in escrow: every deposit minus what was released or refunded.
+    pub fn held(&self) -> u128 {
+        self.sum(|f| f.funded.saturating_sub(f.released).saturating_sub(f.refunded))
     }
 
     pub fn total_available(&self) -> u128 {

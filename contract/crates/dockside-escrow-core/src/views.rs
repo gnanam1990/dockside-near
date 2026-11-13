@@ -43,7 +43,7 @@ pub fn ledger(t: &TradeRecord) -> J {
         .map(|d| json!({"index": d.index, "funder": d.funder, "amount": s(d.amount), "accepted": s(d.accepted), "quarantined": s(d.quarantined), "atMs": d.at_ms}))
         .collect();
     json!({
-        "asset": {"kind": "NEAR_NATIVE", "network": t.terms.network},
+        "asset": asset(t),
         "required": s(t.ledger.required),
         "committed": s(t.ledger.committed()),
         "fullyFunded": t.ledger.fully_funded(),
@@ -51,6 +51,24 @@ pub fn ledger(t: &TradeRecord) -> J {
         "funders": J::Object(funders),
         "deposits": deposits,
         "conservation": t.ledger.check_conservation().is_ok(),
+    })
+}
+
+/// The trade asset as the signed terms state it.
+pub fn asset(t: &TradeRecord) -> J {
+    match &t.terms.asset {
+        crate::terms::Asset::NearNative => json!({"kind": "NEAR_NATIVE", "network": t.terms.network}),
+        crate::terms::Asset::Nep141 { token_account_id, decimals } => {
+            json!({"kind": "NEP141", "network": t.terms.network, "tokenAccountId": token_account_id, "decimals": decimals})
+        }
+    }
+}
+
+/// The deployment limits `get_config` reports.
+pub fn limits(l: &crate::trade::Limits) -> J {
+    json!({
+        "maxTradeAmount": {"nearYocto": s(l.max_native), "nep141": s(l.max_nep141)},
+        "nep141Token": l.nep141_token.as_ref().map(|(id, d)| json!({"accountId": id, "decimals": d})),
     })
 }
 
@@ -100,6 +118,8 @@ pub fn trade(t: &TradeRecord, now_ms: u64) -> J {
         "supplierAccount": t.terms.supplier.account_id,
         "payoutDestination": t.terms.payout_destination,
         "amountYocto": s(t.terms.amount_yocto),
+        "asset": asset(t),
+        "payeeStorage": t.payee_storage.iter().cloned().collect::<Vec<String>>(),
         "expiresAt": t.terms.expires_at,
         "registeredAt": t.registered_at,
         "revokedRoles": t.revoked_roles.iter().cloned().collect::<Vec<String>>(),

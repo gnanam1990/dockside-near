@@ -235,6 +235,9 @@ impl TradeRecord {
             "accepted value was already refunded",
         )?;
         let change = p.clone();
+        // NEP-141: a live intent's lock moves to the new destination here, so that destination
+        // must be confirmed as registered with the token first.
+        self.require_payee_storage(&change.to_destination)?;
         let new_terms = change.terms.clone();
         let new_digest = change.successor_digest.clone();
         let superseded = self.release.live.clone();
@@ -250,6 +253,8 @@ impl TradeRecord {
         done.successor_intent = successor.clone();
         self.destination.pending = None;
         self.destination.history.push(done);
+        let active = self.terms.payout_destination.clone();
+        self.payee_storage.retain(|a| *a == active);
         Ok((new_digest, successor))
     }
 }

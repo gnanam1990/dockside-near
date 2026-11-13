@@ -8,7 +8,7 @@
 
 use dockside_escrow_core::assets::{self, UnexpectedAsset};
 use dockside_escrow_core::refund::RefundSignatures;
-use dockside_escrow_core::{views, Ctx, Error, TradeRecord, DEFAULT_MIN_DEPOSIT_YOCTO};
+use dockside_escrow_core::{funding_message, views, Ctx, Error, Limits, TradeRecord, DEFAULT_MIN_DEPOSIT_NEP141, DEFAULT_MIN_DEPOSIT_YOCTO};
 use serde_json::{json, Value as J};
 use std::collections::BTreeMap;
 
@@ -20,7 +20,8 @@ pub struct Call<'a> {
     pub now_ms: u64,
     pub predecessor: &'a str,
     pub deposit: u128,
-    /// For private callbacks: whether the awaited promise succeeded.
+    /// For private callbacks: whether the awaited promise succeeded. For `on_payee_storage` it
+    /// is whether the token's `storage_balance_of` answered with a balance (registered).
     pub promise_ok: Option<bool>,
 }
 
@@ -43,6 +44,9 @@ pub struct Mirror {
     pub contract: String,
     pub network: String,
     pub min_deposit: u128,
+    pub min_deposit_nep141: u128,
+    /// The deployment limits `new` fixed (caps and the pinned NEP-141 token).
+    pub limits: Limits,
     pub trades: BTreeMap<String, TradeRecord>,
     pub trade_ids: Vec<String>,
     pub unexpected: Vec<UnexpectedAsset>,
@@ -69,12 +73,21 @@ fn arg(a: &J, k: &str) -> Result<J, Error> {
 }
 
 impl Mirror {
-    /// The state `new(network, min_deposit_yocto)` initialises.
+    /// The state `new("near-testnet", min_deposit_yocto)` initialises: no caps, no pinned token.
     pub fn new(contract: &str, min_deposit: Option<u128>) -> Mirror {
+        Mirror::configured(contract, NETWORK, min_deposit, None, Limits::default())
+    }
+
+    /// The state `new(network, min_deposit_yocto, max_trade_amount, nep141_token,
+    /// min_deposit_nep141)` initialises. `limits` is what `Limits::configure` returned for the
+    /// same arguments.
+    pub fn configured(contract: &str, network: &str, min_deposit: Option<u128>, min_deposit_nep141: Option<u128>, limits: Limits) -> Mirror {
         Mirror {
             contract: contract.to_string(),
-            network: NETWORK.to_string(),
+            network: network.to_string(),
             min_deposit: min_deposit.unwrap_or(DEFAULT_MIN_DEPOSIT_YOCTO),
+            min_deposit_nep141: min_deposit_nep141.unwrap_or(DEFAULT_MIN_DEPOSIT_NEP141),
+            limits,
             trades: BTreeMap::new(),
             trade_ids: Vec::new(),
             unexpected: Vec::new(),
@@ -86,7 +99,7 @@ impl Mirror {
     }
 
     fn ctx<'a>(&'a self, c: &Call<'a>) -> Ctx<'a> {
-        Ctx { now_ms: c.now_ms, predecessor: c.predecessor, contract_id: &self.contract, network: &self.network, verifier: &Dalek }
+        Ctx { now_ms: c.now_ms, predecessor: c.predecessor, contract_id: &self.contract, network: &self.network, verifier: &Dalek, limits: &self.limits }
     }
 
     fn mutate<T>(&mut self, trade_id: &str, c: &Call<'_>, f: impl FnOnce(&mut TradeRecord, &Ctx<'_>) -> Result<T, Error>) -> Result<T, Error> {
@@ -181,8 +194,9 @@ impl Mirror {
             }
             "execute_refund" => {
                 let id = arg_str(a, "refund_intent_id")?;
-                let (to, amount) = self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.begin_refund(ctx, &id))?;
-                Ok(json!({ "transfer": { "to": to, "amount": amount.to_string() } }))
+                let trade_id = arg_str(a, "trade_id")?;
+                let (to, amount) = self.mutate(&trade_id, &c, |t, ctx| t.begin_refund(ctx, &id))?;
+                Ok(json!({ "transfer": self.transfer(&trade_id, &to, amount) }))
             }
             "on_refund_transfer" => {
                 let ok = self.callback(&c)?;
@@ -196,8 +210,9 @@ impl Mirror {
             }
             "execute_release" => {
                 let id = arg_str(a, "release_intent_id")?;
-                let (to, amount, attempt) = self.mutate(&arg_str(a, "trade_id")?, &c, |t, ctx| t.execute_release(ctx, &id))?;
-                Ok(json!({ "transfer": { "to": to, "amount": amount.to_string() }, "attempt_id": attempt }))
+                let trade_id = arg_str(a, "trade_id")?;
+                let (to, amount, attempt) = self.mutate(&trade_id, &c, |t, ctx| t.execute_release(ctx, &id))?;
+                Ok(json!({ "transfer": self.transfer(&trade_id, &to, amount), "attempt_id": attempt }))
             }
             "on_release_transfer" => {
                 let ok = self.callback(&c)?;
@@ -226,12 +241,30 @@ impl Mirror {
                 Ok(json!({ "termsDigest": digest, "successorIntent": succ }))
             }
             "ft_on_transfer" => {
-                let index = self.unexpected.len() as u64;
-                assets::ensure_capacity(index, 1)?;
-                let amount = arg_str(a, "amount")?;
-                let asset = assets::record(index, "NEP-141", c.predecessor, None, amount, &arg_str(a, "sender_id")?, &arg_str(a, "msg")?, c.now_ms)?;
-                self.unexpected.push(asset);
-                Ok(J::String("0".into()))
+                let (amount, sender, msg) = (arg_str(a, "amount")?, arg_str(a, "sender_id")?, arg_str(a, "msg")?);
+                let Some(request) = funding_message(&msg) else {
+                    let index = self.unexpected.len() as u64;
+                    assets::ensure_capacity(index, 1)?;
+                    let asset = assets::record(index, "NEP-141", c.predecessor, None, amount, &sender, &msg, c.now_ms)?;
+                    self.unexpected.push(asset);
+                    return Ok(J::String("0".into()));
+                };
+                // A refused funding is not a failed call: nothing changes and the receiver
+                // returns the whole amount to the sender.
+                let units: u128 = amount.parse().map_err(|_| err("VALIDATION_FAILED", "amount"))?;
+                let min = self.min_deposit_nep141;
+                let funded = request.and_then(|m| self.mutate(&m.trade_id, &c, |t, ctx| t.fund_token(ctx, &sender, &m.terms_digest, units, min)));
+                Ok(J::String(if funded.is_ok() { "0".into() } else { amount }))
+            }
+            "check_payee_storage" => {
+                let (trade_id, account) = (arg_str(a, "trade_id")?, arg_str(a, "account_id")?);
+                let token = self.trades.get(&trade_id).ok_or_else(|| err("NOT_FOUND", "trade not found"))?.payee_check_target(&account)?;
+                Ok(json!({ "storage_balance_of": { "token": token, "account": account } }))
+            }
+            "on_payee_storage" => {
+                let registered = self.callback(&c)?;
+                let account = arg_str(a, "account_id")?;
+                self.mutate(&arg_str(a, "trade_id")?, &c, |t, _| t.record_payee_storage(&account, registered)).map(J::Bool)
             }
             "request_asset_recovery" => {
                 let (i, p) = (arg_u64(a, "asset_index")?, arg(a, "payload")?);
@@ -264,6 +297,26 @@ impl Mirror {
         }
     }
 
+    /// The transfer `execute_release` / `execute_refund` schedules: native NEAR to `to`, or
+    /// `ft_transfer` on the trade's token (then `token` names the contract that runs it).
+    fn transfer(&self, trade_id: &str, to: &str, amount: u128) -> J {
+        match self.trades[trade_id].terms.asset.token() {
+            None => json!({ "to": to, "amount": amount.to_string() }),
+            Some(token) => json!({ "to": to, "amount": amount.to_string(), "token": token }),
+        }
+    }
+
+    /// Why a funding `ft_on_transfer` would be refused (`None`: it would be accepted, or `msg` is
+    /// not a funding message). The mirror is not changed.
+    pub fn funding_refusal(&self, a: &J, c: Call<'_>) -> Option<Error> {
+        let (amount, sender, msg) = (arg_str(a, "amount").ok()?, arg_str(a, "sender_id").ok()?, arg_str(a, "msg").ok()?);
+        let request = funding_message(&msg)?;
+        let units: u128 = amount.parse().ok()?;
+        let min = self.min_deposit_nep141;
+        let mut probe = self.clone();
+        request.and_then(|m| probe.mutate(&m.trade_id, &c, |t, ctx| t.fund_token(ctx, &sender, &m.terms_digest, units, min))).err()
+    }
+
     fn callback(&self, c: &Call<'_>) -> Result<bool, Error> {
         if c.predecessor != self.contract {
             return Err(err("FORBIDDEN", "Method is private"));
@@ -285,11 +338,16 @@ impl Mirror {
             "get_release" => views::release(trade(a)?, now_ms),
             "get_holds" => views::holds(trade(a)?, now_ms),
             "get_unexpected_asset" => views::unexpected(&self.asset(arg_u64(a, "asset_index")?)?),
-            "get_config" => json!({
-                "network": self.network, "minDepositYocto": self.min_deposit.to_string(),
-                "trades": self.trade_ids.len(), "unexpectedAssets": self.unexpected.len(),
-                "refundPolicy": {"id": "dockside-refund-v1", "revision": 1},
-            }),
+            "get_config" => {
+                let limits = views::limits(&self.limits);
+                json!({
+                    "network": self.network, "minDepositYocto": self.min_deposit.to_string(),
+                    "minDepositNep141": self.min_deposit_nep141.to_string(),
+                    "maxTradeAmount": limits["maxTradeAmount"], "nep141Token": limits["nep141Token"],
+                    "trades": self.trade_ids.len(), "unexpectedAssets": self.unexpected.len(),
+                    "refundPolicy": {"id": "dockside-refund-v1", "revision": 1},
+                })
+            }
             _ => return Err(err("VALIDATION_FAILED", "view not mirrored")),
         })
     }

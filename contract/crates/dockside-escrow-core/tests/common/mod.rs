@@ -6,7 +6,7 @@
 use dockside_canonical::digest;
 use dockside_escrow_core::crypto::Verifier;
 use dockside_escrow_core::typed::decode;
-use dockside_escrow_core::{register, Ctx, TradeRecord};
+use dockside_escrow_core::{register, Ctx, Limits, TradeRecord};
 use ed25519_dalek::{Signer, SigningKey, Verifier as _, VerifyingKey};
 pub mod evidence;
 pub mod release;
@@ -205,12 +205,19 @@ pub struct World {
     pub caller: String,
 }
 
+/// The limits of the default testnet deployment: no caps, no pinned token.
+pub static NO_LIMITS: Limits = Limits { max_native: 0, max_nep141: 0, nep141_token: None };
+
 impl World {
     pub fn new() -> World {
         World { now: T0, caller: BUYER_ACCT.into() }
     }
     pub fn ctx(&self) -> Ctx<'_> {
-        Ctx { now_ms: self.now, predecessor: &self.caller, contract_id: CONTRACT, network: NETWORK, verifier: &Dalek }
+        Ctx { now_ms: self.now, predecessor: &self.caller, contract_id: CONTRACT, network: NETWORK, verifier: &Dalek, limits: &NO_LIMITS }
+    }
+    /// The same call context on a deployment with `limits`.
+    pub fn ctx_with<'a>(&'a self, limits: &'a Limits) -> Ctx<'a> {
+        Ctx { now_ms: self.now, predecessor: &self.caller, contract_id: CONTRACT, network: NETWORK, verifier: &Dalek, limits }
     }
     pub fn as_caller(&mut self, who: &str) -> &mut World {
         self.caller = who.into();
