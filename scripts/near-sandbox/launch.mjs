@@ -5,18 +5,24 @@
 // exposes its JSON-RPC on 0.0.0.0:3031 so the container's published port reaches it. Local only:
 // no testnet, no mainnet, no state outside this container.
 //
-// usage: node launch.mjs <accountId> <ed25519:publicKey>
+// usage: node launch.mjs <accountId> <ed25519:publicKey> [balanceYocto]
+// (balance defaults to 10 NEAR; the M43 product suites give the root account enough to deploy the escrow)
 import { createServer, connect } from "node:net";
 import { GenesisAccount, Sandbox } from "near-sandbox";
 
-const [accountId, publicKey] = process.argv.slice(2);
-if (!accountId || !publicKey?.startsWith("ed25519:")) {
-  process.stderr.write("usage: node launch.mjs <accountId> <ed25519:publicKey>\n");
+const [accountId, publicKey, balanceArg] = process.argv.slice(2);
+if (
+  !accountId ||
+  !publicKey?.startsWith("ed25519:") ||
+  (balanceArg && !/^[1-9][0-9]{0,38}$/.test(balanceArg))
+) {
+  process.stderr.write("usage: node launch.mjs <accountId> <ed25519:publicKey> [balanceYocto]\n");
   process.exit(2);
 }
 
 // The private key stays with the test that generated it; the genesis record needs only the public key.
-const account = new GenesisAccount(accountId, publicKey, "not-provided", 10n ** 25n);
+const balance = balanceArg ? BigInt(balanceArg) : 10n ** 25n;
+const account = new GenesisAccount(accountId, publicKey, "not-provided", balance);
 const sandbox = await Sandbox.start({ config: { rpcPort: 3030, additionalAccounts: [account] } });
 const target = new URL(sandbox.rpcUrl);
 

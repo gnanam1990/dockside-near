@@ -152,6 +152,11 @@ The run-all journey is a technical check of the deployed contract. It is not the
 
 ## 4. Provision the relayer signer (code plus custody, both yours)
 
+**Code done (M43).** The production `KeyFileTxSigner`, the worker runtime, the party relay and the chain preflight
+are implemented ([ADR-0025](adr/0025-relayer-signer-custody-and-testnet-runtime.md)). What remains yours is custody
+and running it: follow [runbooks/testnet-product.md](runbooks/testnet-product.md), which also replaces §5's
+commands. The original steps are kept below for reference.
+
 The worker (`services/worker`) exits with code 78 and `RELAYER_SIGNER_NOT_PROVISIONED` until it has a signer:
 
 1. Pin an official NEAR transaction library (for example a specific `near-api-js` version) and review it.

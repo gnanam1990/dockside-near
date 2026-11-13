@@ -10,6 +10,8 @@
     { "path": "../../packages/core" },
     { "path": "../../packages/store" },
     { "path": "../../packages/near" },
-    { "path": "../../packages/journal" }
+    { "path": "../../packages/journal" },
+    { "path": "../../packages/authority" },
+    { "path": "../../packages/evidence" }
   ]
 }

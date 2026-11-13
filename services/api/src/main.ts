@@ -3,7 +3,14 @@ import { AuthorityService, IsolatedSigner } from "@dockside/authority";
 import { type DocksideConfig, loadConfig, randomIds, redactConfig, systemClock } from "@dockside/core";
 import { EvidenceService, HoldService, LocalObjectStore } from "@dockside/evidence";
 import { AssetRecoveryJournal, JournalService } from "@dockside/journal";
-import { EscrowContract, JsonRpcNearClient, NearTxClient, Nep141Reader } from "@dockside/near";
+import {
+  EscrowContract,
+  JsonRpcNearClient,
+  NearTxClient,
+  Nep141Reader,
+  type PreflightResult,
+  preflightEscrow,
+} from "@dockside/near";
 import { BlockedOneClickAdapter } from "@dockside/payout";
 import { ReleaseService } from "@dockside/release";
 import { Database } from "@dockside/store";
@@ -89,9 +96,38 @@ async function exportSigner(config: DocksideConfig, db: Database): Promise<Expor
   return s;
 }
 
+/**
+ * Chain preflight (M43): before serving trade routes against a NEAR node, prove it is not mainnet,
+ * is the configured chain, and that the escrow runs exactly the code the manifest names. Runs before
+ * the database is opened, so a refused start creates nothing.
+ */
+async function chainPreflight(config: DocksideConfig): Promise<PreflightResult | null> {
+  const escrowId = config.DOCKSIDE_ESCROW_CONTRACT_ID;
+  const endpoint = config.DOCKSIDE_NEAR_RPC_URL;
+  if (escrowId === undefined || endpoint === undefined) return null;
+  const manifestPath = config.DOCKSIDE_ESCROW_MANIFEST;
+  if (manifestPath === undefined)
+    throw Object.assign(new Error("DOCKSIDE_ESCROW_MANIFEST is required to check the escrow's code hash"), {
+      code: "CONFIG_INVALID",
+    });
+  return preflightEscrow({
+    rpc: new JsonRpcNearClient({
+      endpoint,
+      allowedHosts: [new URL(endpoint).hostname],
+      timeoutMs: 15_000,
+      maxResponseBytes: 4 * 1024 * 1024,
+    }),
+    rpcUrl: endpoint,
+    escrowId,
+    manifestPath,
+    expectedChainId: config.DOCKSIDE_NEAR_CHAIN_ID,
+  });
+}
+
 /** Local entry point. Configuration comes only from DOCKSIDE_* environment variables. */
 async function main(): Promise<void> {
   const config = loadConfig(process.env);
+  const preflight = await chainPreflight(config);
   const db = Database.open(config.DOCKSIDE_DB_PATH);
   const migrated = db.migrate();
   const authority = new AuthorityService({
@@ -138,6 +174,9 @@ async function main(): Promise<void> {
       address: addr,
       migrationsApplied: migrated.applied,
       tradeModules: modules ? "CONFIGURED" : "NOT_CONFIGURED",
+      chain: preflight
+        ? { chainId: preflight.chainId, escrow: preflight.escrowId, codeHash: preflight.codeHash }
+        : "NOT_CONFIGURED",
       auditExportKey: signer ? signer.publicKey : "NOT_CONFIGURED",
       config: redactConfig(config),
     });
@@ -153,8 +192,12 @@ async function main(): Promise<void> {
 }
 
 main().catch((e: unknown) => {
+  const d = (e as { details?: { reason?: unknown; name?: unknown } }).details;
+  // A reason code or the configuration variable's name; never a value.
+  const tag = typeof d?.reason === "string" ? d.reason : typeof d?.name === "string" ? d.name : null;
+  const why = tag ? ` (${tag})` : "";
   process.stderr.write(
-    `api failed to start: ${(e as { code?: string }).code ?? "INTERNAL"}: ${(e as Error).message}\n`,
+    `api failed to start: ${(e as { code?: string }).code ?? "INTERNAL"}${why}: ${(e as Error).message}\n`,
   );
   process.exit(1);
 });

@@ -9,6 +9,7 @@ import { StatusBadge } from "../../components/Status";
 import type { ApiFailure, ApiOutcome } from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
 import { capabilityLabel, formatUtc, networkLabel } from "../../lib/format";
+import { commercialDocsPolicy } from "../../lib/policy-template";
 import { formatDelay, OrgNav } from "./common";
 
 /**
@@ -488,54 +489,198 @@ function PoliciesBody({ app, admin }: { app: ReturnType<typeof useApp>; admin: b
   const data = useApiData(() => app.client.call<PoliciesResponse>(ENDPOINTS.evidencePolicies), [tick]);
   return (
     <Loaded what="Evidence policies" data={data}>
-      {(v) =>
-        v.policies.length === 0 ? (
-          <EmptyState title="No evidence policies yet">
-            <p>Your organization owns no EvidencePolicy and none of its trades binds one.</p>
-          </EmptyState>
-        ) : (
-          v.policies.map((p) => {
-            const latest = p.revisions[0];
-            return (
-              <section
-                key={p.policyId}
-                className="panel"
-                aria-labelledby={`pol-${p.policyId}`}
-                data-testid={`policy-${p.policyId}`}
-              >
-                <h2 id={`pol-${p.policyId}`}>{p.policyId}</h2>
-                <IdentityList
-                  items={[
-                    ["Latest revision", String(p.latestRevision)],
-                    [
-                      "Owner",
-                      p.ownedByYou
-                        ? "Your organization"
-                        : p.ownerOrganizationId
-                          ? `Another organization (${p.ownerOrganizationId})`
-                          : "No owning organization recorded (registered by the operator)",
-                    ],
-                  ]}
-                />
-                <PolicyRevisionTable p={p} />
-                {latest ? <SlotTable r={latest} /> : null}
-                {p.ownedByYou && admin && v.editable ? (
-                  <PolicyDraft p={p} onDone={() => setTick((t) => t + 1)} />
-                ) : (
-                  <p className="muted" data-testid={`policy-readonly-${p.policyId}`}>
-                    {p.ownedByYou
-                      ? admin
-                        ? "New revisions need the trade modules of this backend."
-                        : "Only an Org Security Admin of the owning organization registers new revisions."
-                      : "Read-only here: only the owning organization registers new revisions of this policy."}
-                  </p>
-                )}
-              </section>
-            );
-          })
-        )
-      }
+      {(v) => (
+        <>
+          {admin && v.editable ? <NewPolicy onDone={() => setTick((t) => t + 1)} /> : null}
+          {v.policies.length === 0 ? (
+            <EmptyState title="No evidence policies yet">
+              <p>Your organization owns no EvidencePolicy and none of its trades binds one.</p>
+            </EmptyState>
+          ) : (
+            v.policies.map((p) => {
+              const latest = p.revisions[0];
+              return (
+                <section
+                  key={p.policyId}
+                  className="panel"
+                  aria-labelledby={`pol-${p.policyId}`}
+                  data-testid={`policy-${p.policyId}`}
+                >
+                  <h2 id={`pol-${p.policyId}`}>{p.policyId}</h2>
+                  <IdentityList
+                    items={[
+                      ["Latest revision", String(p.latestRevision)],
+                      [
+                        "Owner",
+                        p.ownedByYou
+                          ? "Your organization"
+                          : p.ownerOrganizationId
+                            ? `Another organization (${p.ownerOrganizationId})`
+                            : "No owning organization recorded (registered by the operator)",
+                      ],
+                    ]}
+                  />
+                  <PolicyRevisionTable p={p} />
+                  {latest ? <SlotTable r={latest} /> : null}
+                  {p.ownedByYou && admin && v.editable ? (
+                    <PolicyDraft p={p} onDone={() => setTick((t) => t + 1)} />
+                  ) : (
+                    <p className="muted" data-testid={`policy-readonly-${p.policyId}`}>
+                      {p.ownedByYou
+                        ? admin
+                          ? "New revisions need the trade modules of this backend."
+                          : "Only an Org Security Admin of the owning organization registers new revisions."
+                        : "Read-only here: only the owning organization registers new revisions of this policy."}
+                    </p>
+                  )}
+                </section>
+              );
+            })
+          )}
+        </>
+      )}
     </Loaded>
+  );
+}
+
+const POLICY_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+/**
+ * Register an organisation's first EvidencePolicy (M43): revision 1 of a new policy id, from the
+ * commercial-documents template or an edited document. The first registration claims the id for this
+ * organisation; later revisions come from the draft form of that policy.
+ */
+function NewPolicy({ onDone }: { onDone: () => void }) {
+  const app = useApp();
+  const gate = useMutationGate();
+  const [policyId, setPolicyId] = useState("commercial-docs");
+  const [doc, setDoc] = useState(() => JSON.stringify(commercialDocsPolicy("commercial-docs"), null, 2));
+  const [confirm, setConfirm] = useState(false);
+  const [failure, setFailure] = useState<ApiFailure | null>(null);
+  const [done, setDone] = useState<{ policyId: string; revision: number; digest: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  let parsed: Record<string, unknown> | null = null;
+  try {
+    const v = JSON.parse(doc) as unknown;
+    if (typeof v === "object" && v !== null && !Array.isArray(v)) parsed = v as Record<string, unknown>;
+  } catch {
+    parsed = null;
+  }
+  const idError = POLICY_ID.test(policyId) ? undefined : "Use lowercase letters, digits and hyphens.";
+  const docError =
+    parsed === null
+      ? "The policy document must be a JSON object."
+      : parsed["policyId"] !== policyId
+        ? "The document's policyId must equal the policy ID above."
+        : parsed["revision"] !== 1
+          ? "A new policy starts at revision 1."
+          : undefined;
+  const submit = async () => {
+    setBusy(true);
+    setFailure(null);
+    const out = await app.client.call<{ policyId: string; revision: number; digest: string }>(
+      ENDPOINTS.registerEvidencePolicy,
+      { body: { policy: parsed } },
+    );
+    setBusy(false);
+    setConfirm(false);
+    if (out.ok) {
+      setDone(out.data);
+      onDone();
+    } else setFailure(out.error);
+  };
+  return (
+    <section className="panel" aria-labelledby="new-policy-title" data-testid="policy-new">
+      <h2 id="new-policy-title">Register a new evidence policy</h2>
+      <p className="muted">
+        Revision 1 of a new policy ID, owned by your organization. Trade proposals name it; the
+        ManifestAttestor and deterministic-policy services are enrolled for its ID and revision.
+      </p>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          if (!idError && !docError) setConfirm(true);
+        }}
+      >
+        <Field id="new-policy-id" label="New policy ID" error={idError}>
+          {(aria) => (
+            <input
+              {...aria}
+              className="mono"
+              spellCheck={false}
+              autoComplete="off"
+              value={policyId}
+              onChange={(e) => setPolicyId(e.target.value)}
+            />
+          )}
+        </Field>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setDoc(JSON.stringify(commercialDocsPolicy(policyId), null, 2))}
+          >
+            Use the commercial documents template
+          </button>
+        </div>
+        <Field
+          id="new-policy-doc"
+          label="Policy document (JSON)"
+          help="Slots, uploaders, issuers, limits and freshness. The server validates every field."
+          error={docError}
+        >
+          {(aria) => (
+            <textarea
+              {...aria}
+              className="mono"
+              rows={12}
+              spellCheck={false}
+              value={doc}
+              onChange={(e) => setDoc(e.target.value)}
+            />
+          )}
+        </Field>
+        <button
+          type="submit"
+          className="btn btn--primary"
+          disabled={busy || !gate.allowed || Boolean(idError) || Boolean(docError)}
+        >
+          Review new policy
+        </button>
+        {gate.reason ? <BlockedAction reason={gate.reason} /> : null}
+      </form>
+      <ConfirmDialog
+        open={confirm}
+        title={`Register ${policyId} revision 1?`}
+        confirmLabel="Register policy"
+        onCancel={() => setConfirm(false)}
+        onConfirm={() => void submit()}
+      >
+        <p>
+          Registration is permanent: the revision and its digest cannot be edited or removed, and the policy
+          ID belongs to your organization from now on.
+        </p>
+      </ConfirmDialog>
+      {failure ? (
+        <Callout tone="negative" icon="blocked" title="Policy not registered" headingLevel={3} role="alert">
+          <p>{failureText(failure)}</p>
+        </Callout>
+      ) : null}
+      {done ? (
+        <Callout
+          tone="neutral"
+          icon="complete"
+          title={`${done.policyId} revision ${done.revision} registered`}
+          headingLevel={3}
+          role="status"
+          testId="policy-created"
+        >
+          <p>
+            Digest <code className="wrap">{done.digest}</code>
+          </p>
+        </Callout>
+      ) : null}
+    </section>
   );
 }
 

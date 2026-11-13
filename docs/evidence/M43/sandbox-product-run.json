@@ -1,0 +1,65 @@
+{
+  "schema": "dockside/m43-sandbox-product-run@1",
+  "chain": "local near-sandbox (nearcore), NOT testnet",
+  "chainId": "test-chain-6Tqbk",
+  "accounts": {
+    "escrow": "escrow.dockside-root.testnet",
+    "relayer": "relayer.dockside-root.testnet",
+    "buyer": "buyer.dockside-root.testnet",
+    "supplier": "supplier.dockside-root.testnet"
+  },
+  "tradeId": "trd_07cd6f1697b84b863f4adb92407b3e3f",
+  "setupTransactions": {
+    "create:escrow": "AGA76CAg9tvK2vjGQoLAvKbcdYhEH6NJpkWziP4CUZ1P",
+    "create:relayer": "Fw5rLj7Wfv6FMeGNpGgDssFVppauNEPrkEHYePWuZv7A",
+    "create:buyer": "5oCsEuVb2zzixZeoTpNeCsoc9yZiTSjoieUZjUxxhxb8",
+    "create:supplier": "CMa3Qt6iBqSpVrxNRzNePRWvJ3rASoqnLbSxKGm4icJG",
+    "deploy+new": "9ogZhwmaQb5Vki7Txquo4CNhVMgQZVHM3tA2kLEgCki",
+    "add_key relayer": "5gEfJpp7Dr7EzwyHiwmqPcJ3yEHzwD7SgYPmRYNA2qaS"
+  },
+  "productTransactions": [
+    {
+      "step": "register_trade",
+      "txHash": "bF7FzCQBwVpSBwLP56empaKT7oB9uZohvnHeFsoCvzj",
+      "signer": "relayer.dockside-root.testnet"
+    },
+    {
+      "step": "register_evidence_policy",
+      "txHash": "85bQSmimnV2UxMZh9NkcFXg2UPobvw4yhgDQdqDyN8DW",
+      "signer": "relayer.dockside-root.testnet"
+    },
+    {
+      "step": "fund",
+      "txHash": "7jj9ttxj5TeViF9YXkkNNevcwhYa2xs9gkjqJ27B2dfq",
+      "signer": "buyer.dockside-root.testnet"
+    },
+    {
+      "step": "submit_inspection",
+      "txHash": "C8D5XkoNPgGsfyd6ZQVA6Upjms7FDHrv2vr4wdrrF9Ar",
+      "signer": "relayer.dockside-root.testnet"
+    },
+    {
+      "step": "create_release_intent",
+      "txHash": "9Bof7h4iKULaBjsFRBhP1tn9KB5NpLoayvzB9PPajAHG",
+      "signer": "relayer.dockside-root.testnet"
+    },
+    {
+      "step": "approve_release",
+      "txHash": "GTZoeZqsh2fCzAExGGwUKjegUhqspz2ix5JuN1JjqqLr",
+      "signer": "relayer.dockside-root.testnet"
+    },
+    {
+      "step": "execute_release (worker)",
+      "txHash": "51q9p4DVfuFoAB3GGfgRbatiBuNeYPogEAVGRnSTuXSW",
+      "signer": "relayer.dockside-root.testnet"
+    }
+  ],
+  "serviceTransactions": [
+    {
+      "event": "attestor.submitted",
+      "tradeId": "trd_07cd6f1697b84b863f4adb92407b3e3f",
+      "outcome": "FINAL_SUCCESS",
+      "txHash": "EFeV1d8nGLpF683mRUKkVsc1umFDLAWPjTFpoWwomefg"
+    }
+  ]
+}
