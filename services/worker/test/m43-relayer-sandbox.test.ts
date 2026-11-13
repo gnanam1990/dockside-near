@@ -11,7 +11,7 @@
  * submitters in parallel never collide), an identical re-broadcast is the same transaction, and the
  * chain preflight accepts exactly the manifest's code hash.
  */
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,7 +74,11 @@ describe.skipIf(!ENABLED)("M43 relayer function-call key signer on a local nearc
       manifestPath: MANIFEST,
       expectedChainId: sb.chainId,
     });
-    expect(ok.codeHash).toBe("7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N");
+    // The code hash of the wasm this run deployed: the build manifest's, whatever build that is
+    // (it was pinned to the escrow2 build's literal until the contract changed in M50).
+    const built = JSON.parse(readFileSync(MANIFEST, "utf8")).contract.nearCodeHash as string;
+    expect(built).toMatch(/^[1-9A-HJ-NP-Za-km-z]{43,44}$/);
+    expect(ok.codeHash).toBe(built);
     expect(ok.contractNetwork).toBe("near-testnet");
     const other = join(dir, "other-manifest.json");
     writeFileSync(other, JSON.stringify({ nearCodeHash: "11111111111111111111111111111111" }));

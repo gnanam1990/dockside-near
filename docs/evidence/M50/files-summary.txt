@@ -2,7 +2,7 @@ M50 USDC rail and capped mainnet label: records of the container reproduction an
 (pnpm run contract:reproduce in node:22-bookworm-slim, pnpm run contract:sandbox in node:22-trixie-slim,
 near-sandbox 2.14.0, near-cli-rs 0.31.1). Nothing here comes from NEAR testnet or mainnet.
 
-build-manifest.json          manifest of the clean-checkout build of commit 16eb013: contract SHA-256 and NEAR code hash,
+build-manifest.json          manifest of the clean-checkout build of commit 8fa5288: contract SHA-256 and NEAR code hash,
                              toolchain, lockfile digests
 clean-checkout-report.json   the steps of that clean checkout (frozen install, pnpm run check, contract host tests,
                              audit, manifest) with exit codes; local paths are replaced by <source> and <tmp>

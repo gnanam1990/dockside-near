@@ -1,6 +1,6 @@
 {
   "schema": "dockside/sandbox-report@1",
-  "commit": "16eb013fd02058353c032cc4185474de12a8ebea",
+  "commit": "8fa5288a84078780e3e7a4723b85dd2635e68a72",
   "wasmSha256": "46f982e44932cc85a8e13c3c15d016b349505279568cd6d74e2ae722ac80e99e",
   "tools": {
     "nearSandbox": {

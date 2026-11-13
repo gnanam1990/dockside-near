@@ -3,8 +3,8 @@
 For the independent reviewer and the owner. This branch changes a contract that is meant to hold real money. It is
 **not merged and not deployed**; it waits for an audit of this diff and the owner's approval.
 
-- Branch `feat/dockside-m50-usdc-rail`, contract and tooling final at commit `16eb013fd02058353c032cc4185474de12a8ebea`; later commits are
-  documentation only.
+- Branch `feat/dockside-m50-usdc-rail`, contract and tooling final at commit `8fa5288a84078780e3e7a4723b85dd2635e68a72` (the merge of main
+  `ae53b8a`); later commits are documentation, evidence records and one opt-in test.
 - Diff to review: `git diff main...feat/dockside-m50-usdc-rail -- contract/crates` (the deployable code), then
   `contract/integration` (mirror, harness, tests) and `scripts/testnet-deploy` (run-all).
 - Decision record: [ADR-0028](../adr/0028-nep141-rail-and-mainnet-guard.md). Status and commands:
@@ -15,7 +15,7 @@ For the independent reviewer and the owner. This branch changes a contract that 
 
 | | |
 |---|---|
-| Source commit | `16eb013fd02058353c032cc4185474de12a8ebea` |
+| Source commit | `8fa5288a84078780e3e7a4723b85dd2635e68a72` |
 | Build | `pnpm run contract:reproduce`: clean clone in `node:22-bookworm-slim` (image pinned by digest in `scripts/lib/docker.mjs`), Rust 1.97.1 from a pinned rustup-init, `--locked`, `CARGO_HOME=/root/.cargo` |
 | File | `dockside_escrow.wasm`, 861214 bytes |
 | SHA-256 | `46f982e44932cc85a8e13c3c15d016b349505279568cd6d74e2ae722ac80e99e` |
@@ -167,6 +167,23 @@ run-all on nearcore: `run_all_runs_the_usdc_journeys_and_the_mainnet_label_on_sa
 - **Arithmetic.** `held() + amount` uses `checked_add`; the release profile keeps `overflow-checks = true`.
 - **Message parsing.** `funding_message` uses `serde_json` on the `msg` string; a message with `tradeId` and
   anything unexpected is refused, not recorded.
+
+## What merging this changes for the deployed escrow
+
+- The deployed `gnanam1990-dock-escrow2.testnet` keeps running the earlier build (`7GEti5E6…5h8N`). Nothing here
+  can change it.
+- After a merge, the repository's source builds to `5n4D4NSN…hFZ7`, not to the code on escrow2. Records that
+  describe the deployment (`deploy/escrow-manifest.json`, the proof page data, the M24/M34/M44 evidence) stay
+  correct because they describe escrow2, not the source. A fresh `pnpm run contract:reproduce` no longer
+  reproduces escrow2's wasm; that needs a checkout of commit `4ff233b` or any commit before this merge.
+- Anything that points the API or worker preflight (`DOCKSIDE_ESCROW_MANIFEST`) at a freshly built manifest while
+  `DOCKSIDE_ESCROW_CONTRACT_ID` is still escrow2 will be refused with a code hash mismatch. Keep using the
+  deployment's own record for escrow2, or move to the new escrow account once it exists.
+- The M50 build cannot be deployed over escrow2 (run-all refuses an account with code, and the state layout
+  differs). escrow3 is a new account.
+- One opt-in test pinned escrow2's code hash as the hash of "the wasm this test deploys"
+  (`services/worker/test/m43-relayer-sandbox.test.ts`); it now reads the manifest. It is not part of
+  `pnpm run check`, so it would have failed silently after a merge.
 
 ## Open questions for the reviewer
 

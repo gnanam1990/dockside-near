@@ -1,6 +1,6 @@
 {
   "schema": "dockside/build-manifest@1",
-  "commit": "16eb013fd02058353c032cc4185474de12a8ebea",
+  "commit": "8fa5288a84078780e3e7a4723b85dd2635e68a72",
   "trackedTreeClean": true,
   "toolchain": {
     "node": "v22.23.5",
@@ -56,15 +56,15 @@
     }
   ],
   "dist": {
-    "files": 316,
-    "digest": "a112264143cc0901e259bcf7f98f1e50a5dafbce9427354431cb0e506bf7aa8c"
+    "files": 324,
+    "digest": "db3f29f44f7ccf2f487bb9d4362c898150e3c7877ac3288941c9ca70151aa2ac"
   },
   "contract": {
     "path": "contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm",
     "bytes": 861214,
     "sha256": "46f982e44932cc85a8e13c3c15d016b349505279568cd6d74e2ae722ac80e99e",
     "nearCodeHash": "5n4D4NSNUfdqBt6udW7EsRnSi7cHvwLXV8ovu6EDhFZ7",
-    "builtAt": "2026-11-13T10:20:54.802Z"
+    "builtAt": "2026-11-13T10:35:21.232Z"
   },
   "deployment": {
     "network": "near-testnet",
