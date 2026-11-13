@@ -1,0 +1,7 @@
+{
+  "relayer": "gnanam1990-dock-relayer.testnet",
+  "publicKey": "ed25519:4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf",
+  "receiverId": "gnanam1990-dock-escrow2.testnet",
+  "methodNames": [],
+  "allowance": "1000000000000000000000000"
+}

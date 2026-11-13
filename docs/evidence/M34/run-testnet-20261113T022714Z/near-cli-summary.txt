@@ -1,0 +1,36 @@
+Summary of the near-cli-rs 0.31.1 output files of this run (the deploy output of step 3 and the add-key
+output of step 5). The raw files stay out of the repository: they hold local paths (the near-cli-rs install, the wasm path and the key-file location
+in the owner's home directory). Neither holds a private key. The add-key output carries the relayer account's
+ml-dsa-65 public key and signature, which are public on chain anyway; they are not repeated here. Values below
+were copied from the files and re-checked on chain (../onchain-reverify.json). The args/ directory (the
+journey's per-call argument files) was not copied either; every call it describes is in journey.json and on
+chain.
+
+Deploy output (step 3, `near contract deploy ... use-file <repo>/.data/repro/dockside_escrow.wasm with-init-call
+new ... sign-with-keychain send`, attempt 1, exit 0)
+  signer / receiver      gnanam1990-dock-escrow2.testnet / gnanam1990-dock-escrow2.testnet
+  actions                deploy code 7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N, function call
+                         new {"min_deposit_yocto": null, "network": "near-testnet"}, 30.0 Tgas, 0 NEAR
+  signing key            the escrow2 account's own full-access key,
+                         ed25519:HavjfuT4NK1sgXTULA4Tj3JLN7VfBsaJknjM25uNw7rH (public key), from the keychain
+  gas used / fee         60.9 Tgas / 0.0060661046307092 NEAR
+  transaction id         7TZqFwwKH9NKohDRS5RBfudep8hmwxeJoiNE18WdakkA (deploy-tx.txt)
+  result                 "Contract code has been successfully deployed." and the `new` call succeeded,
+                         empty return value, no logs
+
+Add-key output (step 5, `near account add-key gnanam1990-dock-relayer.testnet grant-function-call-access
+--allowance '1 NEAR' --contract-account-id gnanam1990-dock-escrow2.testnet --function-names ''
+autogenerate-new-keypair --signature-scheme ed25519 save-to-legacy-keychain network-config testnet
+sign-with-keychain send`)
+  prompt                 none: --signature-scheme ed25519 (the M24 F1 fix) answered the scheme question
+  signer / receiver      gnanam1990-dock-relayer.testnet / gnanam1990-dock-relayer.testnet
+  action                 add access key ed25519:4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf,
+                         FunctionCall { allowance 1 NEAR, receiver gnanam1990-dock-escrow2.testnet,
+                         method_names [] (any method of escrow2 only) }
+  signing key            the relayer account's own full-access key (ml-dsa-65), keychain
+  fee                    0.000052055425 NEAR
+  transaction id         G2vmxhNAfpwhHuLmkqwh3R8VQFyR7c7AWK77akjDDnZH
+  key file               written by near-cli-rs into the owner's legacy keychain directory; not copied,
+                         and run-all reads only its public_key
+
+Step 6 (journey) then ran all eight transactions to PAID (journey.json, run-record.json).

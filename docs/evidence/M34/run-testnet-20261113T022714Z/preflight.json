@@ -1,0 +1,17 @@
+{
+  "network": "testnet",
+  "rpcUrl": "https://rpc.testnet.near.org",
+  "accounts": {
+    "escrow": "gnanam1990-dock-escrow2.testnet",
+    "buyer": "gnanam1990-dock-buyer.testnet",
+    "supplier": "gnanam1990-dock-supplier.testnet",
+    "relayer": "gnanam1990-dock-relayer.testnet"
+  },
+  "escrowCodeHash": "11111111111111111111111111111111",
+  "balancesYocto": {
+    "escrow": "10000000000000000000000000",
+    "buyer": "9899364412148087300000000",
+    "supplier": "10050000000000000000000000",
+    "relayer": "9993199220644112000000000"
+  }
+}

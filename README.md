@@ -16,8 +16,11 @@ The authoritative specification is the sealed pack in [`docs/spec/`](docs/spec/S
 chain (the compiled contract in a local host emulator served over JSON-RPC), and the deployable contract also runs
 with real transactions on a **local nearcore node** (near-sandbox in a container: deploy, funding, release, refunds,
 destination change, a runtime-refunded transfer, NEP-141 recovery and the one-command testnet script end to end).
-On **NEAR testnet** the repository owner deployed the escrow with run-all and ran one technical trade to PAID
-(funding from the buyer, exact release to the bound supplier; docs/status/M24.md). No separate people on separate
+On **NEAR testnet** the repository owner deployed the security-hardened escrow (commit `4ff233b`, code hash
+`7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N`) on `gnanam1990-dock-escrow2.testnet` with run-all and ran one
+technical trade to PAID (funding from the buyer, exact release to the bound supplier; docs/status/M34.md). The
+earlier escrow `gnanam1990-dock-escrow.testnet` runs the superseded pre-audit contract
+`5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM` (docs/status/M24.md) and must not be used for new trades. No separate people on separate
 devices have run the product flow, nothing above the contract (API, worker, web app) has run against testnet, and the CI workflow has never run on GitHub because nothing was pushed. 1Click is not integrated
 (optional, `NOT_RUN`), and the funded mainnet rail is `BLOCKED`.
 
