@@ -23,6 +23,10 @@
 #                replayed nonce (NONCE_REPLAYED), a payout redirected to an unbound account
 #                (DESTINATION_MISMATCH), a release while a hold is active (HOLD_ACTIVE) and an
 #                approval signed by an unbound key (SIGNATURE_INVALID); then the trade is PAID
+#        attack-demo  the attack console's demo trade (M53): funded, evidence accepted, intent
+#                created and approved, then a deterministic-policy hold SET and left ACTIVE; the
+#                journey stops there, so the value stays reserved for the bound supplier and the
+#                release stays blocked (docs/runbooks/attack-console.md)
 #   7. write the run record
 #
 # Usage:
@@ -42,7 +46,7 @@
 #   --skip-deploy                reuse an escrow that already runs the manifest's code
 #   --relayer-key-file <file>    reuse a function-call key file near-cli-rs saved earlier
 #   --allowance <amount>         allowance of a new relayer key, default '1 NEAR'
-#   --journey <paid|hold|refund|refusal>
+#   --journey <paid|hold|refund|refusal|attack-demo>
 #                                the journey step 6 runs, default paid
 #   --excess-yocto <n>           refund journey: excess deposited on top of the trade amount,
 #                                default 10000000000000000000000 (0.01 NEAR)
@@ -159,8 +163,8 @@ elif [ -n "$PENDING_TX" ]; then
   exit 2
 fi
 case "$JOURNEY" in
-  paid|hold|refund|refusal) ;;
-  *) say "USAGE: --journey must be paid, hold, refund or refusal"; exit 2 ;;
+  paid|hold|refund|refusal|attack-demo) ;;
+  *) say "USAGE: --journey must be paid, hold, refund, refusal or attack-demo"; exit 2 ;;
 esac
 
 net_flags() {
@@ -302,6 +306,7 @@ fs.writeFileSync(`${out}/run-record.json`, JSON.stringify(rec, null, 2) + "\n");
 case "$JOURNEY" in
   refund) OUTCOME=REFUNDED ;;
   refusal) OUTCOME="six calls REFUSED, then PAID" ;;
+  attack-demo) OUTCOME="demo trade FUNDED, APPROVED and HELD" ;;
   *) OUTCOME=PAID ;;
 esac
 say "PASS: deployed code hash $CODE_HASH, $JOURNEY journey $OUTCOME; record $OUT/run-record.json"

@@ -210,9 +210,20 @@ describe("M46 proof page", () => {
 
   it("loads nothing from a third party and has no inline script", () => {
     const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? "");
-    expect(refs).toEqual(["./proof.css", "#panel", "./app.mjs"]);
+    // ./attack/ is the M53 attack console, published with the page.
+    expect(refs).toEqual(["./proof.css", "#panel", "./attack/", "./app.mjs"]);
     expect(html).not.toMatch(/<script(?![^>]*\bsrc=)/);
     expect(html).not.toMatch(/\son\w+=/);
+  });
+
+  it("the attack console (M53) loads only its own files and writes chain data as text", () => {
+    const page = readFileSync(join(ROOT, "site/proof/attack/index.html"), "utf8");
+    const refs = [...page.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? "");
+    expect(refs).toEqual(["../proof.css", "./attack.css", "#attacks", "../", "./attack.mjs"]);
+    expect(page).not.toMatch(/<script(?![^>]*\bsrc=)/);
+    expect(page).not.toMatch(/\son\w+=/);
+    const app = readFileSync(join(ROOT, "site/proof/attack/attack.mjs"), "utf8");
+    expect(app).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\(/);
   });
 
   it("writes chain data to the page as text only", () => {

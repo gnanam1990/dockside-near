@@ -1,0 +1,26 @@
+journey: attack-demo journey, trade trd_983b6a037cedfbfc6760c98d72950001
+journey: register_trade               5Rs66XYKfAo6qQQoUzPREWBmzwdC4KTn8cjoEZKbvgA7
+journey: register_evidence_policy     CiiKeEbYVGd2EYimhJRXnmLbuHduX7hsPCSWt82k2YFh
+journey: fund                         HciNVWZPPwJT6HptPCzs4RQNcSbKVq1Eokfcoj3e8cVT
+journey: submit_manifest_attestation  DXAgZ84mvYDw9kYQ6KHG3U4wo22qvURhFCcD35FxKgdi
+journey: submit_inspection            2iiaLVBWQwGXFxwD8NyuKAXjthyk1GcxsTptSiCsYAS4
+journey: create_release_intent        2LyCGbYhVW5Ta5bKtLZJ4VSDD65USY9mNTPbXELu5KfH
+journey: approve_release              dJG38mgnPNhtRKYNGPBTYEcRQNdpQt86aEFhXbQSjSb
+journey: set_hold                     GwSQgbnufb9o5dHhiQTsTxavaYvewHEarUhDXptALzN4
+journey: observed holds ACTIVE, blockers HOLD_ACTIVE,APPROVAL_STALE
+ ✓ services/hosted/test/m53-attack-sandbox.test.ts > M53 attack console on a local nearcore sandbox > run-all's attack-demo journey leaves the trade funded, approved and held on the node
+ ✓ services/hosted/test/m53-attack-sandbox.test.ts > M53 attack console on a local nearcore sandbox > the stored approval bytes are the approval transaction's arguments on the node
+attack change-payout: 6Nk3kUp3zE4MUAKHMLSAv2MDpVFvXwvAZWtuZysyNEM SIGNATURE_INVALID signature does not verify for the bound key and domain
+attack release-during-hold: DnZZDDtgdN6QxzxZjNBPkvhPrRXk5DrNXhxJNKnYxAhR HOLD_ACTIVE release conjunction incomplete: HOLD_ACTIVE,APPROVAL_STALE
+attack approve-wrong-key: CRM5YtCNNPNDnvEr3AqiTiqwwbJHqneSy5YB3S75cdF8 SIGNATURE_INVALID signature does not verify for the bound key and domain
+attack replay-approval: 8n3T7G3HjeJ9z491ew7nBvAUNVAXd7dJQVa2N6mDVAci INVALID_STATE release intent is DIRECT_TESTNET_AUTHORIZED
+attack refund-to-stranger: J3Vt8SfRbWn22SAukCLYjpF7CnRZgV95MVxAAHmpvbAj NOTHING_ELIGIBLE funder has no quarantined excess
+ ✓ services/hosted/test/m53-attack-sandbox.test.ts > M53 attack console on a local nearcore sandbox > nearcore refuses all five attacks with the expected codes; nothing about the trade changes
+ ✓ services/hosted/test/m53-attack-sandbox.test.ts > M53 attack console on a local nearcore sandbox > the HTTP relay behind the hosted front sends a real attempt and rate limits the next
+ ✓ services/hosted/test/m53-attack-sandbox.test.ts > M53 attack console on a local nearcore sandbox > the owner tool builds the demo config from journey.json and sends a recorded attempt
+ ✓ services/hosted/test/m53-attack-sandbox.test.ts > M53 attack console on a local nearcore sandbox > records the node's answers to the page's requests (DOCKSIDE_M53_RECORD=1)
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  17:09:28
+   Duration  55.89s (transform 1.01s, setup 0ms, import 2.41s, tests 52.96s, environment 0ms)
+exit 0

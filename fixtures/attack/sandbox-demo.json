@@ -1,0 +1,359 @@
+{
+  "schema": "dockside/attack-demo@1",
+  "network": "sandbox",
+  "status": "LIVE",
+  "rpc": [
+    "https://test.rpc.fastnear.com"
+  ],
+  "explorer": "http://127.0.0.1/sandbox-has-no-explorer/",
+  "relay": null,
+  "escrow": "escrow.dockside-root.testnet",
+  "tradeId": "trd_8deaaeb3499caffd500a8a1c24cf9a50",
+  "releaseIntentId": "rli_69df76f9fadc4736b2d3b6dd49a284cb",
+  "holdId": "hld_685c5eaaff62f5c9c44b57e968cd4469",
+  "amountYocto": "20000000000000000000000",
+  "parties": {
+    "buyer": "buyer.dockside-root.testnet",
+    "supplier": "supplier.dockside-root.testnet"
+  },
+  "attacker": {
+    "accountId": "stranger.dockside-root.testnet",
+    "publicKey": "ed25519:2itm8SCfLUkDwMvp48mn1b8F55yhfcgaxNBxWSumT1Ai"
+  },
+  "baselineNonce": "47000000",
+  "setup": [
+    {
+      "step": "register",
+      "method": "register_trade",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "HwtukjYwJmjqcVeEcndwLo6KYc8nMMq4eTbEBNU6XJqN"
+    },
+    {
+      "step": "policy",
+      "method": "register_evidence_policy",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "B7DwkzWfGXaktuy81TKbct8eFsHYq5Rdd8PBfPhE8XxK"
+    },
+    {
+      "step": "fund",
+      "method": "fund",
+      "signer": "buyer.dockside-root.testnet",
+      "txHash": "GFYkXtiuxaQEaTJ6o7Azzg8jxT7QNR8RvMU9ETvjkvXK"
+    },
+    {
+      "step": "attestation",
+      "method": "submit_manifest_attestation",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "J8khp3tzrUT4hmLo6JZAMhk4UDtH6Z8gQvoSZmzwZQbL"
+    },
+    {
+      "step": "inspection",
+      "method": "submit_inspection",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "5ucHh1r1dqKDmsX9XwLzNBw5VMvTjW1w4C8jHn3ZGSHW"
+    },
+    {
+      "step": "intent",
+      "method": "create_release_intent",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "GJrVMMH1vwrbJvk7a4yrQBVQpfEt5Z6hHAFR6h2hu9iQ"
+    },
+    {
+      "step": "approval",
+      "method": "approve_release",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "HBTspckrwxkybwd9LN8Hya5m4AxNQTz8UVMmX7ezmqVN"
+    },
+    {
+      "step": "hold_set",
+      "method": "set_hold",
+      "signer": "relayer.dockside-root.testnet",
+      "txHash": "474JEUUD4mLVTFaLNSE3QLNWWGxBKuCNGVRHjydCXoZV"
+    }
+  ],
+  "terms": {
+    "struct": {
+      "amountYocto": {
+        "u128": "20000000000000000000000"
+      },
+      "asset": {
+        "struct": {
+          "kind": {
+            "str": "NEAR_NATIVE"
+          },
+          "network": {
+            "str": "near-testnet"
+          }
+        }
+      },
+      "buyer": {
+        "struct": {
+          "accountId": {
+            "str": "buyer.dockside-root.testnet"
+          },
+          "keyVersionId": {
+            "str": "key_2aa9625f9144c194cd5111f62a38a48b"
+          },
+          "organizationId": {
+            "str": "org_3aea2187375011bbd1b3de939415eeac"
+          },
+          "principalId": {
+            "str": "prn_e63368c72a137c7628f783496206b2f9"
+          },
+          "publicKey": {
+            "str": "ed25519:6z5PJsjGPJtpgDzFWwKQqzeVZQ4QHsUp3ovVu4S4cm8X"
+          }
+        }
+      },
+      "delayPolicy": {
+        "struct": {
+          "destinationChangeDelayMs": {
+            "u64": "3600000"
+          }
+        }
+      },
+      "escrowContractId": {
+        "str": "escrow.dockside-root.testnet"
+      },
+      "evidencePolicy": {
+        "struct": {
+          "digest": {
+            "str": "c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8"
+          },
+          "id": {
+            "str": "commercial-docs"
+          },
+          "revision": {
+            "u64": "1"
+          }
+        }
+      },
+      "expiresAt": {
+        "u64": "1797160631120"
+      },
+      "inspector": {
+        "struct": {
+          "attestationSchema": {
+            "str": "dockside/inspection-attestation@1"
+          },
+          "keyVersionId": {
+            "str": "key_9eda4a825b88c8530ce0dfccf45c6230"
+          },
+          "principalId": {
+            "str": "prn_50edeba4bde59eac5705b82188fd3081"
+          },
+          "publicKey": {
+            "str": "ed25519:4nDWsnVJ9Lww37TCLSLUS7ksAbQ7TWt6PE6EfTJZ6gwa"
+          }
+        }
+      },
+      "manifestAttestor": {
+        "struct": {
+          "attestationSchema": {
+            "str": "dockside/manifest-attestation@1"
+          },
+          "capability": {
+            "str": "MANIFEST_ATTEST"
+          },
+          "enrollmentId": {
+            "str": "svc_7f58ebd28ed257e5ffdf274a6edc54d6"
+          },
+          "keyVersion": {
+            "u64": "1"
+          },
+          "publicKey": {
+            "str": "ed25519:6cRctSeHmW1LxMTjrSkF2doe4BQpG42bFGZBJQijqvCE"
+          },
+          "scope": {
+            "struct": {
+              "evidencePolicyId": {
+                "str": "commercial-docs"
+              },
+              "evidencePolicyRevision": {
+                "u64": "1"
+              },
+              "organizationId": {
+                "str": "org_3aea2187375011bbd1b3de939415eeac"
+              },
+              "tradeId": {
+                "null": null
+              }
+            }
+          },
+          "serviceId": {
+            "str": "manifest-attestor"
+          }
+        }
+      },
+      "milestone": {
+        "struct": {
+          "description": {
+            "str": "Container loaded"
+          },
+          "id": {
+            "str": "shipment-1"
+          }
+        }
+      },
+      "network": {
+        "str": "near-testnet"
+      },
+      "payout": {
+        "struct": {
+          "destination": {
+            "str": "supplier.dockside-root.testnet"
+          },
+          "network": {
+            "str": "near-testnet"
+          },
+          "recipientType": {
+            "str": "NEAR_ACCOUNT"
+          }
+        }
+      },
+      "policySetter": {
+        "struct": {
+          "attestationSchema": {
+            "str": "dockside/hold-set@1"
+          },
+          "capability": {
+            "str": "DETERMINISTIC_POLICY_SET"
+          },
+          "enrollmentId": {
+            "str": "svc_01590cbf2acab4b5672b7cc66756dd2f"
+          },
+          "keyVersion": {
+            "u64": "1"
+          },
+          "publicKey": {
+            "str": "ed25519:BV9La9qcQRykkRwS24eh6cnX6mB7q3YrpUjaHMPUKCcm"
+          },
+          "scope": {
+            "struct": {
+              "evidencePolicyId": {
+                "str": "commercial-docs"
+              },
+              "evidencePolicyRevision": {
+                "u64": "1"
+              },
+              "organizationId": {
+                "str": "org_3aea2187375011bbd1b3de939415eeac"
+              },
+              "tradeId": {
+                "str": "trd_8deaaeb3499caffd500a8a1c24cf9a50"
+              }
+            }
+          },
+          "serviceId": {
+            "str": "deterministic-policy"
+          }
+        }
+      },
+      "predecessorDigest": {
+        "null": null
+      },
+      "profileVersion": {
+        "str": "dockside-direct-testnet-v1"
+      },
+      "refundPolicy": {
+        "struct": {
+          "id": {
+            "str": "dockside-refund-v1"
+          },
+          "revision": {
+            "u64": "1"
+          }
+        }
+      },
+      "revision": {
+        "u64": "1"
+      },
+      "riskResolver": {
+        "struct": {
+          "keyVersionId": {
+            "str": "key_74d9047e8aebae825af7717f4a8ca43c"
+          },
+          "principalId": {
+            "str": "prn_b173182536d24314e830117398d41916"
+          },
+          "publicKey": {
+            "str": "ed25519:2pKPMz46QATTN8GmxC6d8T6vmzko7NDRuopkPUWRxVEy"
+          }
+        }
+      },
+      "schemaVersion": {
+        "u64": "1"
+      },
+      "supplier": {
+        "struct": {
+          "accountId": {
+            "str": "supplier.dockside-root.testnet"
+          },
+          "keyVersionId": {
+            "str": "key_e3cdabbd2bdee5a869b3d1ba2bfc5ac9"
+          },
+          "organizationId": {
+            "str": "org_0754184130a5347e0da27a5dc7f7048a"
+          },
+          "principalId": {
+            "str": "prn_7e92c483618f545802cad245f4d161c6"
+          },
+          "publicKey": {
+            "str": "ed25519:7ET5fChkFFj9iw5XU27oSqCEuURSaQHJv1FgvrW7FmsQ"
+          }
+        }
+      },
+      "tradeId": {
+        "str": "trd_8deaaeb3499caffd500a8a1c24cf9a50"
+      }
+    }
+  },
+  "approval": {
+    "txHash": "HBTspckrwxkybwd9LN8Hya5m4AxNQTz8UVMmX7ezmqVN",
+    "argsBase64": "eyJwYXlsb2FkIjp7InN0cnVjdCI6eyJhbW91bnRZb2N0byI6eyJ1MTI4IjoiMjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAifSwiYXR0ZXN0YXRpb25EaWdlc3QiOnsic3RyIjoiMTJkMTJmZTczNzQzZmE2YmIxYTYyOTQxNzM0YWRiMWJjM2JlMmU3NTY5MjliYzk5YTA2OGQ5OWVlYTMyNDFkNSJ9LCJjb250cmFjdElkIjp7InN0ciI6ImVzY3Jvdy5kb2Nrc2lkZS1yb290LnRlc3RuZXQifSwiZGVzdGluYXRpb24iOnsic3RyIjoic3VwcGxpZXIuZG9ja3NpZGUtcm9vdC50ZXN0bmV0In0sImRlc3RpbmF0aW9uRGlnZXN0Ijp7InN0ciI6ImRmN2FhYThhNmM0NmQ3Yzg1YmQyM2QyNDk1Y2MxYTVjMDlkNDI4N2ZkZmQ0ZDVlMDVlMzU0MjU3ODkwOGY4YzkifSwiZXhlY3V0aW9uUHJvZmlsZSI6eyJzdHIiOiJESVJFQ1RfVEVTVE5FVCJ9LCJleHBpcmVzQXQiOnsidTY0IjoiMTc5NDY1NTAzNTg4MSJ9LCJob2xkc1ZpZXdEaWdlc3QiOnsic3RyIjoiMTUyYjFjYmZhNDcyYWRiYWQ3Yzk0Zjk3NzQxYzE5YjNkNmUyMWQyZjYwYmRmZDIzYjgxNjU2ODhhYWQ4N2ZlYyJ9LCJpbnNwZWN0aW9uRGlnZXN0Ijp7InN0ciI6IjYwZjAxZGFmMjNkMTA2YzM5MzQyZDYzNmIzMDA4ZDc1MzhmZjc2Mzk5Y2UyMmVjMGEzNWQ3YTY3YmE1MjhkZmUifSwiaW50ZW50U3RhdGVWZXJzaW9uIjp7InU2NCI6IjEifSwiaXNzdWVkQXQiOnsidTY0IjoiMTc5NDU2ODYzNTg4MSJ9LCJtYW5pZmVzdERpZ2VzdCI6eyJzdHIiOiIyYzE5Njc2NDU4MmQ1YTkxMGEzZDYxYmJlNTg2ODkxZDhkYTgzZDRlMTEyMDc2MWZmZWI0NjliYmQ5ZDJkNDQyIn0sIm1hbmlmZXN0UmV2aXNpb24iOnsidTY0IjoiMSJ9LCJub25jZSI6eyJzdHIiOiIyODEyM2NiOGZiOTg1YmIzODUwYTQ5NWJkNzdkOTQ4NTI4YzgwZDRiODNmNWJmZmI1Y2FlZTAxMzMyYmMyN2FjIn0sInJlbGVhc2VJbnRlbnRJZCI6eyJzdHIiOiJybGlfNjlkZjc2ZjlmYWRjNDczNmIyZDNiNmRkNDlhMjg0Y2IifSwic2lnbmVyUm9sZSI6eyJzdHIiOiJCVVlFUl9BUFBST1ZFUiJ9LCJ0cmFkZURpZ2VzdCI6eyJzdHIiOiJkNTRmMTNmYmZiODI0ZmFiZDhkZjIxZGM1YTJhZGE4NmVmYjc1YTU5NjgxZTc2ODYwMGRhMTIzYTE0NmY4MWNhIn0sInRyYWRlSWQiOnsic3RyIjoidHJkXzhkZWFhZWIzNDk5Y2FmZmQ1MDBhOGExYzI0Y2Y5YTUwIn0sInRyYWRlUmV2aXNpb24iOnsidTY0IjoiMSJ9fX0sInNpZ25hdHVyZSI6ImVkMjU1MTk6Mmt2N3dEZVdoYXB2MjFCMXlOZTZZMXpaOWg0elN4Z1I5TW41d3NrMnBmUTlDZHVtRWhaTnBjbUF0NXBXYW5vNzVQWFZueXlXcERaeEhBcHhIa1h6S0JOMSIsInRyYWRlX2lkIjoidHJkXzhkZWFhZWIzNDk5Y2FmZmQ1MDBhOGExYzI0Y2Y5YTUwIn0="
+  },
+  "recorded": [
+    {
+      "attack": "change-payout",
+      "txHash": "25nQtgNi55e3xyJjPHybwLqJAmxXCBf1RDS9uLCtbrdV",
+      "signer": "stranger.dockside-root.testnet",
+      "code": "SIGNATURE_INVALID",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "release-during-hold",
+      "txHash": "GoSaXH5jasmBqKfbHPwMkt2dmgupfdsyHCwierHdZo6J",
+      "signer": "stranger.dockside-root.testnet",
+      "code": "HOLD_ACTIVE",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "approve-wrong-key",
+      "txHash": "2vGX5jfAG2BsjsnnWigHkD3KPg23Xr6W43qvFLLdx6rS",
+      "signer": "stranger.dockside-root.testnet",
+      "code": "SIGNATURE_INVALID",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "replay-approval",
+      "txHash": "EoiqFb8r43ha9Mo7j9qKeHsgaRmVBUG4HRg4AsQParLd",
+      "signer": "stranger.dockside-root.testnet",
+      "code": "INVALID_STATE",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "refund-to-stranger",
+      "txHash": "4XxdRE4zjVLhD5B815g4bXGPmyHYLcuR4uSXWjNoYT4z",
+      "signer": "stranger.dockside-root.testnet",
+      "code": "NOTHING_ELIGIBLE",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "release-during-hold",
+      "txHash": "FVerMxXuTC5mffLDj4GECiF87kgnw7GqtGED4b75sGuz",
+      "signer": "stranger.dockside-root.testnet",
+      "code": "HOLD_ACTIVE",
+      "blockTimeMs": null
+    }
+  ]
+}

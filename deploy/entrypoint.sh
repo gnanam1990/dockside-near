@@ -14,11 +14,15 @@
 #      file in RELAYER_KEY_JSON_B64;
 #   3. removes that variable from the environment, so no Node.js process ever sees it.
 # Only the PATH of the private copy is passed on (HOSTED_RELAYER_KEY_FILE), and the launcher gives
-# it to the worker alone. Nothing here prints a secret.
+# it to the worker alone. The attack console's demo key (M53) is handled the same way: the file
+# HOSTED_ATTACK_SECRET_FILE (default /etc/secrets/attack-key.json) or ATTACK_KEY_JSON_B64 becomes a
+# private copy whose path (HOSTED_ATTACK_KEY_FILE) reaches the attack relay alone. Nothing here
+# prints a secret.
 set -eu
 
 DATA_DIR="${HOSTED_DATA_DIR:-/data}"
 SECRET_FILE="${HOSTED_RELAYER_SECRET_FILE:-/etc/secrets/relayer-key.json}"
+ATTACK_SECRET_FILE="${HOSTED_ATTACK_SECRET_FILE:-/etc/secrets/attack-key.json}"
 RUN_USER=dockside
 
 if [ "$(id -u)" = "0" ]; then
@@ -58,11 +62,27 @@ case "${1:-serve}" in
       if [ "$(id -u)" = "0" ]; then chown "$RUN_USER:$RUN_USER" "$KEY"; fi
       export HOSTED_RELAYER_KEY_FILE="$KEY"
     fi
+    AKEY="$RUN_DIR/attack-key.json"
+    if [ -f "$ATTACK_SECRET_FILE" ]; then
+      cat "$ATTACK_SECRET_FILE" > "$AKEY"
+    elif [ -n "${ATTACK_KEY_JSON_B64:-}" ]; then
+      printf '%s' "$ATTACK_KEY_JSON_B64" | base64 -d > "$AKEY" || {
+        rm -f "$AKEY"
+        echo '{"event":"hosted.refused","code":"HOSTED_REFUSED","reason":"ATTACK_SECRET_NOT_BASE64"}'
+        exit 78
+      }
+    fi
+    unset ATTACK_KEY_JSON_B64
+    if [ -f "$AKEY" ]; then
+      chmod 0600 "$AKEY"
+      if [ "$(id -u)" = "0" ]; then chown "$RUN_USER:$RUN_USER" "$AKEY"; fi
+      export HOSTED_ATTACK_KEY_FILE="$AKEY"
+    fi
     as_user node /app/services/hosted/dist/main.js
     ;;
   seed-demo)
     shift
-    unset RELAYER_KEY_JSON_B64
+    unset RELAYER_KEY_JSON_B64 ATTACK_KEY_JSON_B64
     as_user node /app/services/hosted/dist/seed-cli.js "$@"
     ;;
   *)
