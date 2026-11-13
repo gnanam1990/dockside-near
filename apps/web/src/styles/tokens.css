@@ -1,10 +1,10 @@
 /*
- * Dockside semantic tokens (UI-SPEC §4, ADR-0026, ADR-0031). Components consume only these variables;
+ * Dockside semantic tokens (UI-SPEC §4, ADR-0026, ADR-0032). Components consume only these variables;
  * raw colour values live in this file alone. Every text/background and control/background
  * pair used by components is checked for WCAG 2.2 AA in apps/web/test/tokens.test.ts.
  *
  * Direction: light-first Minimal Swiss enterprise operations, set as a trade document
- * (ADR-0031): a navy harbour rail for navigation, ruled ledger boxes for labelled facts, a
+ * (ADR-0032): a navy harbour rail for navigation, ruled ledger boxes for labelled facts, a
  * double-ruled document head on every screen. Flat surfaces, 1 px borders, one restrained
  * elevation step, 4/8 px rhythm, navy action colour, status colours reserved for status.
  */

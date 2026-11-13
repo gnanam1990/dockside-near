@@ -1,7 +1,7 @@
 # M62 — web app redesign (trade-document visual system)
 
 - Status: **implemented; `pnpm run check` and every web Playwright suite green on this branch** (see Validation).
-- Branch: `feat/dockside-m62-web-redesign`. Decision record: ADR-0031 (extends ADR-0026).
+- Branch: `feat/dockside-m62-web-redesign`. Decision record: ADR-0032 (extends ADR-0026).
 - Surface: `apps/web` only. `docs/spec/` is unchanged; README is not touched by this milestone.
 - No route, API call, label, role, `data-testid` or asserted text changed. No dependency added; fonts and icons stay
   self-hosted under the existing content security policy. No transaction was sent to testnet or mainnet.

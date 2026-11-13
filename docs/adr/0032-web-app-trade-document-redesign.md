@@ -1,9 +1,10 @@
-# ADR-0031 — Web app redesign: the trade-document visual system
+# ADR-0032 — Web app redesign: the trade-document visual system
 
 - Decision status: accepted
 - Date: 2026-11-13, Dockside platform team
 - Affected IDs: UI-SPEC §1 (experience principle), §4 (design system), §5 (responsive), §6 (accessibility), §7 (motion)
-- Relates to: ADR-0008 (web UI shell), ADR-0026 (visual design system), which this extends and does not reverse
+- Relates to: ADR-0008 (web UI shell), ADR-0026 (visual design system), which this extends and does not reverse;
+  ADR-0031 (public proof site redesign), the sibling surface it is kept coherent with
 
 ## Context
 
@@ -67,6 +68,14 @@ matches the spec. Its generic fintech/crypto row (glassmorphism, dark OLED, vibr
     (>= 4.5:1), rail focus and accent (>= 3:1) and the ink rule on canvas and panel (>= 3:1), in both schemes.
 11. **Behaviour untouched.** No route, API call, label, role, test id or asserted text changed. No dependency was
     added; fonts and icons stay self-hosted (`font-src 'self'`).
+
+## Coherence with the public proof site (ADR-0031)
+
+Both surfaces now read as documents from the same desk: the proof site as a filed audit document with stamped
+refusal outcomes, the web app as the trade paperwork itself. They share the spec palette, IBM Plex Sans and Mono,
+navy as the only brand colour, small-caps labels over ruled fields, and stamp-like outcomes. The two stylesheets
+stay separate (`site/proof/*.css` and `apps/web/src/styles/`); no token file is shared, so neither redesign changes
+the other's rendering.
 
 ## Consequences
 

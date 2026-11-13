@@ -1,5 +1,5 @@
 /*
- * Dockside application styles. Semantic tokens only (tokens.css; ADR-0026, ADR-0031).
+ * Dockside application styles. Semantic tokens only (tokens.css; ADR-0026, ADR-0032).
  *
  * Visual idea: every screen reads like a trade document. A navy harbour rail carries
  * navigation; each screen opens with a double-ruled document head; labelled facts sit in
@@ -1002,7 +1002,15 @@ td > .tabular,
 td > .mono.tabular {
   white-space: nowrap;
 }
+/* Statuses in a cell wrap between words, never inside one; long identifiers may break anywhere. */
+td .status__label {
+  overflow-wrap: normal;
+}
+[data-testid="trades-table"] td:first-child {
+  min-width: 20ch;
+}
 td:first-child > a {
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
@@ -1502,6 +1510,7 @@ dialog::backdrop {
   }
   .table--cards td {
     grid-column: 1 / -1;
+    min-width: 0;
   }
   .table--cards
     td:is(
