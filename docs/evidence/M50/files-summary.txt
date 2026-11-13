@@ -2,13 +2,13 @@ M50 USDC rail and capped mainnet label: records of the container reproduction an
 (pnpm run contract:reproduce in node:22-bookworm-slim, pnpm run contract:sandbox in node:22-trixie-slim,
 near-sandbox 2.14.0, near-cli-rs 0.31.1). Nothing here comes from NEAR testnet or mainnet.
 
-build-manifest.json          manifest of the clean-checkout build of commit 8fa5288: contract SHA-256 and NEAR code hash,
+build-manifest.json          manifest of the clean-checkout build of commit e335eda: contract SHA-256 and NEAR code hash,
                              toolchain, lockfile digests
 clean-checkout-report.json   the steps of that clean checkout (frozen install, pnpm run check, contract host tests,
                              audit, manifest) with exit codes; local paths are replaced by <source> and <tmp>
 sandbox-report.json          the sandbox suite report: commit under test, wasm SHA-256 (rebuilt from that commit
                              inside the container and equal to the manifest), tool pins, results
-sandbox-tests-summary.txt    the "Running", "running" and "test ..." lines of the suite log (40 passed; the 3 run-all
+sandbox-tests-summary.txt    the "Running", "running" and "test ..." lines of the suite log (42 passed; the 3 run-all
                              validations are the ignored ones, run separately)
 run-all-validation.txt       the result lines of the three run-all validations (all passed). cargo prints a passing
                              test's output nowhere, so the run-all logs themselves are not in this file

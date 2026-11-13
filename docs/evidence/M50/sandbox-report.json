@@ -1,7 +1,7 @@
 {
   "schema": "dockside/sandbox-report@1",
-  "commit": "8fa5288a84078780e3e7a4723b85dd2635e68a72",
-  "wasmSha256": "46f982e44932cc85a8e13c3c15d016b349505279568cd6d74e2ae722ac80e99e",
+  "commit": "e335eda0135064f9693f5e6ebb274dcf4f600726",
+  "wasmSha256": "025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770",
   "tools": {
     "nearSandbox": {
       "version": "2.14.0",
@@ -47,13 +47,19 @@
       },
       {
         "result": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
         "passed": 8,
         "failed": 0,
         "ignored": 0
       },
       {
         "result": "ok",
-        "passed": 22,
+        "passed": 23,
         "failed": 0,
         "ignored": 0
       },

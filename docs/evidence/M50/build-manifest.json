@@ -1,6 +1,6 @@
 {
   "schema": "dockside/build-manifest@1",
-  "commit": "8fa5288a84078780e3e7a4723b85dd2635e68a72",
+  "commit": "e335eda0135064f9693f5e6ebb274dcf4f600726",
   "trackedTreeClean": true,
   "toolchain": {
     "node": "v22.23.5",
@@ -61,10 +61,10 @@
   },
   "contract": {
     "path": "contract/target/wasm32-unknown-unknown/release/dockside_escrow.wasm",
-    "bytes": 861214,
-    "sha256": "46f982e44932cc85a8e13c3c15d016b349505279568cd6d74e2ae722ac80e99e",
-    "nearCodeHash": "5n4D4NSNUfdqBt6udW7EsRnSi7cHvwLXV8ovu6EDhFZ7",
-    "builtAt": "2026-11-13T10:35:21.232Z"
+    "bytes": 862018,
+    "sha256": "025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770",
+    "nearCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "builtAt": "2026-11-13T11:39:52.600Z"
   },
   "deployment": {
     "network": "near-testnet",

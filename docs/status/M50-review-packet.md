@@ -3,8 +3,9 @@
 For the independent reviewer and the owner. This branch changes a contract that is meant to hold real money. It is
 **not merged and not deployed**; it waits for an audit of this diff and the owner's approval.
 
-- Branch `feat/dockside-m50-usdc-rail`, contract and tooling final at commit `8fa5288a84078780e3e7a4723b85dd2635e68a72` (the merge of main
-  `ae53b8a`); later commits are documentation, evidence records and one opt-in test.
+- Branch `feat/dockside-m50-usdc-rail`, contract and tooling final at commit `e335eda0135064f9693f5e6ebb274dcf4f600726` (the
+  independent audit's fix on top of `8fa5288`, the merge of main `ae53b8a`); later commits are documentation and
+  evidence records. The audit and its findings are in [Independent audit](#independent-audit-2026-11-13) below.
 - Diff to review: `git diff main...feat/dockside-m50-usdc-rail -- contract/crates` (the deployable code), then
   `contract/integration` (mirror, harness, tests) and `scripts/testnet-deploy` (run-all).
 - Decision record: [ADR-0028](../adr/0028-nep141-rail-and-mainnet-guard.md). Status and commands:
@@ -15,11 +16,12 @@ For the independent reviewer and the owner. This branch changes a contract that 
 
 | | |
 |---|---|
-| Source commit | `8fa5288a84078780e3e7a4723b85dd2635e68a72` |
+| Source commit | `e335eda0135064f9693f5e6ebb274dcf4f600726` |
 | Build | `pnpm run contract:reproduce`: clean clone in `node:22-bookworm-slim` (image pinned by digest in `scripts/lib/docker.mjs`), Rust 1.97.1 from a pinned rustup-init, `--locked`, `CARGO_HOME=/root/.cargo` |
-| File | `dockside_escrow.wasm`, 861214 bytes |
-| SHA-256 | `46f982e44932cc85a8e13c3c15d016b349505279568cd6d74e2ae722ac80e99e` |
-| NEAR code hash (base58 of the SHA-256) | `5n4D4NSNUfdqBt6udW7EsRnSi7cHvwLXV8ovu6EDhFZ7` |
+| File | `dockside_escrow.wasm`, 862018 bytes |
+| SHA-256 | `025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770` |
+| NEAR code hash (base58 of the SHA-256) | `ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq` |
+| Superseded | the pre-audit build of `8fa5288` (`46f982e4…e99e`, code hash `5n4D4NSN…hFZ7`) must not be deployed |
 | Second build of the same commit | in the same container run (the export step rebuilds and compares) and in the `node:22-trixie-slim` sandbox container (`container-sandbox.sh` refuses to run unless its own rebuild has this SHA-256): both matched ([docs/evidence/M50/sandbox-report.json](../evidence/M50/sandbox-report.json), `wasmSha256`) |
 
 To reproduce: check out the commit and run `pnpm run contract:reproduce`; `.data/repro/build-manifest.json` must
@@ -99,7 +101,7 @@ Each is enforced by the contract and asserted by at least one test, named in bra
 
 ## Test list
 
-Core host tests (`pnpm run contract:test`, 138 passed), new file `tests/m50_nep141_rail.rs`:
+Core host tests (`pnpm run contract:test`, 141 passed; 3 of them added by the audit in `tests/m50_funder_return_bound.rs`), new file `tests/m50_nep141_rail.rs`:
 `nep141_asset_is_part_of_the_signed_terms`, `asset_schema_is_exact_per_kind_and_fails_closed`,
 `only_the_named_token_contract_credits_the_trade`, `funding_message_decides_between_funding_and_an_unexpected_asset`,
 `token_buckets_follow_the_native_rules`, `release_cannot_lock_value_for_an_unregistered_payee`,
@@ -172,7 +174,7 @@ run-all on nearcore: `run_all_runs_the_usdc_journeys_and_the_mainnet_label_on_sa
 
 - The deployed `gnanam1990-dock-escrow2.testnet` keeps running the earlier build (`7GEti5E6…5h8N`). Nothing here
   can change it.
-- After a merge, the repository's source builds to `5n4D4NSN…hFZ7`, not to the code on escrow2. Records that
+- After a merge, the repository's source builds to `ACFe6Us2…k2sq`, not to the code on escrow2. Records that
   describe the deployment (`deploy/escrow-manifest.json`, the proof page data, the M24/M34/M44 evidence) stay
   correct because they describe escrow2, not the source. A fresh `pnpm run contract:reproduce` no longer
   reproduces escrow2's wasm; that needs a checkout of commit `4ff233b` or any commit before this merge.
@@ -225,3 +227,68 @@ run-all on nearcore: `run_all_runs_the_usdc_journeys_and_the_mainnet_label_on_sa
 12. **The token id.** The mainnet USDC id in the documents
     (`17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1`) was checked only by reading its
     `ft_metadata` over a public RPC. Confirm it against Circle's documentation before any real-funds run.
+
+## Independent audit, 2026-11-13
+
+Scope: `git diff main...feat/dockside-m50-usdc-rail` for `contract/crates` (deployable code), the near-sdk
+wrapper's callers in `contract/integration` and run-all (`scripts/testnet-deploy`). Classes checked: NEP-141 receiver
+and callback ordering, promise failure and rollback, re-entrancy across callbacks, `ft_on_transfer` return values,
+storage registration of the payee, token-id confusion, decimals, caps and the network guard, rounding, ledger
+conservation under failure, replay and nonces, private callbacks, init races, gas in callbacks, unexpected assets.
+Every candidate was checked with a host test or on a local nearcore node (near-sandbox 2.14.0 in a container).
+
+### Fixed (commit `e335eda`)
+
+1. **A stranger could grow another party's trade record without bound** (medium). Any account becomes a funder of
+   any trade with one minimum deposit (0.01 USDC). A funder-initiated return (`PARTIAL_FUNDING_RETURN`,
+   `EXCESS_FUNDING_RETURN`) that ends REVOKED, or FAILED because the transfer failed (for a token trade the funder
+   can cause that itself by leaving the token's storage registration), stays in the record for good, so a
+   request/revoke loop grew the victim's record by 546 bytes per cycle (host test: 2229 bytes, then 56829 after
+   100 cycles), paid from the escrow's own NEAR as storage stake, and made every later call on that trade more
+   expensive. ADR-0022 had recorded this loop as an open follow-up. Fix: at most `MAX_ENDED_FUNDER_RETURNS` (4)
+   such returns per funder per trade; the next return request from that funder is `CAPACITY_EXCEEDED`. Nobody
+   else's refunds are affected, and a return that paid does not count.
+   Tests: `tests/m50_funder_return_bound.rs` (3, host) and
+   `m50_a_stranger_cannot_bloat_a_trade_and_a_minimum_gas_relay_still_settles` (nearcore), both failing before the fix.
+2. **The settlement callbacks had a fixed 15 Tgas while rewriting a record of unbounded size** (medium). Anyone may
+   relay `execute_release` or `execute_refund` and may attach only as much gas as the call accepts; the callback
+   then gets about its static 15 Tgas. On nearcore, after 120 stranger cycles on a token trade the release callback
+   of a minimum-gas relay burnt 13.9 Tgas (3.9 Tgas for a normal record); a few more cycles would leave it without
+   gas after the token transfer had gone out, the intent would stay SUBMITTING, and with it any excess or failed
+   value of that trade, since nothing in the contract resolves a SUBMITTING intent or EXECUTING refund. Fix: the
+   release and refund callbacks get 15 Tgas plus 300 Mgas per byte of the trade record (measured about 170 Mgas per
+   byte), so a relay that attaches less fails before anything is transferred or recorded. Test:
+   `the_settlement_callback_is_funded_for_the_size_of_the_record` (near-sdk unit), failing before the fix.
+
+Suites after the fix: `pnpm run contract:test` 141 passed; `pnpm run contract:sandbox` `sandbox suite PASS`
+(42 tests: 2 fixtures, 1 storage bounds, 9 M50 on nearcore, 23 near-sdk unit, 7 native on nearcore; then the 3
+run-all validations); `pnpm run check` 814 passed, secret scan clean; `pnpm run contract:reproduce` gives the
+digest at the top of this packet ([docs/evidence/M50/](../evidence/M50/)).
+
+### Open, for the owner
+
+- **Free storage at the escrow's cost** (low). `register_trade` needs no deposit: on nearcore a stranger's
+  registration added 1893 bytes (0.019 NEAR of the escrow's balance locked as storage stake) for 0.00055 NEAR of
+  gas, about 34 times. Token deposits attach no NEAR either (64 deposits added 5671 bytes). Pre-existing for
+  registration; on mainnet the escrow's balance is real NEAR. Effect: the escrow's free NEAR can be locked into
+  storage and new registrations, fundings and executions then fail until it is topped up; no trade value can be
+  taken. The release callback adds a history entry and drops the live-intent id, so it does not grow the record
+  and a paid release still settles; the refund callback grows it by about 20 bytes. Mitigation without a code
+  change: keep only a small NEAR balance on the escrow, and top up in the same transaction as the call that needs
+  it. A real fix (a storage deposit on registration, or a storage budget per trade) changes who pays and how the
+  relayer signs, so it is an owner decision.
+- **Very large records need more gas than the product attaches** (low). After fix 2 a record of about 150 KB (64
+  funders each with 4 ended returns) needs about 110 Tgas for `execute_release`; the product and run-all attach 100
+  Tgas. Such an execution fails whole and can be repeated with more gas; nothing is lost.
+- **Circle's `ft_transfer` within 20 Tgas** (needs validation). The test token used 1.76 Tgas. Circle's contract
+  was not run here. The testnet run measures it; if it ever needed more, transfers fail and roll back, and the
+  value cannot be paid out by this deployment.
+- Questions 3, 4, 9, 10 and 12 above stand as written (pausing and blocklisting, no deployment-wide cap, plain
+  `ft_transfer` to the escrow, escrow key custody, the mainnet token id). `new` is callable by anyone until the
+  contract is initialised; run-all deploys and initialises in one transaction, and a manual deployment must too.
+
+Checked and not a finding: a forged `ft_on_transfer` (credits nothing, returns the amount); a second token naming
+the trade and digest (returned, `ASSET_MISMATCH`); the unexpected-asset record of a forged call names the forging
+account as the asset contract, so its recovery can only call that account; the private callbacks; a payee check
+whose destination changed before the answer (refused, nothing changes); replays of approvals, executions and
+settlements; the cap counting excess; the mainnet label with zero caps, an unpinned token or testnet-signed terms.
