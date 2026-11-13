@@ -9,6 +9,10 @@ import { codec } from "./schemas.js";
  */
 const MS_DAY = 24 * 3600 * 1000;
 
+function isLoopback(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
 const schema = z
   .object({
     DOCKSIDE_DB_PATH: z.string().min(1).default(".data/dockside.sqlite"),
@@ -130,6 +134,31 @@ const schema = z
     /** Transaction validity period of the chain in blocks (NEAR testnet: 86400). */
     DOCKSIDE_TX_VALIDITY_BLOCKS: z.coerce.number().int().min(10).max(1_000_000).default(86_400),
     DOCKSIDE_WORKER_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(2_000),
+    /* ---------------- supplier cash-out through 1Click (M52, ADR-0028) ---------------- */
+    /**
+     * Origin of the NEAR Intents 1Click service the API asks for token lists, `dry: true` quotes and
+     * statuses. Unset: the cash-out panel reports NOT_CONFIGURED. https, or http on a loopback host
+     * (a local simulator).
+     */
+    DOCKSIDE_ONE_CLICK_URL: z
+      .string()
+      .url()
+      .refine((u) => {
+        const url = new URL(u);
+        return url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname));
+      }, "1Click endpoint must be https, or http on a loopback host")
+      .refine((u) => new URL(u).origin === u, "1Click endpoint must be an origin without a path")
+      .optional(),
+    /**
+     * PATH of a file holding the optional 1Click partner token (never the token itself). Read once at
+     * startup, sent as a bearer header on the read-only requests, kept out of every log and answer.
+     */
+    DOCKSIDE_ONE_CLICK_TOKEN_FILE: z.string().min(1).optional(),
+    /**
+     * NEAR network the configured 1Click service settles on. The public service is mainnet only;
+     * `near-testnet` is accepted only together with a loopback DOCKSIDE_ONE_CLICK_URL (a simulator).
+     */
+    DOCKSIDE_ONE_CLICK_NEAR_NETWORK: z.enum(NETWORKS).default("near-mainnet"),
   })
   .strict();
 
@@ -157,6 +186,18 @@ export function loadConfig(env: Readonly<Record<string, string | undefined>>): D
       "near-mainnet is BLOCKED until separately authorized; only near-testnet is supported",
     );
   }
+  const oneClick = r.data.DOCKSIDE_ONE_CLICK_URL;
+  if (oneClick === undefined && r.data.DOCKSIDE_ONE_CLICK_TOKEN_FILE !== undefined)
+    throw new DocksideError("CONFIG_INVALID", "invalid configuration value", {
+      name: "DOCKSIDE_ONE_CLICK_TOKEN_FILE",
+    });
+  if (
+    r.data.DOCKSIDE_ONE_CLICK_NEAR_NETWORK !== "near-mainnet" &&
+    (oneClick === undefined || !isLoopback(new URL(oneClick).hostname))
+  )
+    fail("CONFIG_INVALID", "a 1Click service off mainnet is accepted only on a loopback endpoint", {
+      name: "DOCKSIDE_ONE_CLICK_NEAR_NETWORK",
+    });
   return Object.freeze(r.data);
 }
 

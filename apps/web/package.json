@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
-    "e2e": "vite build && playwright test && playwright test -c playwright.assets.config.ts && playwright test -c playwright.reasons.config.ts && playwright test -c playwright.clock.config.ts",
+    "e2e": "vite build && playwright test && playwright test -c playwright.assets.config.ts && playwright test -c playwright.reasons.config.ts && playwright test -c playwright.clock.config.ts && playwright test -c playwright.cashout.config.ts",
     "e2e:sandbox": "vite build && playwright test -c playwright.sandbox.config.ts"
   },
   "dependencies": {

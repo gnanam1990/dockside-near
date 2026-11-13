@@ -7,10 +7,17 @@ import { Callout, FailureState, LoadingState } from "../components/States";
 import { StatusBadge } from "../components/Status";
 import { isApiIdentifier } from "../lib/api/endpoints";
 import { type BrowserExportCheck, verifySignedExportInBrowser } from "../lib/export-verify";
-import { type FunctionCall, type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
+import {
+  type FunctionCall,
+  type PayoutView,
+  type Relation,
+  TradeApi,
+  type TradeProjection,
+} from "../lib/api/trade";
 import { formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
 import { AuthorityRevisionCallout } from "./trade/Authority";
+import { CashOut } from "./trade/CashOut";
 import { BlockerList, Near, Section, TradeContext, type TradeCtx, useTrade } from "./trade/common";
 import { DestinationChange } from "./trade/Destination";
 import { KeyRebinding } from "./trade/KeyRebinding";
@@ -36,7 +43,7 @@ const TAB_PROMISE: Record<TradeTab, string> = {
     "EvidencePolicy slots, upload, manifest revisions, attestation, advisory analysis (which cannot create or clear a hold), HoldRecords and the inspector workbench.",
   release: "Release intent and value lock, policy checklist, buyer approval, execution and pre-submit exits.",
   payout:
-    "Direct testnet release, independent dry compatibility, funded authorization, execution, destination receipt and reconciliation.",
+    "Direct testnet release, independent dry compatibility, funded authorization, execution, destination receipt, reconciliation, and the supplier's own move to another chain.",
   refund:
     "Original-funder deposits, the signed refund policy, refund and cancellation eligibility, timelocks, conflicts and outcome.",
   timeline: "Append-only event history as a table, and the checksummed audit export.",
@@ -373,6 +380,17 @@ function AgreementTab() {
 function PayoutTab() {
   const t = useTrade();
   const pay = useApiData(() => t.api.payout(t.tradeId), [t.tradeId, t.tick]);
+  return (
+    <>
+      <PayoutSections pay={pay} />
+      {/* Outside the refreshing section so the supplier's entries survive the periodic reload. */}
+      <CashOut />
+    </>
+  );
+}
+
+function PayoutSections({ pay }: { pay: ReturnType<typeof useApiData<PayoutView>> }) {
+  const t = useTrade();
   return (
     <Section what="payout" state={pay.state} outcome={pay.outcome} reload={pay.reload}>
       {(p) => (
