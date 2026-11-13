@@ -15,25 +15,9 @@ import {
   recordedFor,
 } from "../lib/attack-read.mjs";
 import { createRpc } from "../lib/near-rpc.mjs";
+import { arrive, el, external, icon, mono, mountNav, VERDICT_ICON } from "../lib/ui.mjs";
 
-function el(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === undefined || v === null || v === false) continue;
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else node.setAttribute(k, v === true ? "" : String(v));
-  }
-  for (const c of children.flat()) {
-    if (c === undefined || c === null || c === false) continue;
-    node.append(typeof c === "string" ? document.createTextNode(c) : c);
-  }
-  return node;
-}
-const mono = (text) => el("span", { class: "mono", text });
-const external = (href, text) => el("a", { href, target: "_blank", rel: "noopener noreferrer", text });
-
-const state = { config: null, rpc: null, relay: null, busy: false };
+const state = { config: null, rpc: null, relay: null, busy: false, lastCount: null };
 
 async function loadConfig() {
   const res = await fetch("./attack-demo.json", { cache: "no-store" });
@@ -74,52 +58,84 @@ async function readTrade() {
   return { ledger, release, holds, key };
 }
 
+/** The payment's verdict: one box, icon and words, the same shape as the proof page's. */
+function verdictBox(kind, title, attrs, ...lines) {
+  return arrive(
+    el(
+      "div",
+      { class: `verdict verdict-${kind}`, ...attrs },
+      el("div", { class: "verdict-mark", "aria-hidden": "true" }, icon(VERDICT_ICON[kind], { size: 26 })),
+      el("div", { class: "verdict-body" }, el("p", { class: "verdict-title", text: title }), lines),
+    ),
+  );
+}
+
 function renderTrade(read, error) {
   const c = state.config;
   const section = document.getElementById("trade");
   section.replaceChildren(el("h2", { id: "trade-title", text: "The payment" }));
   section.setAttribute("aria-busy", "false");
   if (error) {
+    const reread = el(
+      "button",
+      { class: "btn", type: "button", id: "reread" },
+      icon("refresh-cw", { size: 18 }),
+      "Read again",
+    );
+    reread.addEventListener("click", () => refresh());
     section.append(
-      el(
-        "div",
-        { class: "verdict verdict-none", "data-state": "unreadable" },
-        el("p", { class: "verdict-title", text: "The trade could not be read from NEAR" }),
+      verdictBox(
+        "none",
+        "The trade could not be read from NEAR",
+        { "data-state": "unreadable" },
         el("p", { text: error }),
-        el("button", { class: "btn", type: "button", id: "reread", text: "Read again" }),
+        el("div", { class: "actions" }, reread),
       ),
     );
-    document.getElementById("reread").addEventListener("click", () => refresh());
     return;
   }
   const f = fundsState(c, read);
   const count = attemptCount(read.key, c);
   const scope = keyScope(read.key, c);
+  const funded = f.rows.find((r) => r.id === "funded");
+  const changedCount = state.lastCount !== null && count !== null && count !== state.lastCount;
+  state.lastCount = count;
   section.append(
-    el(
-      "div",
-      {
-        class: `verdict ${f.unchanged ? "verdict-pass" : "verdict-fail"}`,
-        "data-state": f.unchanged ? "intact" : "changed",
-      },
-      el("p", {
-        class: "verdict-title",
-        text: f.unchanged ? "The money has not moved" : "The trade is not in its demo state",
-      }),
+    verdictBox(
+      f.unchanged ? "pass" : "fail",
+      f.unchanged ? "The money has not moved" : "The trade is not in its demo state",
+      { "data-state": f.unchanged ? "intact" : "changed" },
       el(
         "p",
         {},
-        "Attempts so far: ",
-        el("strong", { id: "attempt-count", text: count === null ? "unreadable" : count.toString() }),
-        ". ",
         f.unchanged
           ? `All ${formatNear(c.amountYocto)} is still funded and reserved for the bound supplier; nothing was released or refunded.`
           : "Read the rows below: the page compares every value with the demo's starting state.",
       ),
     ),
     el(
+      "div",
+      { class: "readout" },
+      el(
+        "div",
+        { class: "readout-cell" },
+        el("p", { class: "readout-label", text: "Held in escrow, read now" }),
+        el("p", { class: "readout-value mono", text: funded ? formatNear(funded.actual) : "unreadable" }),
+      ),
+      el(
+        "div",
+        { class: `readout-cell readout-count${changedCount ? " counted" : ""}` },
+        el("p", { class: "readout-label", text: "Attempts so far" }),
+        el(
+          "p",
+          { class: "readout-value mono" },
+          el("strong", { id: "attempt-count", text: count === null ? "unreadable" : count.toString() }),
+        ),
+      ),
+    ),
+    el(
       "dl",
-      { class: "facts" },
+      { class: "facts vault-facts" },
       el("dt", { text: "Escrow contract" }),
       el("dd", {}, mono(c.escrow)),
       el("dt", { text: "Trade" }),
@@ -152,8 +168,8 @@ function renderTrade(read, error) {
             "tr",
             {},
             el("th", { scope: "col", text: "Bucket" }),
-            el("th", { scope: "col", text: "Demo start" }),
-            el("th", { scope: "col", text: "Now (read from NEAR)" }),
+            el("th", { scope: "col", class: "num", text: "Demo start" }),
+            el("th", { scope: "col", class: "num", text: "Now (read from NEAR)" }),
           ),
         ),
         el(
@@ -164,8 +180,8 @@ function renderTrade(read, error) {
               "tr",
               { "data-row": r.id, "data-ok": String(r.ok) },
               el("th", { scope: "row", text: r.label }),
-              el("td", { class: "num", text: formatNear(r.expected) }),
-              el("td", { class: `num ${r.ok ? "" : "bad"}`, text: formatNear(r.actual) }),
+              el("td", { class: "num mono", text: formatNear(r.expected) }),
+              el("td", { class: `num mono ${r.ok ? "" : "bad"}`, text: formatNear(r.actual) }),
             ),
           ),
         ),
@@ -178,47 +194,67 @@ function setMode() {
   const mode = document.getElementById("mode");
   if (state.relay) {
     mode.dataset.mode = "live";
-    mode.textContent =
-      "Live: each button sends a real transaction now. One attempt per visitor every 20 seconds.";
+    mode.replaceChildren(
+      icon("radio", { size: 18 }),
+      el("span", {
+        text: "Live: each button sends a real transaction now. One attempt per visitor every 20 seconds.",
+      }),
+    );
   } else {
     mode.dataset.mode = "replay";
-    mode.textContent =
-      "The relay is not reachable, so the buttons replay attempts that were already sent: your browser reads each recorded transaction from NEAR.";
+    mode.replaceChildren(
+      icon("history", { size: 18 }),
+      el("span", {
+        text: "The relay is not reachable, so the buttons replay attempts that were already sent: your browser reads each recorded transaction from NEAR.",
+      }),
+    );
   }
 }
 
 function resultView(attack, judged, txHash, note) {
   const c = state.config;
   const refused = judged.refused && judged.ranOnEscrow && judged.receiverOk && judged.signerOk;
-  return el(
-    "div",
-    { class: `result ${refused ? "result-refused" : "result-other"}`, "data-code": judged.code ?? "" },
+  return arrive(
     el(
-      "p",
-      { class: "result-title" },
-      refused ? "Refused by the contract: " : "Not a refusal: ",
-      el("strong", {
-        class: "mono",
-        text: judged.code ?? (judged.refused ? "no DOCKSIDE code" : "SUCCEEDED"),
-      }),
-    ),
-    judged.message ? el("p", { class: "result-message", text: judged.message }) : null,
-    judged.blockers.length > 1
-      ? el("p", { class: "muted", text: `Every blocker the contract listed: ${judged.blockers.join(", ")}` })
-      : null,
-    el(
-      "p",
-      { class: "muted" },
-      "Transaction ",
-      external(explorerTx(c, txHash), txHash),
-      ` signed by ${judged.signer ?? "?"}, read from NEAR by this browser.`,
-      note ? ` ${note}` : "",
-      judged.code && judged.code !== attack.expect
-        ? ` (Expected within the first 24 hours: ${attack.expect}.)`
-        : "",
+      "div",
+      { class: `result ${refused ? "result-refused" : "result-other"}`, "data-code": judged.code ?? "" },
+      el(
+        "div",
+        { class: "result-head" },
+        icon(refused ? "shield-check" : "shield-x", { size: 22, class: "icon result-icon" }),
+        el(
+          "p",
+          { class: "result-title" },
+          refused ? "Refused by the contract: " : "Not a refusal: ",
+          el("strong", {
+            class: "mono result-code",
+            text: judged.code ?? (judged.refused ? "no DOCKSIDE code" : "SUCCEEDED"),
+          }),
+        ),
+      ),
+      judged.message ? el("p", { class: "result-message", text: judged.message }) : null,
+      judged.blockers.length > 1
+        ? el("p", {
+            class: "muted",
+            text: `Every blocker the contract listed: ${judged.blockers.join(", ")}`,
+          })
+        : null,
+      el(
+        "p",
+        { class: "muted result-tx" },
+        "Transaction ",
+        external(explorerTx(c, txHash), txHash, "mono"),
+        ` signed by ${judged.signer ?? "?"}, read from NEAR by this browser.`,
+        note ? ` ${note}` : "",
+        judged.code && judged.code !== attack.expect
+          ? ` (Expected within the first 24 hours: ${attack.expect}.)`
+          : "",
+      ),
     ),
   );
 }
+
+const pending = (text) => el("p", { class: "result-note pending" }, icon("hourglass", { size: 16 }), text);
 
 async function readAttempt(attack, txHash, signer) {
   const tx = await state.rpc.txStatus(txHash, signer);
@@ -231,10 +267,7 @@ async function onTry(attack, button, out) {
   state.busy = true;
   button.disabled = true;
   out.replaceChildren(
-    el("p", {
-      class: "muted",
-      text: state.relay ? "Sending the transaction…" : "Reading the recorded transaction…",
-    }),
+    pending(state.relay ? "Sending the transaction…" : "Reading the recorded transaction…"),
   );
   try {
     const c = state.config;
@@ -293,24 +326,33 @@ async function onTry(attack, button, out) {
 function renderAttacks() {
   const list = document.getElementById("attack-list");
   list.replaceChildren(
-    ...ATTACKS.map((a) => {
+    ...ATTACKS.map((a, i) => {
       const out = el("div", { class: "attack-out", "aria-live": "polite", id: `out-${a.id}` });
       const canReplay = !!recordedFor(state.config, a.id);
-      const button = el("button", {
-        class: "btn",
-        type: "button",
-        "data-attack": a.id,
-        text: state.relay ? "Try it" : "Replay recorded attempt",
-        disabled: !state.relay && !canReplay,
-      });
+      const button = el(
+        "button",
+        {
+          class: "btn btn-primary",
+          type: "button",
+          "data-attack": a.id,
+          disabled: !state.relay && !canReplay,
+        },
+        icon(state.relay ? "key-round" : "history", { size: 18 }),
+        el("span", { text: state.relay ? "Try it" : "Replay recorded attempt" }),
+      );
       button.addEventListener("click", () => onTry(a, button, out));
       return el(
         "li",
         { class: "attack", "data-attack": a.id },
-        el("h3", { text: a.title }),
-        el("p", { text: a.what }),
-        el("p", { class: "muted" }, "Calls ", mono(a.method), "."),
-        button,
+        el("span", { class: "exhibit-num", "aria-hidden": "true", text: String(i + 1).padStart(2, "0") }),
+        el(
+          "div",
+          { class: "attack-body" },
+          el("h3", { text: a.title }),
+          el("p", { text: a.what }),
+          el("p", { class: "muted method" }, "Calls ", mono(a.method), "."),
+        ),
+        el("div", { class: "attack-action" }, button),
         out,
       );
     }),
@@ -326,6 +368,7 @@ async function refresh() {
 }
 
 async function main() {
+  mountNav("attack");
   try {
     state.config = await loadConfig();
   } catch (e) {
@@ -338,10 +381,10 @@ async function main() {
     section.setAttribute("aria-busy", "false");
     section.replaceChildren(
       el("h2", { id: "trade-title", text: "The payment" }),
-      el(
-        "div",
-        { class: "verdict verdict-none", "data-state": "not-set-up" },
-        el("p", { class: "verdict-title", text: "The demo trade has not been created yet" }),
+      verdictBox(
+        "none",
+        "The demo trade has not been created yet",
+        { "data-state": "not-set-up" },
         el("p", {
           text: "The operator creates it with run-all's attack-demo journey; this page then reads it from NEAR. No request was sent.",
         }),
