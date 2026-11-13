@@ -15,10 +15,10 @@ import { AttackRelay, rpcChain } from "./relay.js";
 /**
  * Owner tool of the attack console (M53). Read-only except `send`.
  *
- *   attack-console config --journey <run dir>/journey.json --key-file <attacker key file>
- *                         [--rpc <url>] [--relay <url>] [--out <file>]
- *       Builds site/proof/attack/attack-demo.json from an attack-demo run. Reads the attacker key
- *       file only to learn its account and public key, checks on chain (read-only) that the key is
+ *   attack-console config --journey <run dir>/journey.json --attacker <account>
+ *                         --key-file <attacker key file> [--rpc <url>] [--relay <url>] [--out <file>]
+ *       Builds site/proof/attack/attack-demo.json from an attack-demo run. Loads the attacker key
+ *       file with the relayer custody checks only to learn its public key, checks on chain (read-only) that the key is
  *       a function-call key restricted to the escrow, that the demo is armed and that the recorded
  *       approval bytes are those of the approval transaction, and records the key's nonce now as
  *       the baseline of the attempt counter.
@@ -67,7 +67,7 @@ async function main(): Promise<number> {
       const journey = JSON.parse(readFileSync(need(f, "journey"), "utf8"));
       const escrow = String(journey.contractId);
       const signer = KeyFileTxSigner.load({
-        accountId: String(JSON.parse(readFileSync(need(f, "key-file"), "utf8")).account_id),
+        accountId: need(f, "attacker"),
         receiverId: escrow,
         keyFile: need(f, "key-file"),
       });

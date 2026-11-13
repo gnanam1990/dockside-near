@@ -13,6 +13,7 @@
  * With DOCKSIDE_M53_RECORD=1 the node's answers to the requests the page makes are written to
  * fixtures/attack/ for the browser suite (apps/web/e2e-proof/attack.spec.ts).
  */
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -112,6 +113,7 @@ describe.skipIf(!ENABLED)("M53 attack console on a local nearcore sandbox", () =
   let journey: Json & { ok: boolean; checks: Json };
   let config: DemoConfig;
   let relay: AttackRelay;
+  let outDir = "";
   const results: AttemptResult[] = [];
   const views = async () => {
     const rpc = new tools.Rpc([sb.rpcUrl]);
@@ -156,7 +158,7 @@ describe.skipIf(!ENABLED)("M53 attack console on a local nearcore sandbox", () =
       keyFile: writeKeyFile(join(dir, "attacker-function-call-key.json"), accountId, fc),
     };
 
-    const outDir = mkdtempSync(join(dir, "run-"));
+    outDir = mkdtempSync(join(dir, "run-"));
     const rpc = new tools.Rpc([sb.rpcUrl]);
     const minDeposit = ((await rpc.view(chain.accounts.escrow, "get_config", {})) as Json)["minDepositYocto"];
     journey = await journeyLib.runJourney({
@@ -334,6 +336,74 @@ describe.skipIf(!ENABLED)("M53 attack console on a local nearcore sandbox", () =
       api.close();
       front.close();
     }
+  });
+
+  it("the owner tool builds the demo config from journey.json and sends a recorded attempt", async () => {
+    // journey.json exactly as run-all's tool writes it.
+    writeFileSync(
+      join(outDir, "journey.json"),
+      `${JSON.stringify({ network: "sandbox", contractId: chain.accounts.escrow, ...journey }, null, 2)}
+`,
+    );
+    const cli = join(ROOT, "services/hosted/dist/attack/cli.js");
+    const cfgFile = join(dir, "attack-demo.json");
+    const run = (args: string[]) => spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+    const made = run([
+      "config",
+      "--journey",
+      join(outDir, "journey.json"),
+      "--attacker",
+      attacker.accountId,
+      "--key-file",
+      attacker.keyFile,
+      "--rpc",
+      sb.rpcUrl,
+      "--out",
+      cfgFile,
+    ]);
+    expect(made.status, made.stderr).toBe(0);
+    const built = JSON.parse(readFileSync(cfgFile, "utf8")) as DemoConfig;
+    expect([built.status, built.tradeId, built.attacker?.accountId]).toEqual([
+      "LIVE",
+      config.tradeId,
+      attacker.accountId,
+    ]);
+    expect(built.approval).toEqual(config.approval);
+    // The baseline is the key's nonce when the config was built: the attempts so far are not counted.
+    expect(BigInt(built.baselineNonce as string)).toBe(BigInt(config.baselineNonce as string) + 6n);
+    expect(readFileSync(cfgFile, "utf8")).not.toMatch(/private_key|secret_key/);
+    const sent = run([
+      "send",
+      "--config",
+      cfgFile,
+      "--key-file",
+      attacker.keyFile,
+      "--rpc",
+      sb.rpcUrl,
+      "--attack",
+      "refund-to-stranger",
+      "--record",
+    ]);
+    expect(sent.status, sent.stderr).toBe(0);
+    expect(sent.stderr).toMatch(/refund-to-stranger\s+\S+ REFUSED NOTHING_ELIGIBLE/);
+    const after = JSON.parse(readFileSync(cfgFile, "utf8")) as DemoConfig;
+    expect(after.recorded.map((r) => [r.attack, r.code])).toEqual([
+      ["refund-to-stranger", "NOTHING_ELIGIBLE"],
+    ]);
+    // An unknown attack is refused before anything is sent.
+    expect(
+      run([
+        "send",
+        "--config",
+        cfgFile,
+        "--key-file",
+        attacker.keyFile,
+        "--rpc",
+        sb.rpcUrl,
+        "--attack",
+        "steal",
+      ]).status,
+    ).toBe(2);
   });
 
   it("records the node's answers to the page's requests (DOCKSIDE_M53_RECORD=1)", async () => {

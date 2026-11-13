@@ -20,6 +20,9 @@ primary_region = "fra"
   DOCKSIDE_ESCROW_CONTRACT_ID = "gnanam1990-dock-escrow2.testnet"
   DOCKSIDE_NEAR_RPC_URL = "https://test.rpc.fastnear.com"
   DOCKSIDE_RELAYER_ACCOUNT_ID = "gnanam1990-dock-relayer.testnet"
+  # Attack console (M53): the Pages copy of the page may call the relay. The demo key itself is the
+  # Fly secret ATTACK_KEY_JSON_B64 (docs/runbooks/attack-console.md).
+  HOSTED_ATTACK_ALLOWED_ORIGINS = "https://gnanam1990.github.io"
 
 # SQLite on one volume: exactly one machine, always running (the worker reconciles on a timer).
 [mounts]
