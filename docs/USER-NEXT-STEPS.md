@@ -2,7 +2,11 @@
 
 Dockside is **IMPLEMENTED_UNVERIFIED**. Every code path below exists and passes its tests against a simulated NEAR
 chain, the escrow contract also runs with real transactions on a local nearcore node (near-sandbox), and §2–§3 are
-**done**: you deployed the escrow on NEAR testnet and ran one trade to PAID there (docs/status/M24.md). The steps
+**done**: you deployed the security-hardened escrow (commit `4ff233b`, code hash
+`7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N`) on `gnanam1990-dock-escrow2.testnet` and ran one trade to PAID there
+(docs/status/M34.md). **Use `gnanam1990-dock-escrow2.testnet` for every new trade.** The first escrow,
+`gnanam1990-dock-escrow.testnet`, runs the superseded pre-audit contract `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM`
+(M24) without the m25–m33 security fixes; do not use it for new trades. The steps
 that remain need things this build was not allowed to create or hold. Every step here is for **you** to run;
 nothing in the repository runs them for you.
 
@@ -11,7 +15,7 @@ What remains yours, in short:
 | Yours | Why it cannot be done here | Section |
 |---|---|---|
 | Push the repository and check the first CI run | nothing was pushed; the workflow has only been replayed locally | §1 |
-| ~~Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet`~~ | **done** (M24) | §2–§3 |
+| ~~Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet`~~ | **done** (M24; hardened contract on escrow2 in M34) | §2–§3 |
 | Custody of the relayer key and the worker's `TxSigner` | a signing key with real custody (keychain, HSM, KMS or an isolated signer) is yours | §4 |
 | Custody of the audit-export key (HSM or KMS if you need it) | the build uses an isolated signer process | §5 |
 | Separate people on separate devices for the buyer, supplier, inspector and risk/policy roles | INV-13: one operator holding every key does not count | §6–§7 |
@@ -68,7 +72,8 @@ read-only permissions and no secrets. It has never run, because nothing was push
 
 ## 2. Create the testnet accounts — done
 
-Done (M24): `gnanam1990-dock-escrow`, `-buyer`, `-supplier` and `-relayer` `.testnet`, 10 NEAR each. Kept below for
+Done (M24): `gnanam1990-dock-escrow`, `-buyer`, `-supplier` and `-relayer` `.testnet`, 10 NEAR each; for the
+hardened contract (M34) a fresh escrow account `gnanam1990-dock-escrow2.testnet` (10 NEAR). Kept below for
 reference; the extra accounts for §7 are still yours to create if you have not.
 
 Create these with near-cli-rs (faucet-sponsored creation works on testnet), with names you own, and keep their
@@ -91,22 +96,36 @@ recovery).
 
 ## 3. Deploy, verify and run one trade: one command — done
 
-**Done (M24)**, three runs on 2026-11-12 from Windows: run 1 deployed and initialised the escrow in one transaction
+**Done for the hardened contract (M34)**, one run on 2026-11-13 from Windows, record `testnet-20261113T022714Z`:
+`run-all --network testnet` deployed and initialised commit `4ff233b`'s wasm (SHA-256 `5d0d8a77…a3fb`) on the fresh
+account `gnanam1990-dock-escrow2.testnet` in one transaction (`7TZqFwwKH9NKohDRS5RBfudep8hmwxeJoiNE18WdakkA`, code hash
+`7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N`, equal to the manifest's), added the relayer key
+`ed25519:4X66DAChHBbMuG7rvTzFx5NcBMQuT8gkZp4UUPr8QaZf` restricted to escrow2, and took trade
+`trd_197c633d724eeb2cddc64d6dabf55976` to PAID with the supplier receiving exactly 0.05 NEAR (`execute_release`
+`9Wpr243gsWkQuKFbtmBrKMiGkXCPXp3MDfN8M1qrkcEn`). Re-verified read-only on chain; evidence: docs/evidence/M34/. A
+further journey against this deployment: `run-all --network testnet --skip-deploy --relayer-key-file <that run's
+relayer key file>` with `DOCKSIDE_ESCROW_ACCOUNT=gnanam1990-dock-escrow2.testnet`.
+
+**Superseded (M24)**, three runs on 2026-11-12 from Windows against `gnanam1990-dock-escrow.testnet`, which now runs
+the superseded pre-audit contract and must not be used for new trades: run 1 deployed and initialised the escrow in one transaction
 (`7KExSVdWHAVXXDjjAme1m1zQBW4hBSgXgsMEQt2K9dyY`, code hash `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM`, equal to
 commit `49fbaf7`'s manifest) and added the relayer key `ed25519:J9RvmdzWNiXQZeyJPmhobxH56MwzzyekCdngQg43aidN`; run 3
 (`--skip-deploy --relayer-key-file`) took trade `trd_563c174f39144ac1543b9e3e61eb4d21` to PAID with the supplier
 receiving exactly 0.05 NEAR. Evidence: docs/evidence/M24/. The Windows problems those runs hit (an invisible key-scheme
 question, npm's `near` shim, a transient "Transaction has expired") are fixed in M24; on Windows use
 `powershell -ExecutionPolicy Bypass -File .\scripts\testnet-deploy\run-all.ps1 --network testnet`
-(scripts/testnet-deploy/README.md, "Windows"). Still to do from this section: write the escrow account and on-chain code
-hash into the manifest's `deployment` section.
+(scripts/testnet-deploy/README.md, "Windows"). Still to do from this section: write the escrow account
+`gnanam1990-dock-escrow2.testnet` and on-chain code hash `7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N` into the
+manifest's `deployment` section. Optionally delete the old relayer function-call key
+`ed25519:J9RvmdzWNiXQZeyJPmhobxH56MwzzyekCdngQg43aidN`, which can only call the superseded escrow.
 
 **Stranded trade.** Run 2 stopped at `approve_release` (expired transaction, never included) and left trade
 `trd_9aced7e741a0462ac88ef4de0e67ba81` funded with 0.05 testnet NEAR from `gnanam1990-dock-buyer.testnet`, all of it
 reserved by release intent `rli_7781d4f0bb0b6aa6461935a154614c02` (`VALUE_LOCKED`, no approval). **It cannot be
 refunded in §7.8**: every way out (approval, dual-signed CANCEL, ABANDON after expiry, and every refund row, which also
 needs the intent's reservation released first) needs a Dockside principal signature, and that trade's principal keys
-came from a random seed run-all does not keep. Its 0.05 testnet NEAR stays locked in the escrow; it has no value and the
+came from a random seed run-all does not keep. Its 0.05 testnet NEAR stays locked in the superseded escrow
+`gnanam1990-dock-escrow.testnet` (re-checked in M34: still reserved, conservation `true`); it has no value and the
 contract's conservation holds. Run the §7.8 refunds on new trades whose principals are enrolled with kept keys.
 
 ```sh
@@ -204,7 +223,9 @@ Reviewer kit for §6–§7 with separate people: [review-kits/inv13-acceptance.m
 
 ## 7. Run the trade on testnet and keep the evidence
 
-Use the web app throughout and submit every relay from §4. Keep each transaction hash and receipt.
+Use the web app throughout and submit every relay from §4. Keep each transaction hash and receipt. Run every
+trade against the current escrow `gnanam1990-dock-escrow2.testnet` (hardened contract, M34), never the superseded
+`gnanam1990-dock-escrow.testnet`; in §5 `<escrow>` is `gnanam1990-dock-escrow2`.
 
 1. The buyer creates the trade proposal, the supplier countersigns, then `register_trade` and
    `register_evidence_policy`.

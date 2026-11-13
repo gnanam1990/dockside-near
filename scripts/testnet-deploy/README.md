@@ -1,18 +1,28 @@
 # NEAR testnet deployment: `run-all`
 
-Status: **run on NEAR testnet by the repository owner from their own keys (M24), and validated end
-to end on a local near-sandbox node (M16).** The owner's third run deployed nothing new
-(`--skip-deploy`) and took one trade to PAID with the supplier receiving exactly the trade amount;
-the first run had deployed and initialised the contract in one transaction and added the relayer's
-function-call key. Transaction hashes and the read-only re-check: [docs/status/M24.md](../../docs/status/M24.md),
-[docs/evidence/M24/](../../docs/evidence/M24/). T-007, the T-019 positive path and REAL-PRODUCT-GATE
-item 2 are PASS on testnet for that build. Mainnet is refused by the script and by the contract
+Status: **run on NEAR testnet by the repository owner from their own keys (M24, and again in M34 for the
+security-hardened contract), and validated end to end on a local near-sandbox node (M16).** The current
+deployment (M34) is `gnanam1990-dock-escrow2.testnet`, running commit `4ff233b`'s contract, code hash
+`7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N`: one `run-all --network testnet` on a fresh escrow account
+deployed and initialised it in one transaction, added a relayer function-call key restricted to escrow2 and took
+one trade to PAID with the supplier receiving exactly the trade amount
+([docs/status/M34.md](../../docs/status/M34.md), [docs/evidence/M34/](../../docs/evidence/M34/)). T-007, the
+T-019 positive path and REAL-PRODUCT-GATE item 2 are PASS on testnet for that build. The first deployment
+(M24, [docs/status/M24.md](../../docs/status/M24.md)) on `gnanam1990-dock-escrow.testnet` runs the superseded
+pre-audit contract `5wqct3Wxavf9GXpdYJfrGWKpTZb1j95dJZQsNmAvzHuM`; do not point new runs (`--skip-deploy`) or
+clients at it. Its stranded trade stays locked there. Mainnet is refused by the script and by the contract
 (`new` accepts only `near-testnet`).
 
 The first runs on Windows found three problems, fixed in M24: near-cli-rs 0.31 asked an invisible
 question while adding the relayer key, the Node helpers could not start npm's `near` shim, and a
 transient "Transaction has expired" stopped the journey with a misleading message (see "Windows"
-and "Retries and failures" below).
+and "Retries and failures" below). The M34 run on Windows needed none of the fallbacks: every
+near-cli-rs command succeeded on its first attempt.
+
+A new contract build goes to a fresh, empty escrow account, as in M34: run-all refuses an escrow that already
+has code (`ESCROW_NOT_EMPTY`) and never redeploys in place. After such a move, set
+`DOCKSIDE_ESCROW_ACCOUNT` (and the API's `DOCKSIDE_ESCROW_CONTRACT_ID`) to the new account everywhere; the
+relayer key run-all adds is restricted to the escrow it was created for.
 
 ## What you run
 
