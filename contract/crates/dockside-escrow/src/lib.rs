@@ -20,6 +20,9 @@ use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise, Pr
 use serde_json::Value as J;
 
 const SETTLE_GAS: Gas = Gas::from_tgas(15);
+/// Gas per byte of the trade record a release or refund settlement reads and rewrites, on top of
+/// `SETTLE_GAS`. Measured on nearcore 2.14 at about 170 Mgas per byte; this allows 300.
+const SETTLE_GAS_PER_BYTE: u64 = 300_000_000;
 /// Gas for a NEP-141 `ft_transfer`: the release and refund of a token trade, and the
 /// unexpected-asset recovery adapter.
 const FT_TRANSFER_GAS: Gas = Gas::from_tgas(20);
@@ -96,6 +99,15 @@ impl Escrow {
             limits: &limits,
         };
         f(&ctx)
+    }
+
+    /// Static gas for the settlement callback of `trade_id`: the floor plus an allowance for the
+    /// size of its record, so that whoever relays the execution, and however large the record
+    /// has grown, the callback is funded. A caller that attaches less gas makes the execution
+    /// itself fail, before anything is transferred or recorded.
+    fn settle_gas(&self, trade_id: &str) -> Gas {
+        let bytes = near_sdk::borsh::to_vec(self.read(trade_id)).map(|v| v.len() as u64).unwrap_or_else(|_| fail(Error { code: "INTERNAL", message: "record size".into() }));
+        Gas::from_gas(SETTLE_GAS.as_gas().saturating_add(bytes.saturating_mul(SETTLE_GAS_PER_BYTE)))
     }
 
     fn limits(&self) -> Limits {
@@ -378,9 +390,10 @@ impl Escrow {
     pub fn execute_release(&mut self, trade_id: String, release_intent_id: String) -> Promise {
         let (dest, amount, attempt) = self.mutate(&trade_id, |t, ctx| t.execute_release(ctx, &release_intent_id));
         let asset = self.read(&trade_id).terms.asset.clone();
+        let settle = self.settle_gas(&trade_id);
         Self::pay(&asset, &dest, amount, format!("dockside release {release_intent_id}")).then(
             Self::ext(env::current_account_id())
-                .with_static_gas(SETTLE_GAS)
+                .with_static_gas(settle)
                 .on_release_transfer(trade_id, release_intent_id, attempt),
         )
     }
@@ -467,9 +480,10 @@ impl Escrow {
     pub fn execute_refund(&mut self, trade_id: String, refund_intent_id: String) -> Promise {
         let (funder, amount) = self.mutate(&trade_id, |t, ctx| t.begin_refund(ctx, &refund_intent_id));
         let asset = self.read(&trade_id).terms.asset.clone();
+        let settle = self.settle_gas(&trade_id);
         Self::pay(&asset, &funder, amount, format!("dockside refund {refund_intent_id}")).then(
             Self::ext(env::current_account_id())
-                .with_static_gas(SETTLE_GAS)
+                .with_static_gas(settle)
                 .on_refund_transfer(trade_id, refund_intent_id),
         )
     }

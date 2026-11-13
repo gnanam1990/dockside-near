@@ -579,3 +579,67 @@ fn a_storage_answer_that_is_neither_a_balance_nor_null_changes_nothing() {
     at_with(CONTRACT, T0 + 1_000, 0, vec![PromiseResult::Successful(b"true".to_vec())]);
     c.on_payee_storage(fx.trade_id(), id(SUPPLIER));
 }
+
+/// The static gas of the callback a release or refund schedules (the second receipt).
+fn settlement_gas() -> u64 {
+    get_created_receipts()
+        .iter()
+        .flat_map(|r| r.actions.iter())
+        .filter_map(|a| match a {
+            MockAction::FunctionCallWeight { method_name, prepaid_gas, .. }
+                if method_name.as_slice() == b"on_release_transfer" || method_name.as_slice() == b"on_refund_transfer" =>
+            {
+                Some(prepaid_gas.as_gas())
+            }
+            _ => None,
+        })
+        .next()
+        .expect("a settlement callback")
+}
+
+/// Audit of M50: the settlement callback reads and rewrites the whole trade record, and anyone may
+/// relay the execution with as little gas as the call accepts. The callback's static gas must
+/// therefore grow with the record, or a relayer could leave a large record's callback without gas
+/// after the transfer went out (the intent would stay SUBMITTING and nothing resolves it).
+#[test]
+fn the_settlement_callback_is_funded_for_the_size_of_the_record() {
+    let floor = 15_000_000_000_000u64;
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let small = near_sdk::borsh::to_vec(m.trade(&t)).unwrap().len() as u64;
+    let (intent, _) = submitted_token_release(&mut c, &mut m, &fx);
+    let _ = intent;
+    let bytes = near_sdk::borsh::to_vec(m.trade(&t)).unwrap().len() as u64;
+    assert!(bytes > small);
+    let gas = settlement_gas();
+    assert!(gas > floor, "the callback got only the {gas} gas floor for a {bytes}-byte record");
+    assert!(gas >= floor + bytes * 300_000_000, "{gas} gas for a {bytes}-byte record");
+
+    // A refund of a larger record gets more.
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    for i in 0..40u64 {
+        deliver(&mut c, &mut m, TOKEN, BUYER, 10_000, &good, T0 + 1_000 + i);
+    }
+    deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &good, T0 + 2_000);
+    let now = T0 + 3_000;
+    let q = m.trade(&t).ledger.funder(BUYER).quarantined;
+    let req = refund_request(&fx, m.trade(&t), "excess", "EXCESS_FUNDING_RETURN", BUYER, q, "QUARANTINED", "FUNDER", now);
+    let args = request_refund_args(&fx, m.trade(&t), &req, &[]);
+    at(BUYER, now, 0);
+    c.request_refund(t.clone(), args["payload"].clone(), None, None, None);
+    m.apply("request_refund", &args, Call::by(BUYER, now)).unwrap();
+    let rid = refund_id(&fx, "excess");
+    let later = now + 2 * HOUR;
+    let op = refund_op_args(m.trade(&t), &rid);
+    at(RELAYER, later, 0);
+    c.authorize_refund(t.clone(), rid.clone());
+    m.apply("authorize_refund", &op, Call::by(RELAYER, later)).unwrap();
+    drop(c.execute_refund(t.clone(), rid.clone()));
+    m.apply("execute_refund", &op, Call::by(RELAYER, later)).unwrap();
+    let big = near_sdk::borsh::to_vec(m.trade(&t)).unwrap().len() as u64;
+    let refund_gas = settlement_gas();
+    assert!(big > bytes && refund_gas >= floor + big * 300_000_000, "{refund_gas} gas for a {big}-byte record");
+    assert!(refund_gas > gas);
+}
