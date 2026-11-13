@@ -13,14 +13,21 @@
 //   node tool.mjs accounts
 //   node tool.mjs verify-artifact --wasm <file> --manifest <file>
 //   node tool.mjs preflight --network <n> [--rpc-url <url>] --wasm <file> --amount-yocto <n> [--skip-deploy]
+//                           [--journey <paid|hold|refund>] [--excess-yocto <n>]
 //   node tool.mjs tx-hash --file <near-cli output>
 //   node tool.mjs verify-deployment --network <n> [--rpc-url <url>] --code-hash <base58>
 //   node tool.mjs relayer-key-file --file <near-cli add-key output>
 //   node tool.mjs verify-relayer-key --network <n> [--rpc-url <url>] --key-file <file>
-//   node tool.mjs journey --network <n> [--rpc-url <url>] --near <bin> --key-file <file> --mirror <bin> --out <dir> --amount-yocto <n>
+//   node tool.mjs journey --network <n> [--rpc-url <url>] --near <bin> --key-file <file> --mirror <bin> --out <dir>
+//                         (--journey <paid|hold|refund> --amount-yocto <n> [--excess-yocto <n>] | --resume)
+//                         [--no-wait] [--stop-after <n>] [--pending-tx <hash|none>]
+//       exits 3 (PAUSED) when the journey stops before its end (--stop-after, or --no-wait in a
+//       cooling period); `--resume` with the same --out finishes it from journey-seed.json and
+//       journey-state.json.
+//   node tool.mjs run-params --dir <run dir> --field <name>   one field of <run dir>/run-params.json
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { nearRunner, runJourney } from "./lib/journey.mjs";
+import { DEFAULT_EXCESS_YOCTO, JOURNEYS, nearRunner, runJourney } from "./lib/journey.mjs";
 import {
   accountsFromEnv,
   CONTRACT_NETWORK,
@@ -63,6 +70,20 @@ function amount(f) {
   if (!/^[1-9][0-9]{0,38}$/.test(v))
     throw new ToolError("USAGE", "--amount-yocto must be a positive integer");
   return BigInt(v);
+}
+
+function excess(f) {
+  const v = f["excess-yocto"];
+  if (v === undefined) return DEFAULT_EXCESS_YOCTO;
+  if (typeof v !== "string" || !/^[1-9][0-9]{0,38}$/.test(v))
+    throw new ToolError("USAGE", "--excess-yocto must be a positive integer");
+  return BigInt(v);
+}
+
+function journeyName(f) {
+  const j = f.journey ?? "paid";
+  if (!JOURNEYS.includes(j)) throw new ToolError("USAGE", `--journey must be one of ${JOURNEYS.join(", ")}`);
+  return j;
 }
 
 const print = (v) => process.stdout.write(`${typeof v === "string" ? v : JSON.stringify(v, null, 2)}\n`);
@@ -163,10 +184,13 @@ async function main() {
         );
       }
       const fee = NEAR / 10n;
-      if (BigInt(views.buyer.amount) < amt + fee) {
+      // The refund journey deposits the trade amount plus an excess (EXCESS_FUNDING_RETURN).
+      const journey = journeyName(f);
+      const deposit = journey === "refund" ? amt + excess(f) : amt;
+      if (BigInt(views.buyer.amount) < deposit + fee) {
         throw new ToolError(
           "INSUFFICIENT_BALANCE",
-          `${accts.buyer} needs the trade amount plus 0.1 NEAR for fees`,
+          `${accts.buyer} needs ${journey === "refund" ? "the trade amount plus the excess" : "the trade amount"} plus 0.1 NEAR for fees`,
         );
       }
       if (BigInt(views.relayer.amount) < 2n * NEAR) {
@@ -178,6 +202,8 @@ async function main() {
       return print({
         network: p.network,
         rpcUrl: p.rpcUrl,
+        journey,
+        depositYocto: deposit.toString(),
         accounts: accts,
         escrowCodeHash: escrowCode,
         balancesYocto: Object.fromEntries(Object.entries(views).map(([k, v]) => [k, v.amount])),
@@ -229,13 +255,49 @@ async function main() {
         allowance: fc.allowance,
       });
     }
+    case "run-params": {
+      const file = join(need(f, "dir"), "run-params.json");
+      let params;
+      try {
+        params = JSON.parse(readFileSync(file, "utf8"));
+      } catch (e) {
+        throw new ToolError("NOTHING_TO_RESUME", `${file}: ${e.message}`);
+      }
+      const field = need(f, "field");
+      if (typeof params[field] !== "string")
+        throw new ToolError("NOTHING_TO_RESUME", `${file} has no ${field}`);
+      return print(params[field]);
+    }
     case "journey": {
       const p = profile();
       const accts = accountsFromEnv(process.env);
       const rpc = new Rpc(p.rpcUrls);
       const out = need(f, "out");
+      const resume = f.resume === true;
+      let stopAfter;
+      if (f["stop-after"] !== undefined) {
+        stopAfter = Number(f["stop-after"]);
+        if (!Number.isInteger(stopAfter) || stopAfter < 1)
+          throw new ToolError("USAGE", "--stop-after must be a positive integer");
+      }
+      const pendingTx = f["pending-tx"];
+      if (
+        pendingTx !== undefined &&
+        (typeof pendingTx !== "string" || !/^(none|[1-9A-HJ-NP-Za-km-z]{43,44})$/.test(pendingTx))
+      )
+        throw new ToolError("USAGE", "--pending-tx must be a transaction hash or none");
+      // A resumed journey takes these from its seed file; a new one checks them before any call.
+      const journey = resume ? undefined : journeyName(f);
+      const excessYocto = resume ? undefined : excess(f);
+      const amountYocto = resume ? undefined : amount(f);
       const config = await rpc.view(accts.escrow, "get_config", {});
       const result = await runJourney({
+        journey,
+        resume,
+        wait: !f["no-wait"],
+        stopAfter,
+        pendingTx,
+        excessYocto,
         rpc,
         profile: p,
         accounts: accts,
@@ -245,7 +307,7 @@ async function main() {
         relayerKeyFile: need(f, "key-file"),
         mirrorBin: need(f, "mirror"),
         outDir: out,
-        amountYocto: amount(f),
+        amountYocto,
         minDepositYocto: config.minDepositYocto,
         log: (m) => process.stderr.write(`run-all:   ${m}\n`),
       });
@@ -253,6 +315,11 @@ async function main() {
         join(out, "journey.json"),
         `${JSON.stringify({ network: p.network, contractId: accts.escrow, ...result }, null, 2)}\n`,
       );
+      if (result.paused) {
+        process.stderr.write(`run-all: PAUSED: ${result.why}; ${result.completed} of ${result.of} steps done, next ${result.next}
+`);
+        process.exit(3);
+      }
       if (!result.ok)
         throw new ToolError("JOURNEY_FAILED", `journey checks failed: ${JSON.stringify(result.checks)}`);
       return print(result.checks);
