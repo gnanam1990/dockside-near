@@ -69,11 +69,22 @@ struct Run {
 
 fn run_all(kc: &Keychain, accounts: &[(&str, String)], args: &[&str], out: &str) -> Result<Run> {
     let out = kc.home.join(out);
+    let mut full: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    full.extend(["--out".to_string(), out.to_string_lossy().to_string()]);
+    run_cmd(kc, accounts, &full, out)
+}
+
+/// `run-all --resume <out> [extra]`: everything else comes from the run directory.
+fn resume(kc: &Keychain, accounts: &[(&str, String)], out: &Path, extra: &[&str]) -> Result<Run> {
+    let mut full = vec!["--resume".to_string(), out.to_string_lossy().to_string()];
+    full.extend(extra.iter().map(|a| a.to_string()));
+    run_cmd(kc, accounts, &full, out.to_path_buf())
+}
+
+fn run_cmd(kc: &Keychain, accounts: &[(&str, String)], args: &[String], out: PathBuf) -> Result<Run> {
     let mut cmd = Command::new("sh");
     cmd.arg(repo_root().join("scripts/testnet-deploy/run-all"))
         .args(args)
-        .arg("--out")
-        .arg(&out)
         .env("HOME", &kc.home)
         .env("NEAR_CLI", env("DOCKSIDE_NEAR_CLI")?)
         .current_dir(repo_root());
@@ -187,5 +198,134 @@ async fn run_all_deploys_verifies_configures_the_relayer_and_completes_the_journ
     assert_eq!(rec3["journey"]["ok"], json!(true));
     assert_ne!(rec3["journey"]["tradeId"], rec["journey"]["tradeId"]);
     assert_eq!(rec3["deployTx"], J::Null);
+
+    // M42 hold journey, stopped on purpose after the hold SET (six transactions) and finished
+    // with --resume from the run directory: the deterministic-policy hold blocks the release
+    // until the risk/policy principal resolves it, then the trade is PAID.
+    let mut hold = again.clone();
+    hold.extend(["--journey", "hold", "--stop-after", "6"]);
+    let r = run_all(&kc, &accounts, &hold, "run-hold")?;
+    assert_eq!(r.status, 3, "{}", r.log);
+    assert!(r.log.contains("PAUSED"), "{}", r.log);
+    let hold_out = r.out.clone();
+    seed_file_is_private(&hold_out)?;
+    let paused = read(&hold_out.join("journey.json"))?;
+    let hold_trade = paused["tradeId"].as_str().context("trade id")?.to_string();
+    let holds: J = net.worker.view(&ids[0], "get_holds").args_json(json!({ "trade_id": hold_trade })).await?.json()?;
+    assert_eq!(holds[0]["status"], json!("ACTIVE"), "{holds}");
+    // A resumed run takes its settings from the run directory only.
+    let r = resume(&kc, &accounts, &hold_out, &["--journey", "paid"])?;
+    assert_eq!(r.status, 2, "{}", r.log);
+    let supplier_before = net.balance(&ids[2]).await?;
+    let r = resume(&kc, &accounts, &hold_out, &[])?;
+    if r.status != 0 {
+        bail!("run-all --resume (hold) failed ({}):\n{}", r.status, r.log);
+    }
+    let rec = read(&hold_out.join("run-record.json"))?;
+    assert_eq!(rec["journey"]["kind"], json!("hold"));
+    assert_eq!(rec["journey"]["ok"], json!(true));
+    assert_eq!(rec["journey"]["tradeId"], json!(hold_trade));
+    let methods: Vec<String> = rec["journey"]["transactions"]
+        .as_array()
+        .context("transactions")?
+        .iter()
+        .filter_map(|t| t["method"].as_str().map(str::to_string))
+        .collect();
+    assert_eq!(
+        methods,
+        [
+            "register_trade",
+            "register_evidence_policy",
+            "fund",
+            "submit_manifest_attestation",
+            "submit_inspection",
+            "set_hold",
+            "create_release_intent",
+            "resolve_hold",
+            "approve_release",
+            "execute_release"
+        ]
+    );
+    for c in ["holdWasActive", "releaseBlockedByHold", "holdResolved", "deterministicPolicyHold", "supplierReceivedExactAmount"] {
+        assert_eq!(rec["journey"]["checks"][c], json!(true), "{c}");
+    }
+    let holds: J = net.worker.view(&ids[0], "get_holds").args_json(json!({ "trade_id": hold_trade })).await?.json()?;
+    assert_eq!(
+        (holds[0]["status"].clone(), holds[0]["resolution"]["code"].clone(), holds[0]["issuerRole"].clone()),
+        (json!("RESOLVED"), json!("RELEASE_HOLD"), json!("POLICY_SETTER"))
+    );
+    let release: J = net.worker.view(&ids[0], "get_release").args_json(json!({ "trade_id": hold_trade })).await?.json()?;
+    assert!(release.to_string().contains("\"PAID\""));
+    assert_eq!(net.balance(&ids[2]).await? - supplier_before, amount, "supplier received exactly the trade amount");
+
+    // M42 refund journey: funded with an excess, MUTUAL_CANCEL and EXCESS_FUNDING_RETURN
+    // requested, paused in the one-hour cooling period (--no-wait), the chain clock moved past it,
+    // then --resume authorizes and executes both: every yoctoNEAR goes back to the buyer.
+    let mut refund = again.clone();
+    refund.extend(["--journey", "refund", "--no-wait"]);
+    let supplier_before = net.balance(&ids[2]).await?;
+    let r = run_all(&kc, &accounts, &refund, "run-refund")?;
+    assert_eq!(r.status, 3, "{}", r.log);
+    let refund_out = r.out.clone();
+    seed_file_is_private(&refund_out)?;
+    let refund_trade = read(&refund_out.join("journey.json"))?["tradeId"].as_str().context("trade id")?.to_string();
+    let refunds: J = net.worker.view(&ids[0], "get_refunds").args_json(json!({ "trade_id": refund_trade })).await?.json()?;
+    assert_eq!(refunds.as_array().map(|r| r.iter().filter(|x| x["state"] == json!("TIMELOCKED")).count()), Some(2), "{refunds}");
+    net.hours(1).await?;
+    let r = resume(&kc, &accounts, &refund_out, &[])?;
+    if r.status != 0 {
+        bail!("run-all --resume (refund) failed ({}):\n{}", r.status, r.log);
+    }
+    let rec = read(&refund_out.join("run-record.json"))?;
+    assert_eq!(rec["journey"]["kind"], json!("refund"));
+    assert_eq!(rec["journey"]["ok"], json!(true));
+    let txs = rec["journey"]["transactions"].as_array().context("transactions")?;
+    let methods: Vec<&str> = txs.iter().filter_map(|t| t["method"].as_str()).collect();
+    assert_eq!(
+        methods,
+        ["register_trade", "fund", "request_refund", "request_refund", "authorize_refund", "execute_refund", "authorize_refund", "execute_refund"]
+    );
+    // The buyer's own account funds and asks for its excess back; the relayer key does the rest.
+    for t in txs {
+        let own = t["method"] == json!("fund") || t["step"] == json!("refund:excess");
+        assert_eq!(t["signer"], json!(if own { ids[1].as_str() } else { ids[3].as_str() }), "{t}");
+    }
+    let refunds: J = net.worker.view(&ids[0], "get_refunds").args_json(json!({ "trade_id": refund_trade })).await?.json()?;
+    let mut reasons: Vec<&str> = refunds
+        .as_array()
+        .context("refunds")?
+        .iter()
+        .filter(|x| x["state"] == json!("REFUNDED"))
+        .filter_map(|x| x["reason"].as_str())
+        .collect();
+    reasons.sort();
+    assert_eq!(reasons, ["EXCESS_FUNDING_RETURN", "MUTUAL_CANCEL"]);
+    let ledger: J = net.worker.view(&ids[0], "get_ledger").args_json(json!({ "trade_id": refund_trade })).await?.json()?;
+    let funded = (amount + 10_000_000_000_000_000_000_000).to_string();
+    let buyer = &ledger["funders"][ids[1].as_str()];
+    assert_eq!((buyer["funded"].clone(), buyer["refunded"].clone()), (json!(funded), json!(funded)), "{ledger}");
+    for k in ["partial", "available", "reserved", "released", "refundLocked", "quarantined"] {
+        assert_eq!(buyer[k], json!("0"), "{k}");
+    }
+    assert_eq!(ledger["totals"]["released"], json!("0"));
+    assert_eq!(ledger["conservation"], json!(true));
+    for c in ["buyerReceivedExactAmounts", "buyerRefundedEverything", "supplierUnchanged"] {
+        assert_eq!(rec["journey"]["checks"][c], json!(true), "{c}");
+    }
+    assert_eq!(net.balance(&ids[2]).await?, supplier_before, "the supplier receives nothing");
+    // A journey is never started a second time in the same run directory.
+    let r = run_all(&kc, &accounts, &refund, "run-refund")?;
+    assert_eq!(r.status, 2, "{}", r.log);
+    assert!(r.log.contains("RUN_EXISTS"));
+    Ok(())
+}
+
+/// The journey key seed is kept in the run directory, readable by the owner only.
+fn seed_file_is_private(out: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = std::fs::metadata(out.join("journey-seed.json"))?.permissions().mode() & 0o777;
+    if mode != 0o600 {
+        bail!("journey-seed.json has mode {mode:o}, not 600");
+    }
     Ok(())
 }
