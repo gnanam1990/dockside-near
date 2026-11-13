@@ -7,14 +7,23 @@
 #   4. verify the on-chain code hash and the initialised config
 #   5. configure the relayer: a function-call access key restricted to the escrow contract,
 #      generated and saved by near-cli-rs, then checked on chain
-#   6. run the journey: register, policy, fund (buyer), attest, inspect, intent, approve,
-#      execute, and check the supplier received exactly the trade amount
+#   6. run the journey (--journey, default paid):
+#        paid    register, policy, fund (buyer), attest, inspect, intent, approve, execute, and
+#                check the supplier received exactly the trade amount
+#        hold    as paid, with a deterministic-policy hold SET after the inspection (release
+#                blocked: HOLD_ACTIVE) and RESOLVED (RELEASE_HOLD) by the risk/policy principal
+#                before the approval, then PAID
+#        refund  register, fund the trade amount plus an excess (buyer), MUTUAL_CANCEL (buyer and
+#                supplier sign) and EXCESS_FUNDING_RETURN (the buyer's own account) requests, the
+#                one-hour cooling period on chain time, authorize and execute both: REFUNDED, the
+#                buyer gets back exactly what it deposited and the supplier nothing
 #   7. write the run record
 #
 # Usage:
 #   DOCKSIDE_ESCROW_ACCOUNT=<escrow>.testnet DOCKSIDE_BUYER_ACCOUNT=<buyer>.testnet \
 #   DOCKSIDE_SUPPLIER_ACCOUNT=<supplier>.testnet DOCKSIDE_RELAYER_ACCOUNT=<relayer>.testnet \
 #     scripts/testnet-deploy/run-all --network testnet|sandbox [options]
+#   (same four variables) scripts/testnet-deploy/run-all --resume <run dir> [resume options]
 #
 # Options:
 #   --network <testnet|sandbox>  required; nothing else is accepted (mainnet is refused)
@@ -27,8 +36,30 @@
 #   --skip-deploy                reuse an escrow that already runs the manifest's code
 #   --relayer-key-file <file>    reuse a function-call key file near-cli-rs saved earlier
 #   --allowance <amount>         allowance of a new relayer key, default '1 NEAR'
+#   --journey <paid|hold|refund> the journey step 6 runs, default paid
+#   --excess-yocto <n>           refund journey: excess deposited on top of the trade amount,
+#                                default 10000000000000000000000 (0.01 NEAR)
+#   --no-wait                    refund journey: stop (exit 3) instead of waiting out the cooling period
+#   --stop-after <n>             stop (exit 3) once the journey has n transactions on chain
+# Resume options:
+#   --resume <run dir>           finish an interrupted or paused journey from its run directory. The
+#                                network, RPC URL, journey, amount, wasm, manifest and relayer key file
+#                                come from <run dir>/run-params.json and the journey's key seed from
+#                                <run dir>/journey-seed.json; the deployment and the relayer key are
+#                                checked again (read-only), the completed steps are replayed on the
+#                                mirror, the chain must agree, and the journey continues
+#   --pending-tx <hash|none>     the transaction of a call whose id was lost when the run stopped, or
+#                                none if it never reached the escrow (run-all says when it needs this)
+#   --no-wait, --stop-after and --fallback-rpc-urls work as above.
 # Environment: NEAR_CLI (near-cli-rs binary; on Windows the real near.exe is found from the npm
 # global prefix or `where near`), CARGO (default `cargo`), DOCKSIDE_FALLBACK_RPC_URLS.
+#
+# Journey keys: the Dockside principal keys of the journey's trade (test keys of that one trade,
+# not NEAR keys) derive from a random seed kept in <run dir>/journey-seed.json, mode 0600, so a
+# stuck trade can be finished with --resume. No NEAR private key is read, printed or stored.
+#
+# Exit status: 0 PASS, 1 a near-cli-rs command failed, 2 a refusal or a failed check, 3 PAUSED
+# (the journey stopped part way on purpose; finish it with --resume <run dir>).
 #
 # Every near-cli-rs command runs through `tool.mjs near-run` with stdin closed, so a question it
 # asks fails at once instead of hanging; "Transaction has expired" (never included) is signed
@@ -51,24 +82,38 @@ SKIP_DEPLOY=""
 KEY_FILE=""
 ALLOWANCE="1 NEAR"
 CARGO_BIN="${CARGO:-cargo}"
+JOURNEY="paid"
+EXCESS_YOCTO=""
+NO_WAIT=""
+STOP_AFTER=""
+RESUME=""
+PENDING_TX=""
+# Options a resumed run must not take: the run directory decides them.
+FIXED=""
 
 usage() {
-  sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,/^set -eu/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'
   exit 2
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --network) NETWORK="${2:-}"; shift 2 ;;
-    --rpc-url) RPC_URL="${2:-}"; shift 2 ;;
+    --network) NETWORK="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --rpc-url) RPC_URL="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
     --fallback-rpc-urls) DOCKSIDE_FALLBACK_RPC_URLS="${2:-}"; export DOCKSIDE_FALLBACK_RPC_URLS; shift 2 ;;
-    --wasm) WASM="${2:-}"; shift 2 ;;
-    --manifest) MANIFEST="${2:-}"; shift 2 ;;
-    --amount-yocto) AMOUNT_YOCTO="${2:-}"; shift 2 ;;
-    --out) OUT="${2:-}"; shift 2 ;;
-    --skip-deploy) SKIP_DEPLOY=1; shift ;;
-    --relayer-key-file) KEY_FILE="${2:-}"; shift 2 ;;
-    --allowance) ALLOWANCE="${2:-}"; shift 2 ;;
+    --wasm) WASM="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --manifest) MANIFEST="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --amount-yocto) AMOUNT_YOCTO="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --out) OUT="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --skip-deploy) SKIP_DEPLOY=1; FIXED="$FIXED $1"; shift ;;
+    --relayer-key-file) KEY_FILE="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --allowance) ALLOWANCE="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --journey) JOURNEY="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --excess-yocto) EXCESS_YOCTO="${2:-}"; FIXED="$FIXED $1"; shift 2 ;;
+    --no-wait) NO_WAIT=1; shift ;;
+    --stop-after) STOP_AFTER="${2:-}"; shift 2 ;;
+    --resume) RESUME="${2:-}"; shift 2 ;;
+    --pending-tx) PENDING_TX="${2:-}"; shift 2 ;;
     -h|--help) usage ;;
     *) echo "run-all: unknown argument $1" >&2; usage ;;
   esac
@@ -76,11 +121,33 @@ done
 
 TOOL="$ROOT/scripts/testnet-deploy/tool.mjs"
 say() { echo "run-all: $*" >&2; }
+command -v node >/dev/null 2>&1 || { say "node is required"; exit 2; }
+
+if [ -n "$RESUME" ]; then
+  [ -z "$FIXED" ] || { say "USAGE: --resume takes the run's own settings; drop$FIXED"; exit 2; }
+  [ -d "$RESUME" ] || { say "NOTHING_TO_RESUME: $RESUME is not a directory"; exit 2; }
+  OUT=$(CDPATH= cd -- "$RESUME" && pwd)
+  NETWORK=$(node "$TOOL" run-params --dir "$OUT" --field network)
+  RPC_URL=$(node "$TOOL" run-params --dir "$OUT" --field rpcUrl)
+  JOURNEY=$(node "$TOOL" run-params --dir "$OUT" --field journey)
+  AMOUNT_YOCTO=$(node "$TOOL" run-params --dir "$OUT" --field amountYocto)
+  WASM=$(node "$TOOL" run-params --dir "$OUT" --field wasm)
+  MANIFEST=$(node "$TOOL" run-params --dir "$OUT" --field manifest)
+  KEY_FILE=$(node "$TOOL" run-params --dir "$OUT" --field relayerKeyFile)
+  SKIP_DEPLOY=1
+elif [ -n "$PENDING_TX" ]; then
+  say "USAGE: --pending-tx needs --resume <run dir>"
+  exit 2
+fi
+case "$JOURNEY" in
+  paid|hold|refund) ;;
+  *) say "USAGE: --journey must be paid, hold or refund"; exit 2 ;;
+esac
+
 net_flags() {
   if [ -n "$RPC_URL" ]; then echo "--network $NETWORK --rpc-url $RPC_URL"; else echo "--network $NETWORK"; fi
 }
 
-command -v node >/dev/null 2>&1 || { say "node is required"; exit 2; }
 # Refuses anything but testnet or a loopback sandbox before any other step.
 CLI_NETWORK=$(node "$TOOL" profile $(net_flags) --field cliNetwork)
 RPC=$(node "$TOOL" profile $(net_flags) --field rpcUrl)
@@ -92,19 +159,30 @@ NEAR_BIN=$(node "$TOOL" near-cli </dev/null)
 command -v "$CARGO_BIN" >/dev/null 2>&1 || { say "cargo is required to build the journey payload builder"; exit 2; }
 
 if [ -z "$OUT" ]; then OUT="$ROOT/.data/testnet-run/$NETWORK-$(date -u +%Y%m%dT%H%M%SZ)"; fi
+if [ -z "$RESUME" ] && [ -e "$OUT/journey-seed.json" ]; then
+  say "RUN_EXISTS: $OUT already holds a journey; finish it with --resume $OUT or choose another --out"
+  exit 2
+fi
 mkdir -p "$OUT"
-say "network $NETWORK ($RPC), near-cli-rs connection '$CLI_NETWORK', record in $OUT"
+say "network $NETWORK ($RPC), near-cli-rs connection '$CLI_NETWORK', $JOURNEY journey, record in $OUT"
 
 say "1/7 verify the wasm against the build manifest"
 node "$TOOL" verify-artifact --wasm "$WASM" --manifest "$MANIFEST" >"$OUT/artifact.json"
 CODE_HASH=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).nearCodeHash)' "$OUT/artifact.json")
 say "    code hash $CODE_HASH"
 
-say "2/7 preflight"
-if [ -n "$SKIP_DEPLOY" ]; then
-  node "$TOOL" preflight $(net_flags) --wasm "$WASM" --amount-yocto "$AMOUNT_YOCTO" --skip-deploy >"$OUT/preflight.json"
+EXCESS_FLAGS=""
+if [ -n "$EXCESS_YOCTO" ]; then EXCESS_FLAGS="--excess-yocto $EXCESS_YOCTO"; fi
+if [ -n "$RESUME" ]; then
+  say "2/7 preflight skipped (--resume)"
+elif [ -n "$SKIP_DEPLOY" ]; then
+  say "2/7 preflight"
+  node "$TOOL" preflight $(net_flags) --wasm "$WASM" --amount-yocto "$AMOUNT_YOCTO" \
+    --journey "$JOURNEY" $EXCESS_FLAGS --skip-deploy >"$OUT/preflight.json"
 else
-  node "$TOOL" preflight $(net_flags) --wasm "$WASM" --amount-yocto "$AMOUNT_YOCTO" >"$OUT/preflight.json"
+  say "2/7 preflight"
+  node "$TOOL" preflight $(net_flags) --wasm "$WASM" --amount-yocto "$AMOUNT_YOCTO" \
+    --journey "$JOURNEY" $EXCESS_FLAGS >"$OUT/preflight.json"
 fi
 
 say "    building the journey payload builder"
@@ -128,6 +206,8 @@ if [ -z "$SKIP_DEPLOY" ]; then
   fi
   node "$TOOL" tx-hash --file "$OUT/deploy.txt" >"$OUT/deploy-tx.txt"
   say "    transaction $(cat "$OUT/deploy-tx.txt")"
+elif [ -n "$RESUME" ]; then
+  say "3/7 deploy skipped (--resume)"
 else
   say "3/7 deploy skipped (--skip-deploy)"
 fi
@@ -152,9 +232,36 @@ else
 fi
 node "$TOOL" verify-relayer-key $(net_flags) --key-file "$KEY_FILE" >"$OUT/relayer.json"
 
-say "6/7 journey"
-node "$TOOL" journey $(net_flags) --near "$NEAR_BIN" --key-file "$KEY_FILE" --mirror "$MIRROR" \
-  --out "$OUT" --amount-yocto "$AMOUNT_YOCTO" </dev/null >"$OUT/journey-checks.json"
+if [ -z "$RESUME" ]; then
+  # The non-secret settings --resume reads back (the key seed goes to journey-seed.json, 0600).
+  node -e '
+const [out, network, rpcUrl, journey, amountYocto, wasm, manifest, relayerKeyFile] = process.argv.slice(1);
+const params = { schema: "dockside/run-params@1", network, rpcUrl, journey, amountYocto, wasm, manifest, relayerKeyFile };
+require("fs").writeFileSync(`${out}/run-params.json`, `${JSON.stringify(params, null, 2)}\n`);
+' "$OUT" "$NETWORK" "$RPC_URL" "$JOURNEY" "$AMOUNT_YOCTO" "$WASM" "$MANIFEST" "$KEY_FILE"
+fi
+
+if [ -n "$RESUME" ]; then say "6/7 $JOURNEY journey (resume)"; else say "6/7 $JOURNEY journey"; fi
+set -- --near "$NEAR_BIN" --key-file "$KEY_FILE" --mirror "$MIRROR" --out "$OUT"
+if [ -n "$RESUME" ]; then
+  set -- "$@" --resume
+else
+  set -- "$@" --journey "$JOURNEY" --amount-yocto "$AMOUNT_YOCTO"
+  if [ -n "$EXCESS_YOCTO" ]; then set -- "$@" --excess-yocto "$EXCESS_YOCTO"; fi
+fi
+if [ -n "$NO_WAIT" ]; then set -- "$@" --no-wait; fi
+if [ -n "$STOP_AFTER" ]; then set -- "$@" --stop-after "$STOP_AFTER"; fi
+if [ -n "$PENDING_TX" ]; then set -- "$@" --pending-tx "$PENDING_TX"; fi
+STATUS=0
+node "$TOOL" journey $(net_flags) "$@" </dev/null >"$OUT/journey-checks.json" || STATUS=$?
+if [ "$STATUS" -eq 3 ]; then
+  say "PAUSED: the trade is part way on chain; finish it with: scripts/testnet-deploy/run-all --resume $OUT"
+  exit 3
+fi
+if [ "$STATUS" -ne 0 ]; then
+  if [ -e "$OUT/journey-seed.json" ]; then say "the trade can be finished later with --resume $OUT"; fi
+  exit "$STATUS"
+fi
 
 say "7/7 run record"
 COMMIT=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)
@@ -167,9 +274,11 @@ const j = read("journey.json");
 const rec = {
   schema: "dockside/testnet-run@1", network, scriptCommit: commit, artifact: read("artifact.json"),
   deployTx: tx, deployment: read("deployment.json"), relayer: read("relayer.json"),
-  journey: { ok: j.ok, tradeId: j.tradeId, releaseIntentId: j.releaseIntentId, checks: j.checks,
-    transactions: j.steps.map((s) => ({ method: s.method, signer: s.signer, txHash: s.txHash })) },
+  journey: { kind: j.journey, ok: j.ok, tradeId: j.tradeId, releaseIntentId: j.releaseIntentId, checks: j.checks,
+    transactions: j.steps.filter((s) => s.txHash).map((s) => ({ step: s.step, method: s.method, signer: s.signer,
+      txHash: s.txHash, blockTimeMs: s.blockTimeMs })) },
 };
 fs.writeFileSync(`${out}/run-record.json`, JSON.stringify(rec, null, 2) + "\n");
 ' "$OUT" "$COMMIT" "$NETWORK"
-say "PASS: deployed code hash $CODE_HASH, journey PAID; record $OUT/run-record.json"
+if [ "$JOURNEY" = "refund" ]; then OUTCOME=REFUNDED; else OUTCOME=PAID; fi
+say "PASS: deployed code hash $CODE_HASH, $JOURNEY journey $OUTCOME; record $OUT/run-record.json"
