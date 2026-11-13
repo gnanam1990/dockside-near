@@ -1,0 +1,72 @@
+# Dockside proof page on GitHub Pages (ADR-0027).
+#
+# The site is the static directory site/proof, uploaded unchanged: there is no build step, no
+# dependency install and no secret. The page reads NEAR from the visitor's browser.
+#
+# scripts/ci/workflow-policy.mjs checks this file with its "pages" profile (part of `pnpm run
+# check` through packages/core/test/m46-pages-workflow.test.ts). The rules of the CI workflow
+# still apply: push to main and pull_request only, `contents: read` at workflow level, no secrets,
+# checkout without persisted credentials, every action pinned to a full commit SHA, no expression
+# inside a run script. The single exception is the `deploy` job: it holds `pages: write` and
+# `id-token: write`, which actions/deploy-pages needs, and therefore runs on pushes to main only,
+# checks out nothing, runs no script and consists of that one official action. A pull request runs
+# the `build` job only, which validates the manifest and has no write permission.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: validate the proof manifest and package site/proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Node.js 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "22.23.1"
+
+      - name: The manifest equals what the run records under docs/evidence produce
+        run: node scripts/proof/build-manifest.mjs --check
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+
+      - name: Upload site/proof as the Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: site/proof
+
+  deploy:
+    name: deploy to GitHub Pages
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - name: Deploy the uploaded artifact
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

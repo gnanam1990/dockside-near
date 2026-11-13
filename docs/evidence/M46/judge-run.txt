@@ -1,0 +1,93 @@
+
+> dockside@0.1.0 judge <repo>
+> node scripts/judge/judge.mjs
+
+[judge] install …
+[judge]   pnpm install --frozen-lockfile
+[judge] install done in 2s
+[judge] unit …
+[judge]   pnpm run test
+[judge] unit done in 76s
+[judge] contract …
+[judge]   pnpm run contract:test
+[judge] contract done in 43s
+[judge] manifest …
+[judge] manifest done in 0s
+[judge] chain …
+[judge]   reading gnanam1990-dock-escrow2.testnet through test.rpc.fastnear.com (read-only)
+[judge]   testnet: final block 277493503, 45 requests
+[judge] chain done in 8s
+
+| #  | Check                                                      | Expected                                       | Actual                                         | Result |
+|----|------------------------------------------------------------|------------------------------------------------|------------------------------------------------|--------|
+| 1  | Install from the frozen lockfile                           | exit 0                                         | exit 0                                         | PASS   |
+| 2  | Unit and integration tests (vitest)                        | exit 0, 0 failed                               | exit 0, 709 passed, 0 failed in 71 files       | PASS   |
+| 3  | Contract tests (cargo, escrow core)                        | exit 0, 0 failed                               | exit 0, 123 passed, 0 failed in 22 suites      | PASS   |
+| 4  | Proof manifest is derived from docs/evidence               | identical to the generator's output            | identical to the generator's output            | PASS   |
+| 5  | testnet: Deployed code hash equals the build manifest      | 7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N   | 7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N   | PASS   |
+| 6  | testnet: Manifest SHA-256 an…code hash are the same digest | 7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N   | 7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N   | PASS   |
+| 7  | testnet: Contract bytes down… hash to the manifest SHA-256 | 812902 bytes, sha256 5…133016b46604d440cb3a3fb | 812902 bytes, sha256 5…133016b46604d440cb3a3fb | PASS   |
+| 8  | testnet: Deployment transaction                            | DeployContract + new b… itself, success, FINAL | DeployContract + new b… itself, success, FINAL | PASS   |
+| 9  | testnet: Relayer key is a fu…ow (it cannot transfer funds) | FunctionCall key on gn…90-dock-escrow2.testnet | FunctionCall key on gn…90-dock-escrow2.testnet | PASS   |
+| 10 | testnet: Contract network                                  | near-testnet                                   | near-testnet                                   | PASS   |
+| 11 | testnet: Minimum deposit                                   | 1000000000000000000000 yoctoNEAR               | 1000000000000000000000 yoctoNEAR               | PASS   |
+| 12 | testnet: Refund policy                                     | {"id":"dockside-refund-v1","revision":1}       | {"id":"dockside-refund-v1","revision":1}       | PASS   |
+| 13 | testnet: Trades registered on the contract                 | at least 3 (one per journey below)             | 3                                              | PASS   |
+| 14 | testnet trd_197c63…: Trade is registered on this contract  | trd_197c633d724eeb2cdd…bf55976 on near-testnet | trd_197c633d724eeb2cdd…bf55976 on near-testnet | PASS   |
+| 15 | testnet trd_197c63…: Ledger …computed here from get_ledger | funder buckets sum to …within the trade amount | funded 500000000000000…50000000000000000000000 | PASS   |
+| 16 | testnet trd_197c63…: Contract's own conservation check     | true                                           | true                                           | PASS   |
+| 17 | testnet trd_197c63…: Funded in total                       | 0.05 NEAR (50000000000000000000000 yocto)      | 0.05 NEAR (50000000000000000000000 yocto)      | PASS   |
+| 18 | testnet trd_197c63…: Released to the supplier              | 0.05 NEAR (50000000000000000000000 yocto)      | 0.05 NEAR (50000000000000000000000 yocto)      | PASS   |
+| 19 | testnet trd_197c63…: Refunded to the funder                | 0 NEAR (0 yocto)                               | 0 NEAR (0 yocto)                               | PASS   |
+| 20 | testnet trd_197c63…: Value still held for this trade       | 0 NEAR (0 yocto)                               | 0 NEAR (0 yocto)                               | PASS   |
+| 21 | testnet trd_197c63…: Release intent state                  | rli_abb154c802f92362dc…48888be PAID, 0.05 NEAR | rli_abb154c802f92362dc…48888be PAID, 0.05 NEAR | PASS   |
+| 22 | testnet trd_197c63…: Transfe…the contract recorded as paid | 0.05 NEAR to gnanam1990-dock-supplier.testnet  | 0.05 NEAR to gnanam1990-dock-supplier.testnet  | PASS   |
+| 23 | testnet trd_75c1de…: Trade is registered on this contract  | trd_75c1de55a8c9f1aa53…611f46f on near-testnet | trd_75c1de55a8c9f1aa53…611f46f on near-testnet | PASS   |
+| 24 | testnet trd_75c1de…: Ledger …computed here from get_ledger | funder buckets sum to …within the trade amount | funded 500000000000000…50000000000000000000000 | PASS   |
+| 25 | testnet trd_75c1de…: Contract's own conservation check     | true                                           | true                                           | PASS   |
+| 26 | testnet trd_75c1de…: Funded in total                       | 0.05 NEAR (50000000000000000000000 yocto)      | 0.05 NEAR (50000000000000000000000 yocto)      | PASS   |
+| 27 | testnet trd_75c1de…: Released to the supplier              | 0.05 NEAR (50000000000000000000000 yocto)      | 0.05 NEAR (50000000000000000000000 yocto)      | PASS   |
+| 28 | testnet trd_75c1de…: Refunded to the funder                | 0 NEAR (0 yocto)                               | 0 NEAR (0 yocto)                               | PASS   |
+| 29 | testnet trd_75c1de…: Value still held for this trade       | 0 NEAR (0 yocto)                               | 0 NEAR (0 yocto)                               | PASS   |
+| 30 | testnet trd_75c1de…: Release intent state                  | rli_221f8384040598d5bf…0397da2 PAID, 0.05 NEAR | rli_221f8384040598d5bf…0397da2 PAID, 0.05 NEAR | PASS   |
+| 31 | testnet trd_75c1de…: Hold se…d resolved before the release | RESOLVED, issuer POLIC…ER, rule doc-mismatch@1 | RESOLVED, issuer POLIC…ER, rule doc-mismatch@1 | PASS   |
+| 32 | testnet trd_75c1de…: Transfe…the contract recorded as paid | 0.05 NEAR to gnanam1990-dock-supplier.testnet  | 0.05 NEAR to gnanam1990-dock-supplier.testnet  | PASS   |
+| 33 | testnet trd_a54930…: Trade is registered on this contract  | trd_a54930d5d5af718e0f…43b9a2d on near-testnet | trd_a54930d5d5af718e0f…43b9a2d on near-testnet | PASS   |
+| 34 | testnet trd_a54930…: Ledger …computed here from get_ledger | funder buckets sum to …within the trade amount | funded 600000000000000…60000000000000000000000 | PASS   |
+| 35 | testnet trd_a54930…: Contract's own conservation check     | true                                           | true                                           | PASS   |
+| 36 | testnet trd_a54930…: Funded in total                       | 0.06 NEAR (60000000000000000000000 yocto)      | 0.06 NEAR (60000000000000000000000 yocto)      | PASS   |
+| 37 | testnet trd_a54930…: Released to the supplier              | 0 NEAR (0 yocto)                               | 0 NEAR (0 yocto)                               | PASS   |
+| 38 | testnet trd_a54930…: Refunded to the funder                | 0.06 NEAR (60000000000000000000000 yocto)      | 0.06 NEAR (60000000000000000000000 yocto)      | PASS   |
+| 39 | testnet trd_a54930…: Value still held for this trade       | 0 NEAR (0 yocto)                               | 0 NEAR (0 yocto)                               | PASS   |
+| 40 | testnet trd_a54930…: Refund intents                        | EXCESS_FUNDING_RETURN …NCEL 0.05 NEAR REFUNDED | EXCESS_FUNDING_RETURN …NCEL 0.05 NEAR REFUNDED | PASS   |
+| 41 | testnet trd_a54930…: Transfe…the contract recorded as paid | 0.01 NEAR to gnanam199…1990-dock-buyer.testnet | 0.01 NEAR to gnanam199…1990-dock-buyer.testnet | PASS   |
+| 42 | testnet trd_197c63… tx: 1. register_trade                  | register_trade by gnan…testnet, success, FINAL | register_trade by gnan…testnet, success, FINAL | PASS   |
+| 43 | testnet trd_197c63… tx: 2. register_evidence_policy        | register_evidence_poli…testnet, success, FINAL | register_evidence_poli…testnet, success, FINAL | PASS   |
+| 44 | testnet trd_197c63… tx: 3. fund                            | fund by gnanam1990-doc…testnet, success, FINAL | fund by gnanam1990-doc…testnet, success, FINAL | PASS   |
+| 45 | testnet trd_197c63… tx: 4. submit_manifest_attestation     | submit_manifest_attest…testnet, success, FINAL | submit_manifest_attest…testnet, success, FINAL | PASS   |
+| 46 | testnet trd_197c63… tx: 5. submit_inspection               | submit_inspection by g…testnet, success, FINAL | submit_inspection by g…testnet, success, FINAL | PASS   |
+| 47 | testnet trd_197c63… tx: 6. create_release_intent           | create_release_intent …testnet, success, FINAL | create_release_intent …testnet, success, FINAL | PASS   |
+| 48 | testnet trd_197c63… tx: 7. approve_release                 | approve_release by gna…testnet, success, FINAL | approve_release by gna…testnet, success, FINAL | PASS   |
+| 49 | testnet trd_197c63… tx: 8. execute_release                 | execute_release by gna…testnet, success, FINAL | execute_release by gna…testnet, success, FINAL | PASS   |
+| 50 | testnet trd_75c1de… tx: 1. register_trade (register)       | register_trade by gnan…testnet, success, FINAL | register_trade by gnan…testnet, success, FINAL | PASS   |
+| 51 | testnet trd_75c1de… tx: 2. r…ster_evidence_policy (policy) | register_evidence_poli…testnet, success, FINAL | register_evidence_poli…testnet, success, FINAL | PASS   |
+| 52 | testnet trd_75c1de… tx: 3. fund                            | fund by gnanam1990-doc…testnet, success, FINAL | fund by gnanam1990-doc…testnet, success, FINAL | PASS   |
+| 53 | testnet trd_75c1de… tx: 4. s…est_attestation (attestation) | submit_manifest_attest…testnet, success, FINAL | submit_manifest_attest…testnet, success, FINAL | PASS   |
+| 54 | testnet trd_75c1de… tx: 5. submit_inspection (inspection)  | submit_inspection by g…testnet, success, FINAL | submit_inspection by g…testnet, success, FINAL | PASS   |
+| 55 | testnet trd_75c1de… tx: 6. set_hold (hold_set)             | set_hold by gnanam1990…testnet, success, FINAL | set_hold by gnanam1990…testnet, success, FINAL | PASS   |
+| 56 | testnet trd_75c1de… tx: 7. create_release_intent (intent)  | create_release_intent …testnet, success, FINAL | create_release_intent …testnet, success, FINAL | PASS   |
+| 57 | testnet trd_75c1de… tx: 8. resolve_hold (hold_resolve)     | resolve_hold by gnanam…testnet, success, FINAL | resolve_hold by gnanam…testnet, success, FINAL | PASS   |
+| 58 | testnet trd_75c1de… tx: 9. approve_release (approval)      | approve_release by gna…testnet, success, FINAL | approve_release by gna…testnet, success, FINAL | PASS   |
+| 59 | testnet trd_75c1de… tx: 10. execute_release                | execute_release by gna…testnet, success, FINAL | execute_release by gna…testnet, success, FINAL | PASS   |
+| 60 | testnet trd_a54930… tx: 1. register_trade (register)       | register_trade by gnan…testnet, success, FINAL | register_trade by gnan…testnet, success, FINAL | PASS   |
+| 61 | testnet trd_a54930… tx: 2. fund                            | fund by gnanam1990-doc…testnet, success, FINAL | fund by gnanam1990-doc…testnet, success, FINAL | PASS   |
+| 62 | testnet trd_a54930… tx: 3. request_refund (refund:cancel)  | request_refund by gnan…testnet, success, FINAL | request_refund by gnan…testnet, success, FINAL | PASS   |
+| 63 | testnet trd_a54930… tx: 4. request_refund (refund:excess)  | request_refund by gnan…testnet, success, FINAL | request_refund by gnan…testnet, success, FINAL | PASS   |
+| 64 | testnet trd_a54930… tx: 5. a…ize_refund (authorize:cancel) | authorize_refund by gn…testnet, success, FINAL | authorize_refund by gn…testnet, success, FINAL | PASS   |
+| 65 | testnet trd_a54930… tx: 6. execute_refund (execute:cancel) | execute_refund by gnan…testnet, success, FINAL | execute_refund by gnan…testnet, success, FINAL | PASS   |
+| 66 | testnet trd_a54930… tx: 7. a…ize_refund (authorize:excess) | authorize_refund by gn…testnet, success, FINAL | authorize_refund by gn…testnet, success, FINAL | PASS   |
+| 67 | testnet trd_a54930… tx: 8. execute_refund (execute:excess) | execute_refund by gnan…testnet, success, FINAL | execute_refund by gnan…testnet, success, FINAL | PASS   |
+| 68 | mainnet: deployment                                        | not deployed yet                               | not deployed yet, nothing to read              | SKIP   |
+
+Full values: .data/judge/judge-report.json
+JUDGE: PASS  67 passed, 0 failed, 0 not readable, 1 skipped, 2m 9s
