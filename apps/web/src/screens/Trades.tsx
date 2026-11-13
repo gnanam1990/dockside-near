@@ -41,33 +41,64 @@ function rank(t: TradeListItem): number {
   return 4;
 }
 
+/**
+ * Explicit table roles: below 768 px the rows restyle as labelled cards (CSS display changes),
+ * and some browsers drop native table semantics when display changes; the roles keep the row,
+ * header and cell relationships in the accessibility tree at every width.
+ */
+const TABLE = { role: "table" } as const;
+const GROUP = { role: "rowgroup" } as const;
+const ROW = { role: "row" } as const;
+const COLHEAD = { role: "columnheader" } as const;
+const CELL = { role: "cell" } as const;
+
 function TradeTable({ trades, receivedAt }: { trades: TradeListItem[]; receivedAt: number }) {
   return (
     <TableScroller label="Trades">
-      <table data-testid="trades-table">
+      <table data-testid="trades-table" className="table--cards" {...TABLE}>
         <caption>Trades you are related to, unresolved financial risk first</caption>
-        <thead>
-          <tr>
-            <th scope="col">Trade</th>
-            <th scope="col">Milestone</th>
-            <th scope="col">Amount</th>
-            <th scope="col">Revision</th>
-            <th scope="col">Your relation</th>
-            <th scope="col">Holds</th>
-            <th scope="col">Release intent</th>
-            <th scope="col">Destination</th>
-            <th scope="col">Last sync</th>
+        <thead {...GROUP}>
+          <tr {...ROW}>
+            <th scope="col" {...COLHEAD}>
+              Trade
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Milestone
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Amount
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Revision
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Your relation
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Holds
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Release intent
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Destination
+            </th>
+            <th scope="col" {...COLHEAD}>
+              Last sync
+            </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody {...GROUP}>
           {trades.map((t) => (
-            <tr key={t.tradeId} data-trade={t.tradeId}>
-              <td>
+            <tr key={t.tradeId} data-trade={t.tradeId} {...ROW}>
+              <td {...CELL} data-label="Trade">
                 <Link href={`/trades/${t.tradeId}`}>{t.tradeId}</Link>
                 {t.frozen ? <p className="small">Frozen by an incident</p> : null}
               </td>
-              <td>{t.milestone.description}</td>
-              <td>
+              <td {...CELL} data-label="Milestone">
+                {t.milestone.description}
+              </td>
+              <td {...CELL} data-label="Amount">
                 <MoneyValue
                   value={{
                     amount: t.amountYocto,
@@ -77,7 +108,7 @@ function TradeTable({ trades, receivedAt }: { trades: TradeListItem[]; receivedA
                   }}
                 />
               </td>
-              <td className="tabular">
+              <td className="tabular" {...CELL} data-label="Revision">
                 r{t.revision}
                 {t.requiresNewRevision ? (
                   <p className="small" data-testid="needs-new-revision">
@@ -85,9 +116,13 @@ function TradeTable({ trades, receivedAt }: { trades: TradeListItem[]; receivedA
                   </p>
                 ) : null}
               </td>
-              <td>{t.relations.join(", ")}</td>
-              <td>{t.holdsBlocking > 0 ? `${t.holdsBlocking} blocking release` : "None blocking"}</td>
-              <td>
+              <td {...CELL} data-label="Your relation">
+                {t.relations.join(", ")}
+              </td>
+              <td {...CELL} data-label="Holds">
+                {t.holdsBlocking > 0 ? `${t.holdsBlocking} blocking release` : "None blocking"}
+              </td>
+              <td {...CELL} data-label="Release intent">
                 {t.liveIntentState ? (
                   <StatusBadge
                     dimension="releaseIntentState"
@@ -100,8 +135,12 @@ function TradeTable({ trades, receivedAt }: { trades: TradeListItem[]; receivedA
                   "None live"
                 )}
               </td>
-              <td className="mono wrap">{t.payout.destination}</td>
-              <td className="mono">{formatUtc(receivedAt)}</td>
+              <td className="mono wrap" {...CELL} data-label="Destination">
+                {t.payout.destination}
+              </td>
+              <td className="mono" {...CELL} data-label="Last sync">
+                {formatUtc(receivedAt)}
+              </td>
             </tr>
           ))}
         </tbody>

@@ -113,6 +113,18 @@ describe.each([
       4.5,
     );
   });
+  it("navigation text on the harbour rail and its hover/selected fills meets 4.5:1; rail focus and accent meet 3:1", () => {
+    for (const bg of ["rail-bg", "rail-hover", "rail-selected"]) {
+      for (const fg of ["rail-text", "rail-text-muted"])
+        expect(contrast(t[fg] as string, t[bg] as string), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+      for (const fg of ["rail-focus", "rail-accent"])
+        expect(contrast(t[fg] as string, t[bg] as string), `${fg} on ${bg}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+  it("document ink rules are visible on canvas and panel (3:1)", () => {
+    for (const bg of SURFACES)
+      expect(contrast(t["ink-rule"] as string, t[bg] as string)).toBeGreaterThanOrEqual(3);
+  });
   for (const fg of NON_TEXT)
     for (const bg of SURFACES)
       it(`${fg} on ${bg} meets 3:1 (non-text UI component)`, () => {

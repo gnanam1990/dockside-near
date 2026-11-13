@@ -1,9 +1,9 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useApp } from "../app/app-context";
 import { Link, useRouter } from "../app/router";
 import { capabilityLabel, formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
-import { StatusIcon, type UI_ICONS, UiIcon } from "./Icon";
+import { BrandMark, StatusIcon, type UI_ICONS, UiIcon } from "./Icon";
 import { ConnectionBanner } from "./States";
 import { NetworkLabel } from "./Status";
 
@@ -63,10 +63,26 @@ function ContextBar() {
   );
 }
 
+/**
+ * Alternates between two identical opacity keyframes on every navigation so the new screen
+ * settles in (180 ms, opacity only, removed under reduced motion) without remounting it.
+ */
+function useEnterPhase(path: string): "a" | "b" {
+  const [phase, setPhase] = useState<"a" | "b">("a");
+  const last = useRef(path);
+  useEffect(() => {
+    if (last.current === path) return;
+    last.current = path;
+    setPhase((p) => (p === "a" ? "b" : "a"));
+  }, [path]);
+  return phase;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { path } = useRouter();
   const { me, signOut } = useApp();
   const [navOpen, setNavOpen] = useState(false);
+  const phase = useEnterPhase(path);
   return (
     <div className="shell">
       <a className="skip-link" href="#main">
@@ -74,8 +90,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <header className="topbar">
         <Link href="/trades" className="brand">
-          <UiIcon name="brand" size={22} />
-          Dockside
+          <span className="brand__mark">
+            <BrandMark size={22} />
+          </span>
+          <span className="brand__name">Dockside</span>
+          <span className="brand__tag">Trade escrow</span>
         </Link>
         <button
           type="button"
@@ -89,12 +108,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <ContextBar />
         {me ? (
-          <button type="button" className="btn" onClick={signOut}>
+          <button type="button" className="btn session-action" onClick={signOut}>
             <UiIcon name="signOut" />
             Sign out
           </button>
         ) : (
-          <Link href="/sign-in" className="btn" current={path === "/sign-in"}>
+          <Link href="/sign-in" className="btn session-action" current={path === "/sign-in"}>
             <UiIcon name="signIn" />
             Sign in
           </Link>
@@ -114,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </ul>
         </nav>
         <main id="main" tabIndex={-1}>
-          <div className="content">
+          <div className="content" data-enter={phase}>
             <ConnectionBanner />
             {children}
           </div>
@@ -139,11 +158,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function PageHeader({
   title,
   description,
+  facts,
   actions,
   network,
 }: {
   title: string;
   description?: ReactNode;
+  /** Identity strip of the screen's subject (reference, amount, revision ...), as ruled cells. */
+  facts?: ReadonlyArray<readonly [string, ReactNode]> | undefined;
   actions?: ReactNode;
   /** Money screens pass the network so testnet is labelled on every one of them. */
   network?: string | null | undefined;
@@ -158,6 +180,16 @@ export function PageHeader({
         {network !== undefined ? <NetworkLabel network={network} /> : null}
         {actions}
       </div>
+      {facts && facts.length > 0 ? (
+        <dl className="doc-facts">
+          {facts.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
     </div>
   );
 }

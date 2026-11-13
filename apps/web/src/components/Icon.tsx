@@ -97,6 +97,33 @@ export const UI_ICONS = {
   key: KeyRound,
 } as const;
 
+/**
+ * Dockside mark: two containers on the quay with a third lifted above them, drawn in the same
+ * 1.75 px stroke as the icon family. Decorative; the visible product name carries the meaning.
+ */
+export function BrandMark({ size = 24 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2.5 20.5h19" />
+      <rect x="3.5" y="13.5" width="8" height="5" rx="0.75" />
+      <rect x="12.5" y="13.5" width="8" height="5" rx="0.75" />
+      <rect x="8" y="5" width="8" height="5" rx="0.75" />
+      <path d="M12 2.5V5M6.5 15.5v1M8.5 15.5v1M15.5 15.5v1M17.5 15.5v1" />
+    </svg>
+  );
+}
+
 export function StatusIcon({ name, className }: { name: IconName; className?: string }) {
   const C = STATUS_ICONS[name];
   return <C aria-hidden="true" focusable="false" size={18} strokeWidth={1.75} className={className} />;
