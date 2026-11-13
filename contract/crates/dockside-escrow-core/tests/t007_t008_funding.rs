@@ -42,8 +42,12 @@ fn registration_fails_closed_on_schema_contract_and_network() {
     set(&mut x, &["network"], s("near-mainnet"));
     assert_eq!(code(reg(&x)), "WRONG_NETWORK");
     let mut x = terms();
-    set(&mut x, &["asset", "kind"], s("NEP141"));
+    set(&mut x, &["asset", "kind"], s("NEP245"));
     assert_eq!(code(reg(&x)), "UNSUPPORTED_ASSET");
+    // A NEP-141 asset needs its token account and decimals (M50); the bare kind is malformed.
+    let mut x = terms();
+    set(&mut x, &["asset", "kind"], s("NEP141"));
+    assert_eq!(code(reg(&x)), "VALIDATION_FAILED");
     let mut x = terms();
     set(&mut x, &["complete"], json!({"bool": true}));
     assert_eq!(code(reg(&x)), "UNKNOWN_FIELD");

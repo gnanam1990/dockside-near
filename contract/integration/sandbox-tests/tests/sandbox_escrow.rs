@@ -27,7 +27,7 @@ fn manifest_expectation() -> Option<(String, String)> {
 }
 
 #[tokio::test]
-async fn t045_deployed_code_hash_is_the_built_wasm_and_init_is_testnet_only() -> Result<()> {
+async fn t045_deployed_code_hash_is_the_built_wasm_and_init_refuses_unknown_networks() -> Result<()> {
     let net = Net::start().await?;
     let wasm = escrow_wasm()?;
     if let Some((sha, hash)) = manifest_expectation() {
@@ -38,11 +38,18 @@ async fn t045_deployed_code_hash_is_the_built_wasm_and_init_is_testnet_only() ->
     a.deploy(&wasm).await?.into_result()?;
     assert_eq!(net.code_hash_of(a.id()).await?, code_hash(&wasm), "on-chain code hash is the built wasm");
 
-    // Mainnet and every other network label are refused by the initialiser.
-    for network in ["near-mainnet", "near-sandbox"] {
+    // Every network label but near-testnet and near-mainnet is refused by the initialiser, and
+    // near-mainnet is refused without a non-zero cap (M50; the accepted mainnet label is
+    // exercised in m50_nep141_rail.rs).
+    for network in ["near-sandbox", "mainnet", "near-betanet"] {
         let r = a.call(a.id(), "new").args_json(json!({ "network": network, "min_deposit_yocto": null })).transact().await?;
         assert!(r.is_failure());
         assert!(format!("{:?}", r.failures()).contains("DOCKSIDE:FUNDED_RAIL_BLOCKED"), "{network}");
+    }
+    for caps in [json!({ "near_yocto": "0", "nep141": "25000000" }), json!({ "near_yocto": "5000000000000000000000000", "nep141": "0" })] {
+        let r = a.call(a.id(), "new").args_json(json!({ "network": "near-mainnet", "max_trade_amount": caps })).transact().await?;
+        assert!(r.is_failure());
+        assert!(format!("{:?}", r.failures()).contains("DOCKSIDE:CAP_REQUIRED"), "{:?}", r.failures());
     }
     let min = (2 * MILLINEAR).to_string();
     a.call(a.id(), "new").args_json(json!({ "network": "near-testnet", "min_deposit_yocto": min })).transact().await?.into_result()?;

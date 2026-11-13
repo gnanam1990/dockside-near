@@ -22,6 +22,9 @@ pub use serde_json::{json, Value as J};
 use serde_json::Map;
 
 pub const NETWORK: &str = "near-testnet";
+pub const MAINNET: &str = "near-mainnet";
+/// One whole USDC in base units (6 decimals).
+pub const USDC: u128 = 1_000_000;
 pub const HOUR: u64 = 3_600_000;
 pub const DAY: u64 = 24 * HOUR;
 pub const NEAR: u128 = 1_000_000_000_000_000_000_000_000;
@@ -113,6 +116,11 @@ pub struct Fixture {
     pub destination_change_delay_ms: u64,
     /// Chain time (ms) the run started at; terms expiry and evidence issuance derive from it.
     pub t0: u64,
+    /// The contract's network label (`near-testnet` unless `on_network` says otherwise).
+    pub network: String,
+    /// The trade asset: `None` is native NEAR, `Some((token account, decimals))` a NEP-141 token.
+    /// `amount_yocto` is in base units of the asset either way.
+    pub token: Option<(String, u8)>,
 }
 
 impl Fixture {
@@ -124,7 +132,21 @@ impl Fixture {
             amount_yocto,
             destination_change_delay_ms: delay_ms,
             t0,
+            network: NETWORK.to_string(),
+            token: None,
         }
+    }
+
+    /// The same run with a NEP-141 trade asset.
+    pub fn with_token(mut self, token: &str, decimals: u8) -> Fixture {
+        self.token = Some((token.to_string(), decimals));
+        self
+    }
+
+    /// The same run against a contract initialised for `network`.
+    pub fn on_network(mut self, network: &str) -> Fixture {
+        self.network = network.to_string();
+        self
     }
 
     /// The same run and keys, another trade.

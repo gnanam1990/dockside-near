@@ -190,14 +190,30 @@ describe("M02 escrow contract (compiled wasm, simulated NEAR host)", () => {
     w = world();
   });
 
-  it("init refuses mainnet: the funded rail stays BLOCKED", () => {
+  it("init refuses an unknown network, and near-mainnet without a non-zero cap (M50)", () => {
+    const init = (args: Record<string, unknown>) =>
+      new NearSim("dockside-escrow.near", T0).call("new", args, { predecessor: "dockside-escrow.near" });
+    for (const network of ["near-betanet", "mainnet", ""]) {
+      expect(panicCode(init({ network, min_deposit_yocto: null })), network).toBe("FUNDED_RAIL_BLOCKED");
+    }
+    // Mainnet is a capped deployment: an explicit zero cap is refused, omitted caps take the defaults.
+    for (const caps of [
+      { near_yocto: "0", nep141: "25000000" },
+      { near_yocto: "5000000000000000000000000", nep141: "0" },
+    ]) {
+      expect(panicCode(init({ network: "near-mainnet", max_trade_amount: caps }))).toBe("CAP_REQUIRED");
+    }
     const sim = new NearSim("dockside-escrow.near", T0);
-    const r = sim.call(
-      "new",
-      { network: "near-mainnet", min_deposit_yocto: null },
-      { predecessor: "dockside-escrow.near" },
-    );
-    expect(panicCode(r)).toBe("FUNDED_RAIL_BLOCKED");
+    const ok = sim.call("new", { network: "near-mainnet" }, { predecessor: "dockside-escrow.near" });
+    expect(ok.ok, ok.error ?? "").toBe(true);
+    const cfg = sim.call("get_config", {}, { predecessor: "dockside-escrow.near" }).value as {
+      network: string;
+      maxTradeAmount: { nearYocto: string; nep141: string };
+      nep141Token: unknown;
+    };
+    expect(cfg.network).toBe("near-mainnet");
+    expect(cfg.maxTradeAmount).toEqual({ nearYocto: (5n * NEAR).toString(), nep141: "25000000" });
+    expect(cfg.nep141Token).toBeNull();
   });
 
   it("T-007: registers the TS-signed revision and accepts exact native funding from the recorded funder", async () => {

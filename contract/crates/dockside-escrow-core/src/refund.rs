@@ -24,6 +24,11 @@ use serde_json::Value as J;
 
 pub const HOUR_MS: u64 = 3600_000;
 pub const MAX_REQUEST_LIFETIME_MS: u64 = 7 * 24 * HOUR_MS;
+/// Funder-initiated returns (PARTIAL_FUNDING_RETURN, EXCESS_FUNDING_RETURN) one funder may end
+/// without payment (REVOKED or FAILED) per trade. Each one stays in the record for good, and any
+/// account becomes a funder with one minimum deposit, so without this bound a stranger could grow
+/// another party's trade record without limit.
+pub const MAX_ENDED_FUNDER_RETURNS: usize = 4;
 
 pub const NATIVE_REASONS: [&str; 9] = [
     "TRADE_EXPIRY",
@@ -258,6 +263,20 @@ impl TradeRecord {
                 ensure(initiator == "FUNDER", "FORBIDDEN", "only the original funder initiates this return")?;
                 ensure(ctx.predecessor == funder, "FORBIDDEN", "caller is not the original funder")?;
                 ensure(sigs.buyer.is_none() && sigs.supplier.is_none(), "VALIDATION_FAILED", "funder returns carry no party signatures")?;
+                let ended = self
+                    .refunds
+                    .values()
+                    .filter(|r| {
+                        r.funder == funder
+                            && matches!(r.reason.as_str(), "PARTIAL_FUNDING_RETURN" | "EXCESS_FUNDING_RETURN")
+                            && matches!(r.state, RefundState::Revoked | RefundState::Failed)
+                    })
+                    .count();
+                ensure(
+                    ended < MAX_ENDED_FUNDER_RETURNS,
+                    "CAPACITY_EXCEEDED",
+                    "this funder has ended the maximum number of its own returns on this trade without payment",
+                )?;
             }
             "TRADE_EXPIRY" | "MUTUAL_CANCEL" => {
                 ensure(initiator == "BUYER" || initiator == "SUPPLIER", "FORBIDDEN", "initiator must be the designated buyer or supplier")?;

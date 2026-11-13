@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MANIFEST } from "../../../scripts/proof/build-manifest.mjs";
-import { loadRecording, type Replay, startReplay } from "../../../scripts/proof/replay-rpc.mjs";
+import { loadRecording, NEP141_TOKEN, type Replay, startReplay } from "../../../scripts/proof/replay-rpc.mjs";
 import {
   type ReceiptResult,
   parseReceiptLocation,
@@ -156,6 +156,22 @@ describe("M54 receipt verifier on recorded testnet answers", () => {
     const r = await run(RELEASE, "transfer-recipient");
     expect(notPassing(r)).toEqual({ "release-transfer": "FAIL" });
     expect(row(r, "release-transfer")?.actual).toBe("0.05 NEAR to someone-else.testnet, succeeded");
+  });
+
+  it("checks a NEP-141 trade's payout as the escrow's ft_transfer on the token (M50)", async () => {
+    const r = await run(RELEASE, "nep141");
+    expect(notPassing(r)).toEqual({});
+    expect(receiptVerdict(r)).toBe("PASS");
+    expect(r.facts?.assetText).toBe(`NEP-141 token ${NEP141_TOKEN}`);
+    expect(row(r, "release-transfer")?.actual).toBe(
+      `ft_transfer of 50000000000000000 (50000000000000000000000 base units of ${NEP141_TOKEN}) to gnanam1990-dock-supplier.testnet, succeeded`,
+    );
+  });
+
+  it("fails a NEP-141 payout whose ft_transfer names another receiver", async () => {
+    const r = await run(RELEASE, "nep141-recipient");
+    expect(notPassing(r)).toEqual({ "release-transfer": "FAIL" });
+    expect(row(r, "release-transfer")?.actual).toContain("to someone-else.testnet, succeeded");
   });
 
   it("an unreadable transaction is an ERROR row and the verdict is not a pass", async () => {

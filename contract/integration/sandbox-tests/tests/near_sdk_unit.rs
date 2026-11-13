@@ -9,10 +9,10 @@
 //! The `#[payable]` and `#[private]` guards live in the generated wasm exports, not in the Rust
 //! methods these tests call, so they are tested on the sandbox node instead (sandbox_escrow.rs).
 
-use dockside_escrow::Escrow;
+use dockside_escrow::{Escrow, MaxTradeAmount, TokenConfig};
 use dockside_fixtures::mirror::{Call, Mirror};
 use dockside_fixtures::payloads::*;
-use dockside_fixtures::{Accounts, Fixture, HOUR, J, NEAR};
+use dockside_fixtures::{Accounts, Fixture, HOUR, J, NEAR, USDC};
 use near_sdk::json_types::U128;
 use near_sdk::mock::MockAction;
 use near_sdk::test_utils::{get_created_receipts, get_logs, VMContextBuilder};
@@ -67,7 +67,7 @@ fn funded() -> (Escrow, Mirror, Fixture) {
     let fx = fixture();
     let mut m = Mirror::new(CONTRACT, None);
     at(RELAYER, T0, 0);
-    let mut c = Escrow::new("near-testnet".into(), None);
+    let mut c = Escrow::new("near-testnet".into(), None, None, None, None);
     let reg = register_args(&fx);
     let digest = c.register_trade(reg["terms"].clone(), s(&reg, "buyer_signature"), s(&reg, "supplier_signature"));
     assert_eq!(J::String(digest.clone()), m.apply("register_trade", &reg, Call::by(RELAYER, T0)).unwrap());
@@ -86,16 +86,44 @@ fn funded() -> (Escrow, Mirror, Fixture) {
 
 #[test]
 #[should_panic(expected = "DOCKSIDE:FUNDED_RAIL_BLOCKED")]
-fn new_refuses_mainnet() {
+fn new_refuses_an_unknown_network() {
     at(CONTRACT, T0, 0);
-    let _ = Escrow::new("near-mainnet".into(), None);
+    let _ = Escrow::new("near-betanet".into(), None, None, None, None);
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:CAP_REQUIRED")]
+fn new_refuses_mainnet_with_a_zero_cap() {
+    at(CONTRACT, T0, 0);
+    let _ = Escrow::new("near-mainnet".into(), None, Some(MaxTradeAmount { near_yocto: U128(NEAR), nep141: U128(0) }), None, None);
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:INVALID_AMOUNT")]
+fn new_refuses_a_zero_minimum_token_deposit() {
+    at(CONTRACT, T0, 0);
+    let _ = Escrow::new("near-testnet".into(), None, None, None, Some(U128(0)));
+}
+
+#[test]
+fn new_accepts_mainnet_with_default_caps_and_a_pinned_token() {
+    at(CONTRACT, T0, 0);
+    let usdc = "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+    let c = Escrow::new("near-mainnet".into(), None, None, Some(TokenConfig { account_id: id(usdc), decimals: 6 }), None);
+    let cfg = c.get_config();
+    assert_eq!(cfg["network"], json!("near-mainnet"));
+    assert_eq!(cfg["maxTradeAmount"], json!({ "nearYocto": (5 * NEAR).to_string(), "nep141": (25 * USDC).to_string() }));
+    assert_eq!(cfg["nep141Token"], json!({ "accountId": usdc, "decimals": 6 }));
+    assert_eq!(cfg["minDepositNep141"], json!("10000"));
 }
 
 #[test]
 fn new_sets_the_testnet_corridor_and_minimum_deposit() {
     at(CONTRACT, T0, 0);
-    let c = Escrow::new("near-testnet".into(), Some(U128(5)));
+    let c = Escrow::new("near-testnet".into(), Some(U128(5)), None, None, None);
     assert_eq!(c.get_config(), Mirror::new(CONTRACT, Some(5)).view("get_config", &json!({}), 0).unwrap());
+    assert_eq!(c.get_config()["maxTradeAmount"], json!({ "nearYocto": "0", "nep141": "0" }));
+    assert_eq!(c.get_config()["nep141Token"], J::Null);
 }
 
 #[test]
@@ -220,4 +248,398 @@ fn nep141_tokens_are_recorded_for_review_and_never_credited() {
     assert_eq!(c.get_unexpected_asset(0), m.view("get_unexpected_asset", &json!({ "asset_index": 0 }), 0).unwrap());
     assert_eq!(c.get_ledger(t), before, "native ledger unchanged");
     assert_eq!(c.get_unexpected_assets(None, None).len(), 1);
+}
+
+/* ------------------------------ M50: the NEP-141 rail ------------------------------ */
+
+const TOKEN: &str = "usdc.testnet";
+
+/// The receipts the contract scheduled: receiver, then (method, attached yoctoNEAR, JSON args).
+fn summary() -> Vec<(String, Vec<(String, u128, J)>)> {
+    get_created_receipts()
+        .iter()
+        .map(|r| {
+            let actions = r
+                .actions
+                .iter()
+                .map(|a| match a {
+                    MockAction::Transfer { deposit, .. } => ("transfer".to_string(), deposit.as_yoctonear(), J::Null),
+                    MockAction::FunctionCallWeight { method_name, attached_deposit, args, .. } => (
+                        String::from_utf8_lossy(method_name).to_string(),
+                        attached_deposit.as_yoctonear(),
+                        serde_json::from_slice(args).expect("json args"),
+                    ),
+                    _ => ("other".to_string(), 0, J::Null),
+                })
+                .collect();
+            (r.receiver_id.to_string(), actions)
+        })
+        .collect()
+}
+
+/// A registered 5 USDC trade with its policy on a contract capped at 6 USDC per trade.
+fn token_trade() -> (Escrow, Mirror, Fixture) {
+    let fx = fixture().with_trade("usdc-1", 5 * USDC).with_token(TOKEN, 6);
+    let limits = dockside_escrow_core::Limits::configure("near-testnet", Some(5 * NEAR), Some(6 * USDC), Some((TOKEN.into(), 6))).unwrap();
+    let mut m = Mirror::configured(CONTRACT, "near-testnet", None, None, limits);
+    at(RELAYER, T0, 0);
+    let mut c = Escrow::new(
+        "near-testnet".into(),
+        None,
+        Some(MaxTradeAmount { near_yocto: U128(5 * NEAR), nep141: U128(6 * USDC) }),
+        Some(TokenConfig { account_id: id(TOKEN), decimals: 6 }),
+        None,
+    );
+    assert_eq!(c.get_config(), m.view("get_config", &json!({}), 0).unwrap());
+    let reg = register_args(&fx);
+    let digest = c.register_trade(reg["terms"].clone(), s(&reg, "buyer_signature"), s(&reg, "supplier_signature"));
+    assert_eq!(J::String(digest), m.apply("register_trade", &reg, Call::by(RELAYER, T0)).unwrap());
+    let t = fx.trade_id();
+    let p = policy_args(m.trade(&t));
+    c.register_evidence_policy(t.clone(), p["policy"].clone());
+    m.apply("register_evidence_policy", &p, Call::by(RELAYER, T0)).unwrap();
+    (c, m, fx)
+}
+
+/// `ft_on_transfer` from `token`, on the contract and on the mirror; both must return the same.
+fn deliver(c: &mut Escrow, m: &mut Mirror, token: &str, sender: &str, amount: u128, msg: &str, now: u64) -> u128 {
+    at(token, now, 0);
+    let returned = c.ft_on_transfer(id(sender), U128(amount), msg.to_string());
+    let args = json!({ "sender_id": sender, "amount": amount.to_string(), "msg": msg });
+    let mirrored = m.apply("ft_on_transfer", &args, Call::by(token, now)).unwrap();
+    assert_eq!(J::String(returned.0.to_string()), mirrored, "{msg}");
+    returned.0
+}
+
+#[test]
+fn ft_on_transfer_funds_the_named_trade_and_returns_every_refused_amount() {
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let digest = m.trade(&t).terms_digest.clone();
+    let good = funding_msg(&t, &digest);
+    let empty = c.get_ledger(t.clone());
+    let refused = |code: &str| get_logs().iter().any(|l| l.contains("nep141_funding_returned") && l.contains(&format!("\"code\":\"{code}\"")));
+
+    // Wrong token contract, an account calling the receiver directly, wrong digest, unknown
+    // trade, a malformed funding message, dust, and an amount over the cap: all returned whole.
+    assert_eq!(deliver(&mut c, &mut m, "other-token.testnet", BUYER, 5 * USDC, &good, T0 + 1_000), 5 * USDC);
+    assert!(refused("ASSET_MISMATCH"), "{:?}", get_logs());
+    assert_eq!(deliver(&mut c, &mut m, BUYER, BUYER, 5 * USDC, &good, T0 + 1_100), 5 * USDC);
+    assert!(refused("ASSET_MISMATCH"));
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &funding_msg(&t, &"00".repeat(32)), T0 + 1_200), 5 * USDC);
+    assert!(refused("STALE_REVISION"));
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &funding_msg("trd_00000000000000000000000000000000", &digest), T0 + 1_300), 5 * USDC);
+    assert!(refused("NOT_FOUND"));
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &format!("{{\"tradeId\":\"{t}\"}}"), T0 + 1_400), 5 * USDC);
+    assert!(refused("VALIDATION_FAILED"));
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 9_999, &good, T0 + 1_500), 9_999);
+    assert!(refused("INVALID_AMOUNT"));
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 6 * USDC + 1, &good, T0 + 1_600), 6 * USDC + 1);
+    assert!(refused("CAP_EXCEEDED"));
+    assert_eq!(c.get_ledger(t.clone()), empty, "a returned deposit leaves the ledger untouched");
+    assert_eq!(c.get_unexpected_assets(None, None).len(), 0, "and records no unexpected asset");
+
+    // The named token funds the trade for the sender it reports: nothing is returned.
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 3 * USDC, &good, T0 + 2_000), 0);
+    assert!(get_logs().iter().any(|l| l.contains("nep141_funding_accepted")), "{:?}", get_logs());
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, TREASURY, 3 * USDC, &good, T0 + 3_000), 0);
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!(l["asset"], json!({ "kind": "NEP141", "network": "near-testnet", "tokenAccountId": TOKEN, "decimals": 6 }));
+    assert_eq!(l["fullyFunded"], json!(true));
+    assert_eq!(l["funders"][BUYER]["available"], json!((3 * USDC).to_string()));
+    assert_eq!(l["funders"][TREASURY]["quarantined"], json!(USDC.to_string()));
+    // 6 USDC held is the cap: the next unit comes back.
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, 10_000, &good, T0 + 4_000), 10_000);
+    assert!(refused("CAP_EXCEEDED"));
+
+    // The same token without a funding message is an unexpected asset: kept, recorded, never credited.
+    assert_eq!(deliver(&mut c, &mut m, TOKEN, BUYER, USDC, "invoice 7", T0 + 5_000), 0);
+    assert_eq!(c.get_unexpected_asset(0), m.view("get_unexpected_asset", &json!({ "asset_index": 0 }), 0).unwrap());
+    assert_eq!(c.get_ledger(t), l);
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:ASSET_MISMATCH")]
+fn native_near_cannot_fund_a_token_trade() {
+    let (mut c, m, fx) = token_trade();
+    at(BUYER, T0 + 1_000, NEAR);
+    c.fund(fx.trade_id(), m.trade(&fx.trade_id()).terms_digest.clone());
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:CAP_EXCEEDED")]
+fn a_trade_above_the_cap_does_not_register() {
+    let (mut c, _m, fx) = token_trade();
+    let big = fx.with_trade("usdc-big", 6 * USDC + 1);
+    let reg = register_args(&big);
+    c.register_trade(reg["terms"].clone(), s(&reg, "buyer_signature"), s(&reg, "supplier_signature"));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:UNSUPPORTED_ASSET")]
+fn a_trade_naming_another_token_than_the_pinned_one_does_not_register() {
+    let (mut c, _m, fx) = token_trade();
+    let other = fx.with_trade("usdc-other", USDC).with_token("other-token.testnet", 6);
+    let reg = register_args(&other);
+    c.register_trade(reg["terms"].clone(), s(&reg, "buyer_signature"), s(&reg, "supplier_signature"));
+}
+
+#[test]
+fn a_token_release_checks_the_payee_then_schedules_ft_transfer_with_one_yocto() {
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &good, T0 + 1_000);
+    let now = T0 + 10_000;
+
+    // The payee check asks the trade's token about the bound destination and nothing else.
+    at(RELAYER, now, 0);
+    drop(c.check_payee_storage(t.clone(), id(SUPPLIER)));
+    assert_eq!(
+        summary(),
+        vec![
+            (TOKEN.to_string(), vec![("storage_balance_of".to_string(), 0, json!({ "account_id": SUPPLIER }))]),
+            (CONTRACT.to_string(), vec![("on_payee_storage".to_string(), 0, json!({ "trade_id": t, "account_id": SUPPLIER }))]),
+        ]
+    );
+    let check = json!({ "trade_id": t, "account_id": SUPPLIER });
+    m.apply("check_payee_storage", &check, Call::by(RELAYER, now)).unwrap();
+    // `null` is the token saying "not registered": the payee stays unconfirmed.
+    at_with(CONTRACT, now + 100, 0, vec![PromiseResult::Successful(b"null".to_vec())]);
+    assert!(!c.on_payee_storage(t.clone(), id(SUPPLIER)));
+    m.apply("on_payee_storage", &check, Call::by(CONTRACT, now + 100).settled(false)).unwrap();
+    assert_eq!(c.get_trade(t.clone())["payeeStorage"], json!([]));
+    at_with(CONTRACT, now + 200, 0, vec![PromiseResult::Successful(br#"{"total":"1250000000000000000000","available":"0"}"#.to_vec())]);
+    assert!(c.on_payee_storage(t.clone(), id(SUPPLIER)));
+    m.apply("on_payee_storage", &check, Call::by(CONTRACT, now + 200).settled(true)).unwrap();
+    assert_eq!(c.get_trade(t.clone())["payeeStorage"], json!([SUPPLIER]));
+
+    let intent = approved(&mut c, &mut m, &fx, now + 1_000);
+    at(RELAYER, now + 2_000, 0);
+    drop(c.execute_release(t.clone(), intent.clone()));
+    let scheduled = m.apply("execute_release", &execute_release_args(m.trade(&t), &intent), Call::by(RELAYER, now + 2_000)).unwrap();
+    assert_eq!(scheduled["transfer"], json!({ "to": SUPPLIER, "amount": (5 * USDC).to_string(), "token": TOKEN }));
+    let attempt = s(&scheduled, "attempt_id");
+    // One `ft_transfer` of the exact amount on the trade's token with one yoctoNEAR, no native
+    // transfer, then the private settlement.
+    let memo = format!("dockside release {intent}");
+    assert_eq!(
+        summary(),
+        vec![
+            (TOKEN.to_string(), vec![("ft_transfer".to_string(), 1, json!({ "receiver_id": SUPPLIER, "amount": "5000000", "memo": memo }))]),
+            (
+                CONTRACT.to_string(),
+                vec![("on_release_transfer".to_string(), 0, json!({ "trade_id": t, "release_intent_id": intent, "attempt_id": attempt }))]
+            ),
+        ]
+    );
+    at_with(CONTRACT, now + 3_000, 0, vec![PromiseResult::Successful(vec![])]);
+    assert!(c.on_release_transfer(t.clone(), intent.clone(), attempt.clone()));
+    let cb = json!({ "trade_id": t, "release_intent_id": intent, "attempt_id": attempt });
+    m.apply("on_release_transfer", &cb, Call::by(CONTRACT, now + 3_000).settled(true)).unwrap();
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!(l["totals"]["released"], json!((5 * USDC).to_string()));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:PAYEE_NOT_REGISTERED")]
+fn a_token_release_intent_is_refused_until_the_payee_is_confirmed() {
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &good, T0 + 1_000);
+    let now = T0 + 10_000;
+    let att = attestation_args(&fx, m.trade(&t), 1, now, "m1");
+    at(RELAYER, now, 0);
+    c.submit_manifest_attestation(t.clone(), att["payload"].clone(), s(&att, "signature"));
+    m.apply("submit_manifest_attestation", &att, Call::by(RELAYER, now)).unwrap();
+    let ins = inspection_args(&fx, m.trade(&t), "PASS", now, "m1");
+    c.submit_inspection(t.clone(), ins["payload"].clone(), s(&ins, "signature"));
+    m.apply("submit_inspection", &ins, Call::by(RELAYER, now)).unwrap();
+    // Build the intent as if the payee were confirmed; the contract has no such record.
+    let mut probe = m.clone();
+    probe.trades.get_mut(&t).unwrap().payee_storage.insert(SUPPLIER.into());
+    let i = intent_args(&fx, probe.trade(&t), now, "main");
+    c.create_release_intent(t, i["payload"].clone(), s(&i, "buyer_signature"));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:DESTINATION_MISMATCH")]
+fn the_payee_check_cannot_be_pointed_at_another_account() {
+    let (mut c, _m, fx) = token_trade();
+    at(RELAYER, T0 + 1_000, 0);
+    drop(c.check_payee_storage(fx.trade_id(), id("attacker.testnet")));
+}
+
+#[test]
+fn a_failed_token_refund_restores_the_exact_bucket() {
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    deliver(&mut c, &mut m, TOKEN, BUYER, 6 * USDC, &good, T0 + 1_000);
+    let now = T0 + 2_000;
+    let req = refund_request(&fx, m.trade(&t), "excess", "EXCESS_FUNDING_RETURN", BUYER, USDC, "QUARANTINED", "FUNDER", now);
+    let args = request_refund_args(&fx, m.trade(&t), &req, &[]);
+    at(BUYER, now, 0);
+    c.request_refund(t.clone(), args["payload"].clone(), None, None, None);
+    m.apply("request_refund", &args, Call::by(BUYER, now)).unwrap();
+    let rid = refund_id(&fx, "excess");
+    let later = now + 2 * HOUR;
+    let op = refund_op_args(m.trade(&t), &rid);
+    at(RELAYER, later, 0);
+    c.authorize_refund(t.clone(), rid.clone());
+    m.apply("authorize_refund", &op, Call::by(RELAYER, later)).unwrap();
+    drop(c.execute_refund(t.clone(), rid.clone()));
+    let scheduled = m.apply("execute_refund", &op, Call::by(RELAYER, later)).unwrap();
+    assert_eq!(scheduled["transfer"], json!({ "to": BUYER, "amount": USDC.to_string(), "token": TOKEN }));
+    let memo = format!("dockside refund {rid}");
+    assert_eq!(
+        summary()[0],
+        (TOKEN.to_string(), vec![("ft_transfer".to_string(), 1, json!({ "receiver_id": BUYER, "amount": "1000000", "memo": memo }))])
+    );
+    at_with(CONTRACT, later + 1_000, 0, vec![PromiseResult::Failed]);
+    assert!(!c.on_refund_transfer(t.clone(), rid.clone()));
+    m.apply("on_refund_transfer", &op, Call::by(CONTRACT, later + 1_000).settled(false)).unwrap();
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!(l["funders"][BUYER]["quarantined"], json!(USDC.to_string()));
+    assert_eq!(l["funders"][BUYER]["refunded"], json!("0"));
+    assert_eq!(c.get_refunds(t)[0]["state"], json!("FAILED"));
+}
+
+/// Funded with 5 USDC, payee confirmed, intent approved; returns (intent id, attempt id) with the
+/// release submitted.
+fn submitted_token_release(c: &mut Escrow, m: &mut Mirror, fx: &Fixture) -> (String, String) {
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    deliver(c, m, TOKEN, BUYER, 5 * USDC, &good, T0 + 1_000);
+    let now = T0 + 10_000;
+    let check = json!({ "trade_id": t, "account_id": SUPPLIER });
+    at_with(CONTRACT, now, 0, vec![PromiseResult::Successful(br#"{"total":"1","available":"0"}"#.to_vec())]);
+    assert!(c.on_payee_storage(t.clone(), id(SUPPLIER)));
+    m.apply("on_payee_storage", &check, Call::by(CONTRACT, now).settled(true)).unwrap();
+    let intent = approved(c, m, fx, now + 1_000);
+    at(RELAYER, now + 2_000, 0);
+    drop(c.execute_release(t.clone(), intent.clone()));
+    let scheduled = m.apply("execute_release", &execute_release_args(m.trade(&t), &intent), Call::by(RELAYER, now + 2_000)).unwrap();
+    (intent, s(&scheduled, "attempt_id"))
+}
+
+#[test]
+fn a_transfer_that_succeeded_with_a_long_return_value_is_settled_as_paid_not_rolled_back() {
+    // A token whose `ft_transfer` succeeds and returns more than the callback reads has still
+    // moved the tokens: rolling the ledger back would let the same value be released twice.
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let (intent, attempt) = submitted_token_release(&mut c, &mut m, &fx);
+    at_with(CONTRACT, T0 + 20_000, 0, vec![PromiseResult::Successful(vec![b'x'; 4_096])]);
+    assert!(c.on_release_transfer(t.clone(), intent.clone(), attempt.clone()), "a successful promise is a transfer");
+    let cb = json!({ "trade_id": t, "release_intent_id": intent, "attempt_id": attempt });
+    m.apply("on_release_transfer", &cb, Call::by(CONTRACT, T0 + 20_000).settled(true)).unwrap();
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!((l["totals"]["released"].clone(), l["totals"]["available"].clone()), (json!((5 * USDC).to_string()), json!("0")));
+    assert!(c.get_release(t).to_string().contains("\"PAID\""));
+}
+
+#[test]
+fn a_failed_token_release_restores_the_reservation() {
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let (intent, attempt) = submitted_token_release(&mut c, &mut m, &fx);
+    at_with(CONTRACT, T0 + 20_000, 0, vec![PromiseResult::Failed]);
+    assert!(!c.on_release_transfer(t.clone(), intent.clone(), attempt.clone()));
+    let cb = json!({ "trade_id": t, "release_intent_id": intent, "attempt_id": attempt });
+    m.apply("on_release_transfer", &cb, Call::by(CONTRACT, T0 + 20_000).settled(false)).unwrap();
+    let l = c.get_ledger(t.clone());
+    assert_eq!(l, m.view("get_ledger", &json!({ "trade_id": t }), 0).unwrap());
+    assert_eq!((l["totals"]["released"].clone(), l["totals"]["available"].clone()), (json!("0"), json!((5 * USDC).to_string())));
+    assert!(c.get_release(t).to_string().contains("\"FAILED\""));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:TOKEN_CALL_FAILED")]
+fn a_failed_storage_view_changes_nothing_about_the_payee() {
+    // Only the token's own answer counts. A view that failed says nothing, so it must not
+    // withdraw an earlier confirmation (nor create one).
+    let (mut c, _m, fx) = token_trade();
+    let t = fx.trade_id();
+    at_with(CONTRACT, T0 + 1_000, 0, vec![PromiseResult::Successful(br#"{"total":"1","available":"0"}"#.to_vec())]);
+    assert!(c.on_payee_storage(t.clone(), id(SUPPLIER)));
+    at_with(CONTRACT, T0 + 2_000, 0, vec![PromiseResult::Failed]);
+    c.on_payee_storage(t, id(SUPPLIER));
+}
+
+#[test]
+#[should_panic(expected = "DOCKSIDE:TOKEN_CALL_FAILED")]
+fn a_storage_answer_that_is_neither_a_balance_nor_null_changes_nothing() {
+    let (mut c, _m, fx) = token_trade();
+    at_with(CONTRACT, T0 + 1_000, 0, vec![PromiseResult::Successful(b"true".to_vec())]);
+    c.on_payee_storage(fx.trade_id(), id(SUPPLIER));
+}
+
+/// The static gas of the callback a release or refund schedules (the second receipt).
+fn settlement_gas() -> u64 {
+    get_created_receipts()
+        .iter()
+        .flat_map(|r| r.actions.iter())
+        .filter_map(|a| match a {
+            MockAction::FunctionCallWeight { method_name, prepaid_gas, .. }
+                if method_name.as_slice() == b"on_release_transfer" || method_name.as_slice() == b"on_refund_transfer" =>
+            {
+                Some(prepaid_gas.as_gas())
+            }
+            _ => None,
+        })
+        .next()
+        .expect("a settlement callback")
+}
+
+/// Audit of M50: the settlement callback reads and rewrites the whole trade record, and anyone may
+/// relay the execution with as little gas as the call accepts. The callback's static gas must
+/// therefore grow with the record, or a relayer could leave a large record's callback without gas
+/// after the transfer went out (the intent would stay SUBMITTING and nothing resolves it).
+#[test]
+fn the_settlement_callback_is_funded_for_the_size_of_the_record() {
+    let floor = 15_000_000_000_000u64;
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let small = near_sdk::borsh::to_vec(m.trade(&t)).unwrap().len() as u64;
+    let (intent, _) = submitted_token_release(&mut c, &mut m, &fx);
+    let _ = intent;
+    let bytes = near_sdk::borsh::to_vec(m.trade(&t)).unwrap().len() as u64;
+    assert!(bytes > small);
+    let gas = settlement_gas();
+    assert!(gas > floor, "the callback got only the {gas} gas floor for a {bytes}-byte record");
+    assert!(gas >= floor + bytes * 300_000_000, "{gas} gas for a {bytes}-byte record");
+
+    // A refund of a larger record gets more.
+    let (mut c, mut m, fx) = token_trade();
+    let t = fx.trade_id();
+    let good = funding_msg(&t, &m.trade(&t).terms_digest);
+    for i in 0..40u64 {
+        deliver(&mut c, &mut m, TOKEN, BUYER, 10_000, &good, T0 + 1_000 + i);
+    }
+    deliver(&mut c, &mut m, TOKEN, BUYER, 5 * USDC, &good, T0 + 2_000);
+    let now = T0 + 3_000;
+    let q = m.trade(&t).ledger.funder(BUYER).quarantined;
+    let req = refund_request(&fx, m.trade(&t), "excess", "EXCESS_FUNDING_RETURN", BUYER, q, "QUARANTINED", "FUNDER", now);
+    let args = request_refund_args(&fx, m.trade(&t), &req, &[]);
+    at(BUYER, now, 0);
+    c.request_refund(t.clone(), args["payload"].clone(), None, None, None);
+    m.apply("request_refund", &args, Call::by(BUYER, now)).unwrap();
+    let rid = refund_id(&fx, "excess");
+    let later = now + 2 * HOUR;
+    let op = refund_op_args(m.trade(&t), &rid);
+    at(RELAYER, later, 0);
+    c.authorize_refund(t.clone(), rid.clone());
+    m.apply("authorize_refund", &op, Call::by(RELAYER, later)).unwrap();
+    drop(c.execute_refund(t.clone(), rid.clone()));
+    m.apply("execute_refund", &op, Call::by(RELAYER, later)).unwrap();
+    let big = near_sdk::borsh::to_vec(m.trade(&t)).unwrap().len() as u64;
+    let refund_gas = settlement_gas();
+    assert!(big > bytes && refund_gas >= floor + big * 300_000_000, "{refund_gas} gas for a {big}-byte record");
+    assert!(refund_gas > gas);
 }

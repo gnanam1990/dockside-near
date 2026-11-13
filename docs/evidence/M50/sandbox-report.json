@@ -1,0 +1,116 @@
+{
+  "schema": "dockside/sandbox-report@1",
+  "commit": "e335eda0135064f9693f5e6ebb274dcf4f600726",
+  "wasmSha256": "025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770",
+  "tools": {
+    "nearSandbox": {
+      "version": "2.14.0",
+      "sha256": "a0ba004218b218bd74351795e7ce2eda4a2b6af5cd3e252bd5e8bfe3c8f2e691"
+    },
+    "nearCliRs": {
+      "version": "0.31.1",
+      "sha256": "8b92f4f79f324a882ad79b58d61b91dccc676dd653dc72a1f23693aa5db99e21"
+    }
+  },
+  "suite": {
+    "exit": 0,
+    "results": [
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 23,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 3
+      },
+      {
+        "result": "ok",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "result": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "runAllValidation": {
+    "exit": 0,
+    "results": [
+      {
+        "result": "ok",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "result": "PASS"
+}

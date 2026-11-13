@@ -38,7 +38,43 @@ export function assetText(asset) {
 
 function amountText(asset, amount) {
   if (asset?.kind === "NEAR_NATIVE") return formatNear(amount);
+  if (asset?.kind === "NEP141" && Number.isInteger(asset.decimals))
+    return `${tokenUnits(amount, asset.decimals)} (${amount} base units of ${asset.tokenAccountId})`;
   return `${amount} base units`;
+}
+
+/** `5000000` at 6 decimals is `5`: base units of a token for people. */
+function tokenUnits(amount, decimals) {
+  const s = String(amount).padStart(decimals + 1, "0");
+  const whole = s.slice(0, s.length - decimals);
+  const frac = decimals ? s.slice(s.length - decimals).replace(/0+$/, "") : "";
+  return frac ? `${whole}.${frac}` : whole;
+}
+
+/**
+ * The NEP-141 transfers the escrow sent in one transaction: each `ft_transfer` receipt from the
+ * escrow to the token contract, with the receiver and amount it names and whether it succeeded
+ * (a failed `ft_transfer` is reverted by the token contract).
+ */
+function tokenTransfers(result, contractId, tokenId) {
+  const outcomes = new Map((result.receipts_outcome ?? []).map((o) => [o.id, o.outcome?.status ?? {}]));
+  const out = [];
+  for (const r of result.receipts ?? []) {
+    if (r.predecessor_id !== contractId || r.receiver_id !== tokenId) continue;
+    for (const a of r.receipt?.Action?.actions ?? []) {
+      const fc = a?.FunctionCall;
+      if (!fc || fc.method_name !== "ft_transfer") continue;
+      const args = decodeArgs(fc.args);
+      const st = outcomes.get(r.receipt_id);
+      out.push({
+        to: typeof args?.receiver_id === "string" ? args.receiver_id : null,
+        amount: typeof args?.amount === "string" ? args.amount : null,
+        deposit: fc.deposit,
+        succeeded: st !== undefined && ("SuccessValue" in st || "SuccessReceiptId" in st),
+      });
+    }
+  }
+  return out;
 }
 
 /**
@@ -361,10 +397,35 @@ export async function verifyReceipt(network, subject, options = {}) {
     status: callOk && s.success && s.finality === "FINAL" && s.failedReceipts === 0 ? PASS : FAIL,
   });
 
+  if (ledger.asset?.kind === "NEP141" && typeof ledger.asset.tokenAccountId === "string") {
+    // A token trade is paid by the escrow's `ft_transfer` on the token contract, one yoctoNEAR
+    // attached; no native transfer leaves the escrow.
+    const sent = tokenTransfers(result, d.contractId, ledger.asset.tokenAccountId);
+    const shown =
+      sent.length === 0
+        ? `no ft_transfer from the escrow on ${ledger.asset.tokenAccountId}`
+        : sent
+            .map(
+              (t) =>
+                `ft_transfer of ${t.amount === null ? "an unreadable amount" : amountText(ledger.asset, t.amount)} to ${t.to ?? "an unreadable account"}, ${t.succeeded ? "succeeded" : "did not succeed"}`,
+            )
+            .join("; ");
+    const ok =
+      intent !== null &&
+      callOk &&
+      sent.length === 1 &&
+      sent[0].to === intent.destination &&
+      sent[0].amount === intent.amount &&
+      sent[0].deposit === "1" &&
+      sent[0].succeeded &&
+      s.transfers.length === 0;
+    row({ ...transferBase, actual: shown, status: ok ? PASS : FAIL });
+    return finish(block);
+  }
   if (ledger.asset?.kind !== "NEAR_NATIVE") {
     row({
       ...transferBase,
-      actual: `${assetText(ledger.asset)}: token transfer receipts are not checked by this page yet`,
+      actual: `${assetText(ledger.asset)}: an asset this page cannot check`,
       status: ERROR,
     });
     return finish(block);

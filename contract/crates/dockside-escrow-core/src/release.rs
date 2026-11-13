@@ -34,6 +34,16 @@ use serde_json::Value as J;
 
 pub const DAY_MS: u64 = 24 * 3600_000;
 pub const PROFILE_DIRECT: &str = "DIRECT_TESTNET";
+pub const PROFILE_DIRECT_MAINNET: &str = "DIRECT_MAINNET";
+
+/// The direct execution profile a release intent must name on `network`.
+pub fn direct_profile(network: &str) -> &'static str {
+    if network == crate::terms::NETWORK_MAINNET {
+        PROFILE_DIRECT_MAINNET
+    } else {
+        PROFILE_DIRECT
+    }
+}
 pub const PROFILE_FUNDED: &str = "FUNDED_1CLICK";
 pub const MAX_INTENT_LIFETIME_MS: u64 = 14 * DAY_MS;
 pub const MAX_APPROVAL_LIFETIME_MS: u64 = 7 * DAY_MS;
@@ -324,7 +334,7 @@ impl TradeRecord {
         if now_ms >= i.expires_at {
             out.push("INTENT_EXPIRED");
         }
-        if i.profile != PROFILE_DIRECT {
+        if i.profile != direct_profile(&self.terms.network) {
             out.push("PROFILE_MISMATCH");
         }
         if i.destination != self.terms.payout_destination {
@@ -373,8 +383,9 @@ impl TradeRecord {
         o.expect_str("network", ctx.network, "WRONG_NETWORK")?;
         o.expect_str("signerRole", "BUYER_APPROVER", "FORBIDDEN")?;
         self.check_window(&o, ctx, DAY_MS)?;
+        let direct = direct_profile(ctx.network);
         match o.str("executionProfile")?.as_str() {
-            PROFILE_DIRECT => {}
+            p if p == direct => {}
             PROFILE_FUNDED => return err("FUNDED_RAIL_BLOCKED", "the funded payout profile is not enabled"),
             _ => return err("UNSUPPORTED_VERSION", "unknown execution profile"),
         }
@@ -394,6 +405,8 @@ impl TradeRecord {
         ensure(dest == self.terms.payout_destination, "DESTINATION_MISMATCH", "intent destination is not the revision-bound destination")?;
         o.expect_str("destinationDigest", &destination_digest(ctx.network, &dest)?, "DESTINATION_MISMATCH")?;
         o.expect_str("sourceBucketDigest", &source_bucket_digest(&slices)?, "STALE_LEDGER")?;
+        // NEP-141: the payee must be registered with the token before the value is locked for it.
+        self.require_payee_storage(&dest)?;
         let expires = o.u64("intentExpiresAt")?;
         ensure(
             expires > ctx.now_ms && expires <= self.terms.expires_at && expires - ctx.now_ms <= MAX_INTENT_LIFETIME_MS,
@@ -415,7 +428,7 @@ impl TradeRecord {
             slices: slices.into_iter().map(|(funder, amount)| Slice { funder, amount }).collect(),
             source_bucket: Bucket::Available,
             destination: dest,
-            profile: PROFILE_DIRECT.into(),
+            profile: direct.into(),
             state: IntentState::ValueLocked,
             version: 1,
             created_at: ctx.now_ms,

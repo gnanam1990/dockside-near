@@ -5,7 +5,7 @@
 //! verifies both party signatures over it before any of these fields carry authority.
 
 use crate::crypto::parse_public_key;
-use crate::error::{ensure, R};
+use crate::error::{ensure, err, R};
 use crate::typed::{is_hex64, is_id, Obj};
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -13,6 +13,52 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use dockside_canonical::Value;
 
 pub const PROFILE_DIRECT_TESTNET: &str = "dockside-direct-testnet-v1";
+pub const PROFILE_DIRECT_MAINNET: &str = "dockside-direct-mainnet-v1";
+pub const NETWORK_TESTNET: &str = "near-testnet";
+pub const NETWORK_MAINNET: &str = "near-mainnet";
+/// Largest `decimals` a NEP-141 trade asset may declare (NEAR itself uses 24).
+pub const MAX_TOKEN_DECIMALS: u64 = 24;
+
+/// The signed terms profile of a network. Any other network has none.
+pub fn terms_profile(network: &str) -> Option<&'static str> {
+    match network {
+        NETWORK_TESTNET => Some(PROFILE_DIRECT_TESTNET),
+        NETWORK_MAINNET => Some(PROFILE_DIRECT_MAINNET),
+        _ => None,
+    }
+}
+
+/// The asset a trade is funded, released and refunded in. It is part of the signed terms and can
+/// never change in a successor revision: destination changes and key rebindings compare the whole
+/// `Terms` value.
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq)]
+pub enum Asset {
+    /// Native NEAR attached to `fund`.
+    NearNative,
+    /// One NEP-141 token contract; amounts are in its base units.
+    Nep141 { token_account_id: String, decimals: u8 },
+}
+
+impl Asset {
+    pub fn is_native(&self) -> bool {
+        matches!(self, Asset::NearNative)
+    }
+
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Asset::NearNative => "NEAR_NATIVE",
+            Asset::Nep141 { .. } => "NEP141",
+        }
+    }
+
+    /// The NEP-141 contract of this asset, if it is one.
+    pub fn token(&self) -> Option<&str> {
+        match self {
+            Asset::NearNative => None,
+            Asset::Nep141 { token_account_id, .. } => Some(token_account_id),
+        }
+    }
+}
 pub const REFUND_POLICY_ID: &str = "dockside-refund-v1";
 pub const REFUND_POLICY_REVISION: u64 = 1;
 
@@ -67,6 +113,9 @@ pub struct Terms {
     pub escrow_contract_id: String,
     pub buyer: Party,
     pub supplier: Party,
+    pub asset: Asset,
+    /// Trade amount in base units of `asset` (yoctoNEAR for native NEAR). The field keeps its
+    /// schema-v1 name for both assets.
     pub amount_yocto: u128,
     pub milestone_id: String,
     pub evidence_policy: EvidencePolicyRef,
@@ -183,6 +232,38 @@ fn service(o: &Obj<'_>, name: &str, capability: &str) -> R<ServiceBinding> {
     Ok(out)
 }
 
+/// `asset`: `{kind: NEAR_NATIVE, network}` or `{kind: NEP141, network, tokenAccountId, decimals}`.
+/// The field set is exact per kind, so a native asset cannot carry a token and a NEP-141 asset
+/// cannot omit one.
+fn parse_asset(v: &Value, network: &str, contract_id: &str) -> R<Asset> {
+    let kind = match v {
+        Value::Struct(f) => f.iter().find(|(k, _)| k == "kind").and_then(|(_, x)| match x {
+            Value::Str(s) => Some(s.as_str()),
+            _ => None,
+        }),
+        _ => None,
+    };
+    match kind {
+        Some("NEAR_NATIVE") => {
+            let a = Obj::exact(v, &["kind", "network"], "terms.asset")?;
+            a.expect_str("network", network, "WRONG_NETWORK")?;
+            Ok(Asset::NearNative)
+        }
+        Some("NEP141") => {
+            let a = Obj::exact(v, &["kind", "network", "tokenAccountId", "decimals"], "terms.asset")?;
+            a.expect_str("network", network, "WRONG_NETWORK")?;
+            let token_account_id = a.str("tokenAccountId")?;
+            ensure(valid_account(&token_account_id, network, false), "INVALID_ADDRESS", "token account id invalid for network")?;
+            ensure(token_account_id != contract_id, "INVALID_ADDRESS", "the escrow cannot be its own trade asset")?;
+            let decimals = a.u64("decimals")?;
+            ensure(decimals <= MAX_TOKEN_DECIMALS, "VALIDATION_FAILED", "token decimals out of range")?;
+            Ok(Asset::Nep141 { token_account_id, decimals: decimals as u8 })
+        }
+        Some(_) => err("UNSUPPORTED_ASSET", "terms.asset: kind must be NEAR_NATIVE or NEP141"),
+        None => err("VALIDATION_FAILED", "terms.asset: expected a struct with a string kind"),
+    }
+}
+
 /// Parse and validate canonical terms. `network` and `contract_id` come from the contract itself.
 pub fn parse_terms(v: &Value, network: &str, contract_id: &str) -> R<Terms> {
     let o = Obj::exact(
@@ -196,12 +277,11 @@ pub fn parse_terms(v: &Value, network: &str, contract_id: &str) -> R<Terms> {
         "terms",
     )?;
     ensure(o.u64("schemaVersion")? == 1, "UNSUPPORTED_VERSION", "terms schemaVersion must be 1")?;
-    o.expect_str("profileVersion", PROFILE_DIRECT_TESTNET, "UNSUPPORTED_VERSION")?;
     o.expect_str("network", network, "WRONG_NETWORK")?;
+    let profile = terms_profile(network).ok_or_else(|| crate::error::Error { code: "WRONG_NETWORK", message: "contract network has no terms profile".into() })?;
+    o.expect_str("profileVersion", profile, "UNSUPPORTED_VERSION")?;
     o.expect_str("escrowContractId", contract_id, "WRONG_CONTRACT")?;
-    let asset = o.obj("asset", &["kind", "network"], "terms.asset")?;
-    asset.expect_str("kind", "NEAR_NATIVE", "UNSUPPORTED_ASSET")?;
-    asset.expect_str("network", network, "WRONG_NETWORK")?;
+    let asset = parse_asset(o.get("asset"), network, contract_id)?;
     let milestone = o.obj("milestone", &["id", "description"], "terms.milestone")?;
     milestone.str("description")?;
     let ep = o.obj("evidencePolicy", &["id", "revision", "digest"], "terms.evidencePolicy")?;
@@ -221,6 +301,7 @@ pub fn parse_terms(v: &Value, network: &str, contract_id: &str) -> R<Terms> {
         escrow_contract_id: contract_id.into(),
         buyer: party(&o, "buyer")?,
         supplier: party(&o, "supplier")?,
+        asset,
         amount_yocto: o.u128("amountYocto")?,
         milestone_id: milestone.str("id")?,
         evidence_policy: EvidencePolicyRef {

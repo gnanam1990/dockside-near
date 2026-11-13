@@ -35,11 +35,11 @@ pub fn terms(fx: &Fixture) -> J {
     let a = &fx.accounts;
     st(vec![
         ("schemaVersion", u(1)),
-        ("profileVersion", s("dockside-direct-testnet-v1")),
+        ("profileVersion", s(dockside_escrow_core::terms::terms_profile(&fx.network).expect("network profile"))),
         ("tradeId", s(&trade)),
         ("revision", u(1)),
         ("predecessorDigest", null()),
-        ("network", s(NETWORK)),
+        ("network", s(&fx.network)),
         ("escrowContractId", s(&a.contract)),
         (
             "buyer",
@@ -61,7 +61,18 @@ pub fn terms(fx: &Fixture) -> J {
                 ("accountId", s(&a.supplier)),
             ]),
         ),
-        ("asset", st(vec![("kind", s("NEAR_NATIVE")), ("network", s(NETWORK))])),
+        (
+            "asset",
+            match &fx.token {
+                None => st(vec![("kind", s("NEAR_NATIVE")), ("network", s(&fx.network))]),
+                Some((token, decimals)) => st(vec![
+                    ("kind", s("NEP141")),
+                    ("network", s(&fx.network)),
+                    ("tokenAccountId", s(token)),
+                    ("decimals", u(u64::from(*decimals))),
+                ]),
+            },
+        ),
         ("amountYocto", big(fx.amount_yocto)),
         ("milestone", st(vec![("id", s("shipment-1")), ("description", s("Container loaded"))])),
         ("evidencePolicy", st(vec![("id", s("commercial-docs")), ("revision", u(1)), ("digest", s(&policy_digest()))])),
@@ -84,7 +95,7 @@ pub fn terms(fx: &Fixture) -> J {
                 ("publicKey", s(&fx.pk("risk"))),
             ]),
         ),
-        ("payout", st(vec![("network", s(NETWORK)), ("recipientType", s("NEAR_ACCOUNT")), ("destination", s(&a.supplier))])),
+        ("payout", st(vec![("network", s(&fx.network)), ("recipientType", s("NEAR_ACCOUNT")), ("destination", s(&a.supplier))])),
         ("refundPolicy", st(vec![("id", s("dockside-refund-v1")), ("revision", u(1))])),
         ("delayPolicy", st(vec![("destinationChangeDelayMs", u(fx.destination_change_delay_ms))])),
         ("expiresAt", u(fx.t0 + 30 * DAY)),
@@ -328,7 +339,7 @@ pub fn attestation_args(fx: &Fixture, rec: &TradeRecord, revision: u64, now: u64
         rec,
         &fx.accounts.contract,
         vec![
-            ("network", s(NETWORK)),
+            ("network", s(&rec.terms.network)),
             ("organizationId", s(&b.scope.organization_id)),
             ("evidencePolicyId", s("commercial-docs")),
             ("evidencePolicyRevision", u(1)),
@@ -403,12 +414,12 @@ pub fn intent_args_to(fx: &Fixture, rec: &TradeRecord, now: u64, n: &str, destin
         rec,
         &fx.accounts.contract,
         vec![
-            ("network", s(NETWORK)),
+            ("network", s(&rec.terms.network)),
             ("releaseIntentId", s(&fx.id("rli", n))),
             ("amountYocto", big(rec.terms.amount_yocto)),
-            ("executionProfile", s("DIRECT_TESTNET")),
+            ("executionProfile", s(dockside_escrow_core::release::direct_profile(&rec.terms.network))),
             ("destination", s(destination)),
-            ("destinationDigest", s(&destination_digest(NETWORK, destination).expect("destination"))),
+            ("destinationDigest", s(&destination_digest(&rec.terms.network, destination).expect("destination"))),
             ("sourceBucketDigest", s(&source_bucket_digest(&slices).expect("slices"))),
             ("intentExpiresAt", u(now + 3 * DAY)),
             ("signerRole", s("BUYER_APPROVER")),
@@ -441,7 +452,7 @@ pub fn approval_args_signed_by(fx: &Fixture, rec: &TradeRecord, intent_id: &str,
             ("amountYocto", big(i.amount)),
             ("executionProfile", s(&i.profile)),
             ("destination", s(&i.destination)),
-            ("destinationDigest", s(&destination_digest(NETWORK, &i.destination).expect("destination"))),
+            ("destinationDigest", s(&destination_digest(&rec.terms.network, &i.destination).expect("destination"))),
             ("manifestRevision", u(m.map(|m| m.revision).unwrap_or(0))),
             ("manifestDigest", s(&m.map(|m| m.digest.clone()).unwrap_or_else(|| zero.clone()))),
             ("attestationDigest", s(&m.map(|m| m.attestation_digest.clone()).unwrap_or_else(|| zero.clone()))),
@@ -734,6 +745,26 @@ pub fn policy_args(rec: &TradeRecord) -> J {
 }
 
 /// A deposit names the trade revision digest the funder agreed to.
+/// The `msg` of the `ft_transfer_call` that funds a NEP-141 trade revision.
+pub fn funding_msg(trade_id: &str, terms_digest: &str) -> String {
+    json!({ "tradeId": trade_id, "termsDigest": terms_digest }).to_string()
+}
+
+/// `ft_transfer_call` arguments (sent to the token contract) that fund `rec` with `amount` units.
+pub fn ft_fund_args(rec: &TradeRecord, contract: &str, amount: u128) -> J {
+    json!({
+        "receiver_id": contract,
+        "amount": amount.to_string(),
+        "memo": null,
+        "msg": funding_msg(&rec.terms.trade_id, &rec.terms_digest),
+    })
+}
+
+/// `check_payee_storage` arguments for the active payout destination.
+pub fn check_payee_args(rec: &TradeRecord) -> J {
+    json!({ "trade_id": rec.terms.trade_id, "account_id": rec.terms.payout_destination })
+}
+
 pub fn fund_args(trade_id: &str, terms_digest: &str) -> J {
     json!({ "trade_id": trade_id, "terms_digest": terms_digest })
 }
