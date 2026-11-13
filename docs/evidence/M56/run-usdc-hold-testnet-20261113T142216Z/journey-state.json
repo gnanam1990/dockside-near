@@ -1,0 +1,1590 @@
+{
+  "schema": "dockside/journey-state@1",
+  "steps": [
+    {
+      "step": "register",
+      "method": "register_trade",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "BWbSL6ure3p4rGQG8NtVnAqndKVquMyjJwg98CDwMFg7",
+      "blockHash": "ffbeZnAh26PFLhh3RfKigdU3Dop7hwYFAfJvcXxtkUf",
+      "blockTimeMs": 1794579744448,
+      "returned": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f",
+      "mirror": [
+        {
+          "method": "register_trade",
+          "args": {
+            "buyer_signature": "ed25519:24uCUbukwadizjmm8tkgx7cxFdBukrsd2PiJ6W8wa4doPtvDPvSc2u6xYEQo75y7ThmHd2YNh59RTMHHerGAS4P7",
+            "supplier_signature": "ed25519:UBFanKd5GRnE4hJEmUg9UhhasA2HLqBfvPeMJF8bsGQ3vi3TGU7ra3gtB9cqsoQcvuiM5zCfCSuoCVjzs52uce9",
+            "terms": {
+              "struct": {
+                "amountYocto": {
+                  "u128": "5000000"
+                },
+                "asset": {
+                  "struct": {
+                    "decimals": {
+                      "u64": "6"
+                    },
+                    "kind": {
+                      "str": "NEP141"
+                    },
+                    "network": {
+                      "str": "near-testnet"
+                    },
+                    "tokenAccountId": {
+                      "str": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af"
+                    }
+                  }
+                },
+                "buyer": {
+                  "struct": {
+                    "accountId": {
+                      "str": "gnanam1990-dock-buyer.testnet"
+                    },
+                    "keyVersionId": {
+                      "str": "key_5253745e417fbc0fb31f99eb2a0a29db"
+                    },
+                    "organizationId": {
+                      "str": "org_739c0d52ab45faeb32e8848b50ea240b"
+                    },
+                    "principalId": {
+                      "str": "prn_165c0614b090f7659f2cf55cdeb1f46b"
+                    },
+                    "publicKey": {
+                      "str": "ed25519:FAe3PMrvSzDBoUvztAP8fqJn3s88qApxQHUv7o2AxJpW"
+                    }
+                  }
+                },
+                "delayPolicy": {
+                  "struct": {
+                    "destinationChangeDelayMs": {
+                      "u64": "3600000"
+                    }
+                  }
+                },
+                "escrowContractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "evidencePolicy": {
+                  "struct": {
+                    "digest": {
+                      "str": "c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8"
+                    },
+                    "id": {
+                      "str": "commercial-docs"
+                    },
+                    "revision": {
+                      "u64": "1"
+                    }
+                  }
+                },
+                "expiresAt": {
+                  "u64": "1797171740826"
+                },
+                "inspector": {
+                  "struct": {
+                    "attestationSchema": {
+                      "str": "dockside/inspection-attestation@1"
+                    },
+                    "keyVersionId": {
+                      "str": "key_f4d8e03de495ced7d17f10d1e9dc9a1b"
+                    },
+                    "principalId": {
+                      "str": "prn_ea09840d71155229120c946daf4bd9c5"
+                    },
+                    "publicKey": {
+                      "str": "ed25519:YhsF6mXwLQVTEZj6wfQ44h9YPXMnPxZw8VUYgfeS4kE"
+                    }
+                  }
+                },
+                "manifestAttestor": {
+                  "struct": {
+                    "attestationSchema": {
+                      "str": "dockside/manifest-attestation@1"
+                    },
+                    "capability": {
+                      "str": "MANIFEST_ATTEST"
+                    },
+                    "enrollmentId": {
+                      "str": "svc_1dfab2129eee88f23fd33a85d77fb1f4"
+                    },
+                    "keyVersion": {
+                      "u64": "1"
+                    },
+                    "publicKey": {
+                      "str": "ed25519:J4b3rUkYAYibs6wVzDywZ6JYKHZAAUhd4iwamgMVF2MQ"
+                    },
+                    "scope": {
+                      "struct": {
+                        "evidencePolicyId": {
+                          "str": "commercial-docs"
+                        },
+                        "evidencePolicyRevision": {
+                          "u64": "1"
+                        },
+                        "organizationId": {
+                          "str": "org_739c0d52ab45faeb32e8848b50ea240b"
+                        },
+                        "tradeId": {
+                          "null": null
+                        }
+                      }
+                    },
+                    "serviceId": {
+                      "str": "manifest-attestor"
+                    }
+                  }
+                },
+                "milestone": {
+                  "struct": {
+                    "description": {
+                      "str": "Container loaded"
+                    },
+                    "id": {
+                      "str": "shipment-1"
+                    }
+                  }
+                },
+                "network": {
+                  "str": "near-testnet"
+                },
+                "payout": {
+                  "struct": {
+                    "destination": {
+                      "str": "gnanam1990-dock-supplier.testnet"
+                    },
+                    "network": {
+                      "str": "near-testnet"
+                    },
+                    "recipientType": {
+                      "str": "NEAR_ACCOUNT"
+                    }
+                  }
+                },
+                "policySetter": {
+                  "struct": {
+                    "attestationSchema": {
+                      "str": "dockside/hold-set@1"
+                    },
+                    "capability": {
+                      "str": "DETERMINISTIC_POLICY_SET"
+                    },
+                    "enrollmentId": {
+                      "str": "svc_57ea2ece62ae7f2a4212bfbe3804c443"
+                    },
+                    "keyVersion": {
+                      "u64": "1"
+                    },
+                    "publicKey": {
+                      "str": "ed25519:4oVbTFconXtW5QBcaKQYaHSy1wC7t77AyASnryno2eYF"
+                    },
+                    "scope": {
+                      "struct": {
+                        "evidencePolicyId": {
+                          "str": "commercial-docs"
+                        },
+                        "evidencePolicyRevision": {
+                          "u64": "1"
+                        },
+                        "organizationId": {
+                          "str": "org_739c0d52ab45faeb32e8848b50ea240b"
+                        },
+                        "tradeId": {
+                          "str": "trd_96560def80db3315577c91c0f9265a77"
+                        }
+                      }
+                    },
+                    "serviceId": {
+                      "str": "deterministic-policy"
+                    }
+                  }
+                },
+                "predecessorDigest": {
+                  "null": null
+                },
+                "profileVersion": {
+                  "str": "dockside-direct-testnet-v1"
+                },
+                "refundPolicy": {
+                  "struct": {
+                    "id": {
+                      "str": "dockside-refund-v1"
+                    },
+                    "revision": {
+                      "u64": "1"
+                    }
+                  }
+                },
+                "revision": {
+                  "u64": "1"
+                },
+                "riskResolver": {
+                  "struct": {
+                    "keyVersionId": {
+                      "str": "key_bdb25d48231abd79d011f531a63043af"
+                    },
+                    "principalId": {
+                      "str": "prn_7630948c0fafaa4704824ab48799c751"
+                    },
+                    "publicKey": {
+                      "str": "ed25519:CXxuPsh53TuEJAAEYXsAVPWq4YNZJJgYTdwXvrMUUQeW"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "u64": "1"
+                },
+                "supplier": {
+                  "struct": {
+                    "accountId": {
+                      "str": "gnanam1990-dock-supplier.testnet"
+                    },
+                    "keyVersionId": {
+                      "str": "key_dc8981728c48c9c5139ff123aabf4dfa"
+                    },
+                    "organizationId": {
+                      "str": "org_d6dc83817804e51993c5ea31d78f3f07"
+                    },
+                    "principalId": {
+                      "str": "prn_96140fbe08db1511358a531ef5879bf3"
+                    },
+                    "publicKey": {
+                      "str": "ed25519:3aYAyaFux6SghTHVnZ1BfKGi7azbMFcbZiPPmNH55Vxa"
+                    }
+                  }
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                }
+              }
+            }
+          },
+          "now": 1794579744448,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "policy",
+      "method": "register_evidence_policy",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "8Vjis3Byti84gmesKHhxa7Up62Cxo1LJd12HV8z9V7Ry",
+      "blockHash": "GdrXBMZauoCGq4G1pTVNt6aR3giTZJcfCyGGTc3uV23s",
+      "blockTimeMs": 1794579749491,
+      "returned": "c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8",
+      "mirror": [
+        {
+          "method": "register_evidence_policy",
+          "args": {
+            "policy": {
+              "struct": {
+                "attestationLifetimeMs": {
+                  "u64": "86400000"
+                },
+                "policyId": {
+                  "str": "commercial-docs"
+                },
+                "revision": {
+                  "u64": "1"
+                },
+                "schema": {
+                  "str": "dockside/evidence-policy@1"
+                },
+                "slots": {
+                  "list": [
+                    {
+                      "struct": {
+                        "allowedMime": {
+                          "list": [
+                            {
+                              "str": "application/pdf"
+                            },
+                            {
+                              "str": "text/plain"
+                            }
+                          ]
+                        },
+                        "contentClass": {
+                          "str": "DOCUMENT"
+                        },
+                        "freshnessMs": {
+                          "u64": "2592000000"
+                        },
+                        "issuedAtRequired": {
+                          "bool": true
+                        },
+                        "issuerCapabilities": {
+                          "list": [
+                            {
+                              "str": "SUPPLIER_SIGNER"
+                            }
+                          ]
+                        },
+                        "limits": {
+                          "struct": {
+                            "maxDecompressedBytes": {
+                              "u64": "1048576"
+                            },
+                            "maxDecompressionRatioPermille": {
+                              "u64": "100000"
+                            },
+                            "maxPages": {
+                              "u64": "20"
+                            },
+                            "maxParseTimeMs": {
+                              "u64": "2000"
+                            },
+                            "maxPixels": {
+                              "u64": "4000000"
+                            }
+                          }
+                        },
+                        "maxAggregateBytes": {
+                          "u64": "65536"
+                        },
+                        "maxItemBytes": {
+                          "u64": "65536"
+                        },
+                        "maxItems": {
+                          "u64": "1"
+                        },
+                        "minItems": {
+                          "u64": "1"
+                        },
+                        "parserProfiles": {
+                          "list": [
+                            {
+                              "str": "dockside-sniff@1"
+                            }
+                          ]
+                        },
+                        "purpose": {
+                          "str": "commercial-invoice for the milestone"
+                        },
+                        "replacement": {
+                          "str": "SUPERSEDE_CURRENT"
+                        },
+                        "requiredDerived": {
+                          "list": [
+                            {
+                              "struct": {
+                                "artifactClass": {
+                                  "str": "TEXT_EXTRACT"
+                                },
+                                "transformProfile": {
+                                  "str": "dockside-text@1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "schema": {
+                          "str": "dockside/evidence-slot-policy@1"
+                        },
+                        "slotId": {
+                          "str": "commercial-invoice"
+                        },
+                        "uploaderCapabilities": {
+                          "list": [
+                            {
+                              "str": "SUPPLIER_SIGNER"
+                            },
+                            {
+                              "str": "EVIDENCE_UPLOADER"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "struct": {
+                        "allowedMime": {
+                          "list": [
+                            {
+                              "str": "application/pdf"
+                            },
+                            {
+                              "str": "text/plain"
+                            }
+                          ]
+                        },
+                        "contentClass": {
+                          "str": "DOCUMENT"
+                        },
+                        "freshnessMs": {
+                          "u64": "2592000000"
+                        },
+                        "issuedAtRequired": {
+                          "bool": true
+                        },
+                        "issuerCapabilities": {
+                          "list": [
+                            {
+                              "str": "INSPECTOR"
+                            }
+                          ]
+                        },
+                        "limits": {
+                          "struct": {
+                            "maxDecompressedBytes": {
+                              "u64": "1048576"
+                            },
+                            "maxDecompressionRatioPermille": {
+                              "u64": "100000"
+                            },
+                            "maxPages": {
+                              "u64": "20"
+                            },
+                            "maxParseTimeMs": {
+                              "u64": "2000"
+                            },
+                            "maxPixels": {
+                              "u64": "4000000"
+                            }
+                          }
+                        },
+                        "maxAggregateBytes": {
+                          "u64": "65536"
+                        },
+                        "maxItemBytes": {
+                          "u64": "65536"
+                        },
+                        "maxItems": {
+                          "u64": "1"
+                        },
+                        "minItems": {
+                          "u64": "1"
+                        },
+                        "parserProfiles": {
+                          "list": [
+                            {
+                              "str": "dockside-sniff@1"
+                            }
+                          ]
+                        },
+                        "purpose": {
+                          "str": "inspection-report for the milestone"
+                        },
+                        "replacement": {
+                          "str": "SUPERSEDE_CURRENT"
+                        },
+                        "requiredDerived": {
+                          "list": [
+                            {
+                              "struct": {
+                                "artifactClass": {
+                                  "str": "TEXT_EXTRACT"
+                                },
+                                "transformProfile": {
+                                  "str": "dockside-text@1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "schema": {
+                          "str": "dockside/evidence-slot-policy@1"
+                        },
+                        "slotId": {
+                          "str": "inspection-report"
+                        },
+                        "uploaderCapabilities": {
+                          "list": [
+                            {
+                              "str": "INSPECTOR"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "struct": {
+                        "allowedMime": {
+                          "list": [
+                            {
+                              "str": "image/png"
+                            },
+                            {
+                              "str": "image/jpeg"
+                            }
+                          ]
+                        },
+                        "contentClass": {
+                          "str": "IMAGE"
+                        },
+                        "freshnessMs": {
+                          "u64": "2592000000"
+                        },
+                        "issuedAtRequired": {
+                          "bool": true
+                        },
+                        "issuerCapabilities": {
+                          "list": [
+                            {
+                              "str": "INSPECTOR"
+                            }
+                          ]
+                        },
+                        "limits": {
+                          "struct": {
+                            "maxDecompressedBytes": {
+                              "u64": "1048576"
+                            },
+                            "maxDecompressionRatioPermille": {
+                              "u64": "100000"
+                            },
+                            "maxPages": {
+                              "u64": "20"
+                            },
+                            "maxParseTimeMs": {
+                              "u64": "2000"
+                            },
+                            "maxPixels": {
+                              "u64": "4000000"
+                            }
+                          }
+                        },
+                        "maxAggregateBytes": {
+                          "u64": "100000"
+                        },
+                        "maxItemBytes": {
+                          "u64": "65536"
+                        },
+                        "maxItems": {
+                          "u64": "2"
+                        },
+                        "minItems": {
+                          "u64": "1"
+                        },
+                        "parserProfiles": {
+                          "list": [
+                            {
+                              "str": "dockside-sniff@1"
+                            }
+                          ]
+                        },
+                        "purpose": {
+                          "str": "cargo-photos for the milestone"
+                        },
+                        "replacement": {
+                          "str": "SUPERSEDE_CURRENT"
+                        },
+                        "requiredDerived": {
+                          "list": [
+                            {
+                              "struct": {
+                                "artifactClass": {
+                                  "str": "IMAGE_METADATA"
+                                },
+                                "transformProfile": {
+                                  "str": "dockside-image-meta@1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "schema": {
+                          "str": "dockside/evidence-slot-policy@1"
+                        },
+                        "slotId": {
+                          "str": "cargo-photos"
+                        },
+                        "uploaderCapabilities": {
+                          "list": [
+                            {
+                              "str": "INSPECTOR"
+                            },
+                            {
+                              "str": "BUYER_APPROVER"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579749491,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "fund",
+      "method": "ft_transfer_call",
+      "signer": "gnanam1990-dock-buyer.testnet",
+      "txHash": "GGReYME6Ha8mAagWvm7NicTTAWdKrUSP6WtzHqSsYgSh",
+      "blockHash": "43qX7sBHoyNKCvejkHUwXJCEEmBA5FdNxG3ZK1Er7q9f",
+      "blockTimeMs": 1794579757198,
+      "returned": "0",
+      "mirror": [
+        {
+          "method": "ft_on_transfer",
+          "args": {
+            "amount": "5000000",
+            "msg": "{\"termsDigest\":\"8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f\",\"tradeId\":\"trd_96560def80db3315577c91c0f9265a77\"}",
+            "sender_id": "gnanam1990-dock-buyer.testnet"
+          },
+          "now": 1794579757198,
+          "predecessor": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "attestation",
+      "method": "submit_manifest_attestation",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "7hzwBHmWJeSE1r5BjSKbe6fyoPkXdhzxeUszp7iwpo5e",
+      "blockHash": "4JDKdnYA89PZSd3mbFPUhFkS42WN5o6E9e9qiV8SXUDo",
+      "blockTimeMs": 1794579762813,
+      "returned": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150",
+      "mirror": [
+        {
+          "method": "submit_manifest_attestation",
+          "args": {
+            "payload": {
+              "struct": {
+                "attestor": {
+                  "struct": {
+                    "capability": {
+                      "str": "MANIFEST_ATTEST"
+                    },
+                    "enrollmentId": {
+                      "str": "svc_1dfab2129eee88f23fd33a85d77fb1f4"
+                    },
+                    "keyVersion": {
+                      "u64": "1"
+                    },
+                    "scope": {
+                      "struct": {
+                        "evidencePolicyId": {
+                          "str": "commercial-docs"
+                        },
+                        "evidencePolicyRevision": {
+                          "u64": "1"
+                        },
+                        "organizationId": {
+                          "str": "org_739c0d52ab45faeb32e8848b50ea240b"
+                        },
+                        "tradeId": {
+                          "null": null
+                        }
+                      }
+                    },
+                    "serviceId": {
+                      "str": "manifest-attestor"
+                    }
+                  }
+                },
+                "contractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "evidencePolicyDigest": {
+                  "str": "c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8"
+                },
+                "evidencePolicyId": {
+                  "str": "commercial-docs"
+                },
+                "evidencePolicyRevision": {
+                  "u64": "1"
+                },
+                "expiresAt": {
+                  "u64": "1794583360846"
+                },
+                "issuedAt": {
+                  "u64": "1794579760846"
+                },
+                "manifestDigest": {
+                  "str": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150"
+                },
+                "manifestRevision": {
+                  "u64": "1"
+                },
+                "network": {
+                  "str": "near-testnet"
+                },
+                "nonce": {
+                  "str": "1b7582bce1c75d4fe83222e9fe2a2ec4f9cc2e229c6e8f5a9e57f7c29a25f787"
+                },
+                "organizationId": {
+                  "str": "org_739c0d52ab45faeb32e8848b50ea240b"
+                },
+                "schema": {
+                  "str": "dockside/manifest-attestation@1"
+                },
+                "slots": {
+                  "list": [
+                    {
+                      "struct": {
+                        "currentnessVersion": {
+                          "u64": "1"
+                        },
+                        "itemCount": {
+                          "u64": "1"
+                        },
+                        "items": {
+                          "list": [
+                            {
+                              "struct": {
+                                "byteLength": {
+                                  "u64": "2048"
+                                },
+                                "contentClass": {
+                                  "str": "DOCUMENT"
+                                },
+                                "derived": {
+                                  "list": [
+                                    {
+                                      "struct": {
+                                        "artifactClass": {
+                                          "str": "TEXT_EXTRACT"
+                                        },
+                                        "digest": {
+                                          "str": "d52a3aad7b31425db97aa2802efc144cc34bfa73711c0626e343ffb40a5544c3"
+                                        },
+                                        "sourceDigest": {
+                                          "str": "0f86ab5d8897c4f6cf9f8f044e9af8cae7fe60dd0d7782840689b54242dd2e14"
+                                        },
+                                        "transformProfile": {
+                                          "str": "dockside-text@1"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "detectedMime": {
+                                  "str": "application/pdf"
+                                },
+                                "freshUntil": {
+                                  "u64": "1797168160846"
+                                },
+                                "issuer": {
+                                  "struct": {
+                                    "capability": {
+                                      "str": "SUPPLIER_SIGNER"
+                                    },
+                                    "issuedAt": {
+                                      "u64": "1794576160846"
+                                    },
+                                    "keyVersionId": {
+                                      "str": "key_dc8981728c48c9c5139ff123aabf4dfa"
+                                    },
+                                    "principalId": {
+                                      "str": "prn_96140fbe08db1511358a531ef5879bf3"
+                                    },
+                                    "signature": {
+                                      "str": "ed25519:5wfdZgoxqSaj796J9uWtvV3YK4jnZo4ijoYeHSDwcnPevppy52UcMaaeUfSYAn3v6rYUuuTGkVqrAzun1ctedkLb"
+                                    }
+                                  }
+                                },
+                                "itemId": {
+                                  "str": "evi_20cb63fed317dae95836e001467c6d8d"
+                                },
+                                "originalDigest": {
+                                  "str": "0f86ab5d8897c4f6cf9f8f044e9af8cae7fe60dd0d7782840689b54242dd2e14"
+                                },
+                                "predecessorItemId": {
+                                  "null": null
+                                },
+                                "resources": {
+                                  "struct": {
+                                    "decompressedBytes": {
+                                      "u64": "2048"
+                                    },
+                                    "decompressionRatioPermille": {
+                                      "u64": "1000"
+                                    },
+                                    "pages": {
+                                      "u64": "1"
+                                    },
+                                    "parseTimeMs": {
+                                      "u64": "3"
+                                    },
+                                    "parserProfile": {
+                                      "str": "dockside-sniff@1"
+                                    },
+                                    "pixels": {
+                                      "u64": "0"
+                                    }
+                                  }
+                                },
+                                "uploader": {
+                                  "struct": {
+                                    "capability": {
+                                      "str": "SUPPLIER_SIGNER"
+                                    },
+                                    "keyVersionId": {
+                                      "str": "key_dc8981728c48c9c5139ff123aabf4dfa"
+                                    },
+                                    "organizationId": {
+                                      "str": "org_d6dc83817804e51993c5ea31d78f3f07"
+                                    },
+                                    "principalId": {
+                                      "str": "prn_96140fbe08db1511358a531ef5879bf3"
+                                    }
+                                  }
+                                },
+                                "version": {
+                                  "u64": "1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "slotId": {
+                          "str": "commercial-invoice"
+                        },
+                        "slotPolicyDigest": {
+                          "str": "a32d6d4b9fba0bb5c8d3d842ac01b53804a3be89ee29c12b8b0cc7160d80900a"
+                        }
+                      }
+                    },
+                    {
+                      "struct": {
+                        "currentnessVersion": {
+                          "u64": "1"
+                        },
+                        "itemCount": {
+                          "u64": "1"
+                        },
+                        "items": {
+                          "list": [
+                            {
+                              "struct": {
+                                "byteLength": {
+                                  "u64": "2048"
+                                },
+                                "contentClass": {
+                                  "str": "DOCUMENT"
+                                },
+                                "derived": {
+                                  "list": [
+                                    {
+                                      "struct": {
+                                        "artifactClass": {
+                                          "str": "TEXT_EXTRACT"
+                                        },
+                                        "digest": {
+                                          "str": "6bf0b4f29f655b45df44e0db6109848200b59387323b34ce90a070321fd34d86"
+                                        },
+                                        "sourceDigest": {
+                                          "str": "a26ed0c8d6f5e819181a7de153f8af1196237bf8b42ac1b08b433b1ec678b07f"
+                                        },
+                                        "transformProfile": {
+                                          "str": "dockside-text@1"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "detectedMime": {
+                                  "str": "application/pdf"
+                                },
+                                "freshUntil": {
+                                  "u64": "1797168160846"
+                                },
+                                "issuer": {
+                                  "struct": {
+                                    "capability": {
+                                      "str": "INSPECTOR"
+                                    },
+                                    "issuedAt": {
+                                      "u64": "1794576160846"
+                                    },
+                                    "keyVersionId": {
+                                      "str": "key_f4d8e03de495ced7d17f10d1e9dc9a1b"
+                                    },
+                                    "principalId": {
+                                      "str": "prn_ea09840d71155229120c946daf4bd9c5"
+                                    },
+                                    "signature": {
+                                      "str": "ed25519:3cFYHH1X5Qm8FK92XxnGMQie5QGqFGuR84wQwacDZt8zPM39vwVEeB2PonqhibmRW9d9PJ4kJmZZ5qMZMenyLHgV"
+                                    }
+                                  }
+                                },
+                                "itemId": {
+                                  "str": "evi_20b0285f4bc52ce3dd3c4d683371db99"
+                                },
+                                "originalDigest": {
+                                  "str": "a26ed0c8d6f5e819181a7de153f8af1196237bf8b42ac1b08b433b1ec678b07f"
+                                },
+                                "predecessorItemId": {
+                                  "null": null
+                                },
+                                "resources": {
+                                  "struct": {
+                                    "decompressedBytes": {
+                                      "u64": "2048"
+                                    },
+                                    "decompressionRatioPermille": {
+                                      "u64": "1000"
+                                    },
+                                    "pages": {
+                                      "u64": "1"
+                                    },
+                                    "parseTimeMs": {
+                                      "u64": "3"
+                                    },
+                                    "parserProfile": {
+                                      "str": "dockside-sniff@1"
+                                    },
+                                    "pixels": {
+                                      "u64": "0"
+                                    }
+                                  }
+                                },
+                                "uploader": {
+                                  "struct": {
+                                    "capability": {
+                                      "str": "INSPECTOR"
+                                    },
+                                    "keyVersionId": {
+                                      "str": "key_f4d8e03de495ced7d17f10d1e9dc9a1b"
+                                    },
+                                    "organizationId": {
+                                      "str": "org_8c75c10f2f7008a710c6fa1e4f8d0197"
+                                    },
+                                    "principalId": {
+                                      "str": "prn_ea09840d71155229120c946daf4bd9c5"
+                                    }
+                                  }
+                                },
+                                "version": {
+                                  "u64": "1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "slotId": {
+                          "str": "inspection-report"
+                        },
+                        "slotPolicyDigest": {
+                          "str": "cee3ed6abb24b78678da41b40dccafdbafd06f99d9b5a58f9f1ae646e4c8f7a1"
+                        }
+                      }
+                    },
+                    {
+                      "struct": {
+                        "currentnessVersion": {
+                          "u64": "1"
+                        },
+                        "itemCount": {
+                          "u64": "1"
+                        },
+                        "items": {
+                          "list": [
+                            {
+                              "struct": {
+                                "byteLength": {
+                                  "u64": "2048"
+                                },
+                                "contentClass": {
+                                  "str": "IMAGE"
+                                },
+                                "derived": {
+                                  "list": [
+                                    {
+                                      "struct": {
+                                        "artifactClass": {
+                                          "str": "IMAGE_METADATA"
+                                        },
+                                        "digest": {
+                                          "str": "271e1cd30414870f62179c718ce0d27df33366f0631cbd1c0f328a576ddbefd9"
+                                        },
+                                        "sourceDigest": {
+                                          "str": "0feeced7f4ebb09d132cfc72612cfe337c051900ce2f8b937903c41a756739c7"
+                                        },
+                                        "transformProfile": {
+                                          "str": "dockside-image-meta@1"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "detectedMime": {
+                                  "str": "image/png"
+                                },
+                                "freshUntil": {
+                                  "u64": "1797168160846"
+                                },
+                                "issuer": {
+                                  "struct": {
+                                    "capability": {
+                                      "str": "INSPECTOR"
+                                    },
+                                    "issuedAt": {
+                                      "u64": "1794576160846"
+                                    },
+                                    "keyVersionId": {
+                                      "str": "key_f4d8e03de495ced7d17f10d1e9dc9a1b"
+                                    },
+                                    "principalId": {
+                                      "str": "prn_ea09840d71155229120c946daf4bd9c5"
+                                    },
+                                    "signature": {
+                                      "str": "ed25519:5G7zyP1X3UhkeksB1eV3oXUjhrCh9Nmwy5GK28UWLz7MwvBbexoD6KMq4X2BmFM99mEQtT9MVbJjkW8mdn68ndzy"
+                                    }
+                                  }
+                                },
+                                "itemId": {
+                                  "str": "evi_7875a595d9b69eef22b0b36390b5c618"
+                                },
+                                "originalDigest": {
+                                  "str": "0feeced7f4ebb09d132cfc72612cfe337c051900ce2f8b937903c41a756739c7"
+                                },
+                                "predecessorItemId": {
+                                  "null": null
+                                },
+                                "resources": {
+                                  "struct": {
+                                    "decompressedBytes": {
+                                      "u64": "2048"
+                                    },
+                                    "decompressionRatioPermille": {
+                                      "u64": "1000"
+                                    },
+                                    "pages": {
+                                      "u64": "0"
+                                    },
+                                    "parseTimeMs": {
+                                      "u64": "3"
+                                    },
+                                    "parserProfile": {
+                                      "str": "dockside-sniff@1"
+                                    },
+                                    "pixels": {
+                                      "u64": "1000000"
+                                    }
+                                  }
+                                },
+                                "uploader": {
+                                  "struct": {
+                                    "capability": {
+                                      "str": "INSPECTOR"
+                                    },
+                                    "keyVersionId": {
+                                      "str": "key_f4d8e03de495ced7d17f10d1e9dc9a1b"
+                                    },
+                                    "organizationId": {
+                                      "str": "org_8c75c10f2f7008a710c6fa1e4f8d0197"
+                                    },
+                                    "principalId": {
+                                      "str": "prn_ea09840d71155229120c946daf4bd9c5"
+                                    }
+                                  }
+                                },
+                                "version": {
+                                  "u64": "1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "slotId": {
+                          "str": "cargo-photos"
+                        },
+                        "slotPolicyDigest": {
+                          "str": "f19d1f96b12a39779114c5ce86f83f132289a7675911b4280473d09f00a0c18a"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "tradeDigest": {
+                  "str": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f"
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                },
+                "tradeRevision": {
+                  "u64": "1"
+                }
+              }
+            },
+            "signature": "ed25519:mhv8PD14rWWFSCipFxz1JdiVWC7EKbYez46bK8MzeYeu5UQcQ43izNotnVZyn4GFZvDuc8cJfW4GruvstEuKRHW",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579762813,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "inspection",
+      "method": "submit_inspection",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "B76PT2DN1roPPTpeP9XYZC5Rfq3qnkXZX4HHU1z9eJ9b",
+      "blockHash": "5CVqe7aFMQZ8FPQRnP3PbC2fqVaUmSm9dVXhqpsddhEU",
+      "blockTimeMs": 1794579767995,
+      "returned": "85f8b960936d4881c496f2a1aeb2e62fad360483c56c641d4bcadd60b568bf82",
+      "mirror": [
+        {
+          "method": "submit_inspection",
+          "args": {
+            "payload": {
+              "struct": {
+                "contractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "decision": {
+                  "str": "PASS"
+                },
+                "evidencePolicyId": {
+                  "str": "commercial-docs"
+                },
+                "evidencePolicyRevision": {
+                  "u64": "1"
+                },
+                "expiresAt": {
+                  "u64": "1795184564977"
+                },
+                "inspectorKeyVersionId": {
+                  "str": "key_f4d8e03de495ced7d17f10d1e9dc9a1b"
+                },
+                "inspectorPrincipalId": {
+                  "str": "prn_ea09840d71155229120c946daf4bd9c5"
+                },
+                "issuedAt": {
+                  "u64": "1794579764977"
+                },
+                "manifestDigest": {
+                  "str": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150"
+                },
+                "manifestRevision": {
+                  "u64": "1"
+                },
+                "milestoneId": {
+                  "str": "shipment-1"
+                },
+                "nonce": {
+                  "str": "2eb702db3b4b42be6af92f7adb9b17f32c83853107f6b09c4a750b6d9b05ca5d"
+                },
+                "reasonCodes": {
+                  "list": [
+                    {
+                      "str": "DOCS_MATCH"
+                    }
+                  ]
+                },
+                "schema": {
+                  "str": "dockside/inspection-attestation@1"
+                },
+                "tradeDigest": {
+                  "str": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f"
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                },
+                "tradeRevision": {
+                  "u64": "1"
+                }
+              }
+            },
+            "signature": "ed25519:59tirZ8WCzE5eCEEdHyBfgNQppCo9qDBLJgJu2nid2GqmLQtMdvGDgf6ctUrZ6XAR2wK59jscxXuU4ZMfxUZTmAe",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579767995,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "hold_set",
+      "method": "set_hold",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "2oxiNqeDRYnEEyTBuLfQar4M21fu5Hv2mpYet1NMbZyL",
+      "blockHash": "7DbmcR1m9fjcVWWwEsQEsSpBsFyZDSqC1MYMEbgdzYQv",
+      "blockTimeMs": 1794579773402,
+      "returned": "db554aeca695452d58f46d67ab6f662c13b8840555f8d8bc53731ccc44b2a9bc",
+      "mirror": [
+        {
+          "method": "set_hold",
+          "args": {
+            "payload": {
+              "struct": {
+                "contractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "expiresAt": {
+                  "u64": "1795184570934"
+                },
+                "holdId": {
+                  "str": "hld_796b853d353195611493e8299e4617e6"
+                },
+                "issuedAt": {
+                  "u64": "1794579770934"
+                },
+                "issuerRole": {
+                  "str": "POLICY_SETTER"
+                },
+                "manifestDigest": {
+                  "str": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150"
+                },
+                "nonce": {
+                  "str": "0c669a2e54b295adac34fdf45705f36259c74e3231ebf7b60393236f7f4ed7ef"
+                },
+                "reasonCode": {
+                  "str": "DOC_MISMATCH"
+                },
+                "ruleId": {
+                  "str": "doc-mismatch@1"
+                },
+                "schema": {
+                  "str": "dockside/hold-set@1"
+                },
+                "tradeDigest": {
+                  "str": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f"
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                },
+                "tradeRevision": {
+                  "u64": "1"
+                }
+              }
+            },
+            "signature": "ed25519:M13awQCzR6RyGHe854pVeGPUTX4e4rZYZNfDypDvN9Mknf1Zp2R8s1MkzYbQeSQG2jQx9CEf9mMNgcFvnMzaRy7",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579773402,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "payee_storage",
+      "method": "check_payee_storage",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "4XFiXJ26iekwM91ABa1TXM9XBsLebEbcNANVoRq2D8cs",
+      "blockHash": "WLBLjevXk4B1qKTzVU9STngMgv8xDq81AiiG2uGMkU3",
+      "blockTimeMs": 1794579779218,
+      "returned": true,
+      "mirror": [
+        {
+          "method": "check_payee_storage",
+          "args": {
+            "account_id": "gnanam1990-dock-supplier.testnet",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579779218,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        },
+        {
+          "method": "on_payee_storage",
+          "args": {
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77",
+            "account_id": "gnanam1990-dock-supplier.testnet"
+          },
+          "now": 1794579780326,
+          "predecessor": "gnanam1990-dock-escrow3.testnet",
+          "deposit": "0",
+          "promiseOk": true
+        }
+      ]
+    },
+    {
+      "step": "intent",
+      "method": "create_release_intent",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "BsVL6KsCqYoAtKQ45ercipksq52BxqbV9tn8MiHZD72C",
+      "blockHash": "6i58jkFY4iXibK3YxqTdt8TyaqARUQnpfDoTHTZkaDRK",
+      "blockTimeMs": 1794579786885,
+      "returned": {
+        "releaseIntentId": "rli_888224b79be758a123931fe000c877e0",
+        "joined": false
+      },
+      "mirror": [
+        {
+          "method": "create_release_intent",
+          "args": {
+            "buyer_signature": "ed25519:63jYEXaTFTBEX5iirre4D8PLPhg1456d4wfeFFwV5qgNp5mEH9D644HRjNwQVDnudiCg7emxeUgAmgj6saXRewzz",
+            "payload": {
+              "struct": {
+                "amountYocto": {
+                  "u128": "5000000"
+                },
+                "contractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "destination": {
+                  "str": "gnanam1990-dock-supplier.testnet"
+                },
+                "destinationDigest": {
+                  "str": "7878eb7203df5f87ca4cd46742aa944362962fcc2e75c56877e52eb6bf090b71"
+                },
+                "executionProfile": {
+                  "str": "DIRECT_TESTNET"
+                },
+                "expiresAt": {
+                  "u64": "1794583383926"
+                },
+                "intentExpiresAt": {
+                  "u64": "1794838983926"
+                },
+                "issuedAt": {
+                  "u64": "1794579783926"
+                },
+                "network": {
+                  "str": "near-testnet"
+                },
+                "nonce": {
+                  "str": "92f640220702c789ffaa939144869ef5e144476d5fa61d010f5b1d781fddfdc5"
+                },
+                "releaseIntentId": {
+                  "str": "rli_888224b79be758a123931fe000c877e0"
+                },
+                "signerRole": {
+                  "str": "BUYER_APPROVER"
+                },
+                "sourceBucketDigest": {
+                  "str": "1d5570af3ed8096665d04c9e33046b8779f5bd047f11f45cda792f86f7dc812c"
+                },
+                "tradeDigest": {
+                  "str": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f"
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                },
+                "tradeRevision": {
+                  "u64": "1"
+                }
+              }
+            },
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579786885,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "observe:held",
+      "kind": "observe",
+      "atMs": 1794579789189
+    },
+    {
+      "step": "hold_resolve",
+      "method": "resolve_hold",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "JDZy69FzLWaqAxUXhLghoHUGWPBpnsHAgwvtxm22TrK1",
+      "blockHash": "7rZZjy9Y22pF9B4AJoywbodpM2WxgNyBZLFyeRLdc6Ki",
+      "blockTimeMs": 1794579792788,
+      "returned": "2092ffe68c4a4c32838e536c9aefaca162693f96f4f667052cf740863ebe13ba",
+      "mirror": [
+        {
+          "method": "resolve_hold",
+          "args": {
+            "payload": {
+              "struct": {
+                "contractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "evidenceDigest": {
+                  "str": "ca3758c30188f316cf05b5b0edecc51e2bb6f1e2d7ff438e10697f12c470ce7a"
+                },
+                "expiresAt": {
+                  "u64": "1794583390417"
+                },
+                "holdId": {
+                  "str": "hld_796b853d353195611493e8299e4617e6"
+                },
+                "holdReasonCode": {
+                  "str": "DOC_MISMATCH"
+                },
+                "issuedAt": {
+                  "u64": "1794579790417"
+                },
+                "manifestDigest": {
+                  "str": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150"
+                },
+                "nonce": {
+                  "str": "7cc0b03b28c71e7e4c6b4c4021571b529b90495f9c470dd3cd51bfacffa31774"
+                },
+                "resolutionCode": {
+                  "str": "RELEASE_HOLD"
+                },
+                "resolverRole": {
+                  "str": "RISK_RESOLVER"
+                },
+                "schema": {
+                  "str": "dockside/hold-resolve@1"
+                },
+                "tradeDigest": {
+                  "str": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f"
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                },
+                "tradeRevision": {
+                  "u64": "1"
+                }
+              }
+            },
+            "signature": "ed25519:16YMaEhtVNYsjDHmZXBhkFkGH5dZ3JZUm3c76ZzZiv63q2zixTYey2vAq3888x4Ne4m5ovZSSkNKSg1VZULcBmR",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579792788,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "approval",
+      "method": "approve_release",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "DmyA9MCRcAZeB4rcSdQHYUX2vAP5B8zRYFJcu6Wx9TJo",
+      "blockHash": "5MURJim3ciCqAwiWAkvizYkhgQi5Lp4eBTgeVYbfejBT",
+      "blockTimeMs": 1794579798234,
+      "returned": "44cfcf3be8ec75f1ae108f5290dbc4bfa7a1a6964a78cf2aded3dea6dd49459e",
+      "mirror": [
+        {
+          "method": "approve_release",
+          "args": {
+            "payload": {
+              "struct": {
+                "amountYocto": {
+                  "u128": "5000000"
+                },
+                "attestationDigest": {
+                  "str": "44657db94c5bec672e078d45e497acfec4119a37146b8bca940198d794db5069"
+                },
+                "contractId": {
+                  "str": "gnanam1990-dock-escrow3.testnet"
+                },
+                "destination": {
+                  "str": "gnanam1990-dock-supplier.testnet"
+                },
+                "destinationDigest": {
+                  "str": "7878eb7203df5f87ca4cd46742aa944362962fcc2e75c56877e52eb6bf090b71"
+                },
+                "executionProfile": {
+                  "str": "DIRECT_TESTNET"
+                },
+                "expiresAt": {
+                  "u64": "1794666195825"
+                },
+                "holdsViewDigest": {
+                  "str": "c52a1381c299a2876c01f074d7933b9c2a5a4603e38dd4f84362544b3b1b5418"
+                },
+                "inspectionDigest": {
+                  "str": "85f8b960936d4881c496f2a1aeb2e62fad360483c56c641d4bcadd60b568bf82"
+                },
+                "intentStateVersion": {
+                  "u64": "1"
+                },
+                "issuedAt": {
+                  "u64": "1794579795825"
+                },
+                "manifestDigest": {
+                  "str": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150"
+                },
+                "manifestRevision": {
+                  "u64": "1"
+                },
+                "nonce": {
+                  "str": "1bdd72581770c991a8e211755830960069de8df75a9143855173da387b51956a"
+                },
+                "releaseIntentId": {
+                  "str": "rli_888224b79be758a123931fe000c877e0"
+                },
+                "signerRole": {
+                  "str": "BUYER_APPROVER"
+                },
+                "tradeDigest": {
+                  "str": "8b02cae887dd528ab85b9c5b60f8d1656b2681fe4f7e03278e8f973119d9f77f"
+                },
+                "tradeId": {
+                  "str": "trd_96560def80db3315577c91c0f9265a77"
+                },
+                "tradeRevision": {
+                  "u64": "1"
+                }
+              }
+            },
+            "signature": "ed25519:3WnC3r64BnfT42g8mUUxaSAye5ZoNAoeZXxYqVaw2YdEfUPmAbyG2uNyEQvjiV9GQZVW6csb75Bz2XcqBuihropT",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579798234,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        }
+      ]
+    },
+    {
+      "step": "execute_release",
+      "method": "execute_release",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "FD7izvtEY76ir6nfYYsVcqmtmPhoCtsdwQwmrMsFKa1U",
+      "blockHash": "CNuVDaDHByUkGy8wXyx8qYjsgteBgJtFkSkDXvhbVFfc",
+      "blockTimeMs": 1794579802713,
+      "returned": true,
+      "mirror": [
+        {
+          "method": "execute_release",
+          "args": {
+            "release_intent_id": "rli_888224b79be758a123931fe000c877e0",
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77"
+          },
+          "now": 1794579802713,
+          "predecessor": "gnanam1990-dock-relayer.testnet",
+          "deposit": "0"
+        },
+        {
+          "method": "on_release_transfer",
+          "args": {
+            "trade_id": "trd_96560def80db3315577c91c0f9265a77",
+            "release_intent_id": "rli_888224b79be758a123931fe000c877e0",
+            "attempt_id": "rla_8f7302e12a887b63f5ea37933ff05bde"
+          },
+          "now": 1794579803885,
+          "predecessor": "gnanam1990-dock-escrow3.testnet",
+          "deposit": "0",
+          "promiseOk": true
+        }
+      ],
+      "payee": "gnanam1990-dock-supplier.testnet",
+      "payeeBeforeYocto": "5000000",
+      "payeeAfterYocto": "10000000"
+    }
+  ],
+  "pending": null,
+  "observed": {
+    "observe:held": {
+      "atMs": 1794579789189,
+      "holds": [
+        {
+          "holdId": "hld_796b853d353195611493e8299e4617e6",
+          "status": "ACTIVE",
+          "reasonCode": "DOC_MISMATCH",
+          "issuerRole": "POLICY_SETTER",
+          "ruleId": "doc-mismatch@1",
+          "manifestDigest": "75da7eb6549d5853a186163239efeae375df310e1a9a401032dc3254682eb150",
+          "issuedAt": 1794579770934,
+          "expiresAt": 1795184570934,
+          "recordedAt": 1794579773402,
+          "setDigest": "db554aeca695452d58f46d67ab6f662c13b8840555f8d8bc53731ccc44b2a9bc",
+          "resolution": null
+        }
+      ],
+      "blockers": [
+        "HOLD_ACTIVE",
+        "APPROVAL_MISSING"
+      ]
+    }
+  },
+  "supplierStartYocto": "5000000",
+  "relayerStartYocto": "0"
+}

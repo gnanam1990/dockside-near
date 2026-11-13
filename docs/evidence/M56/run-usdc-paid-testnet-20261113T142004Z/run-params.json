@@ -1,0 +1,14 @@
+{
+  "schema": "dockside/run-params@1",
+  "network": "testnet",
+  "rpcUrl": "https://test.rpc.fastnear.com",
+  "journey": "paid",
+  "amountYocto": "5000000",
+  "wasm": "<repo>/.data/repro/dockside_escrow.wasm",
+  "manifest": "<repo>/.data/repro/build-manifest.json",
+  "relayerKeyFile": "<home>/.near-credentials/testnet/gnanam1990-dock-relayer.testnet/<public key>.json",
+  "contractNetwork": "near-testnet",
+  "asset": "usdc",
+  "token": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+  "tokenDecimals": "6"
+}
