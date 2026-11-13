@@ -43,7 +43,7 @@
       "name": "the API passed the chain preflight against the sandbox escrow (code hash equals the manifest)",
       "ok": true,
       "detail": {
-        "chainId": "test-chain-9fOoJ",
+        "chainId": "test-chain-BXaAN",
         "escrow": "escrow.dockside-root.testnet",
         "codeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N"
       }
@@ -54,11 +54,11 @@
       "detail": {
         "event": "worker.started",
         "network": "near-testnet",
-        "chainId": "test-chain-9fOoJ",
+        "chainId": "test-chain-BXaAN",
         "escrow": "escrow.dockside-root.testnet",
         "codeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
         "relayer": "relayer.dockside-root.testnet",
-        "relayerPublicKey": "ed25519:2rRt28RUQjMGdkisUSc2ZNxuKR9CLHJzfuqXYwpRwoUk",
+        "relayerPublicKey": "ed25519:BgTYyCU6Qei61z8Ea3TnngqdCC5KLSt8q33tiL46D9Y8",
         "relayPort": 9034,
         "services": {
           "manifestAttestor": true,
@@ -112,8 +112,8 @@
         "relayer": "relayer.dockside-root.testnet",
         "contractId": "escrow.dockside-root.testnet",
         "network": "near-testnet",
-        "chain": "NEAR_TEST-CHAIN-9FOOJ",
-        "note": "function-call key ed25519:2rRt28RUQjMGdkisUSc2ZNxuKR9CLHJzfuqXYwpRwoUk restricted to escrow.dockside-root.testnet; the contract re-verifies every signature in the call."
+        "chain": "NEAR_TEST-CHAIN-BXAAN",
+        "note": "function-call key ed25519:BgTYyCU6Qei61z8Ea3TnngqdCC5KLSt8q33tiL46D9Y8 restricted to escrow.dockside-root.testnet; the contract re-verifies every signature in the call."
       }
     },
     {
@@ -132,12 +132,12 @@
       "name": "every Node.js process of the product runs as the unprivileged user (uid 10001)",
       "ok": true,
       "detail": [
-        "287645 10001 node /app/services/hosted/dist/main.js",
-        "287925 10001 /usr/local/bin/node /app/services/api/dist/main.js",
-        "288851 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=AUDIT_EXPORT_KEY_ENROLLMENT,AUDIT_EXPORT --seed-file=/data/keys/audit-export.seed",
-        "289055 10001 /usr/local/bin/node /app/services/worker/dist/main.js",
-        "289071 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=SERVICE_POP_CHALLENGE,MANIFEST_ATTESTATION --seed-file=/data/keys/manifest-attestor.seed",
-        "289086 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=SERVICE_POP_CHALLENGE,HOLD_SET --seed-file=/data/keys/deterministic-policy.seed"
+        "396753 10001 node /app/services/hosted/dist/main.js",
+        "396988 10001 /usr/local/bin/node /app/services/api/dist/main.js",
+        "397020 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=AUDIT_EXPORT_KEY_ENROLLMENT,AUDIT_EXPORT --seed-file=/data/keys/audit-export.seed",
+        "397031 10001 /usr/local/bin/node /app/services/worker/dist/main.js",
+        "397807 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=SERVICE_POP_CHALLENGE,MANIFEST_ATTESTATION --seed-file=/data/keys/manifest-attestor.seed",
+        "398174 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=SERVICE_POP_CHALLENGE,HOLD_SET --seed-file=/data/keys/deterministic-policy.seed"
       ]
     },
     {
@@ -179,26 +179,26 @@
         {
           "role": "buyer",
           "capability": "BUYER_APPROVER",
-          "invitationId": "inv_6b9dc5b20528557cba4493167b70c2ec",
+          "invitationId": "inv_a7075929672fdb7015859cf23f9476de",
           "state": "GRANTED",
-          "principalId": "prn_5345e3575065a19f0aab097d534893c7"
+          "principalId": "prn_fa7ef92ca235649f5ee9f93b306c986c"
         },
         {
           "role": "buyer",
           "capability": "RISK_RESOLVER",
-          "invitationId": "inv_b0080d4c3efb57ab69c6a85aa580aa3b",
+          "invitationId": "inv_96e2fcc36e7d6d6c3bc8cb6d7b5f3665",
           "state": "PENDING"
         },
         {
           "role": "supplier",
           "capability": "SUPPLIER_SIGNER",
-          "invitationId": "inv_b6e7d81adbf6a90ae88a7b7983831780",
+          "invitationId": "inv_76a137cbc1aad536a36debc2544c4edd",
           "state": "PENDING"
         },
         {
           "role": "inspector",
           "capability": "INSPECTOR",
-          "invitationId": "inv_0c76d420f6afe6b0c98ac5b858c7650e",
+          "invitationId": "inv_e56195be4093959ef25222aab0a711b4",
           "state": "PENDING"
         }
       ]
@@ -251,12 +251,12 @@
     }
   ],
   "image": {
-    "id": "sha256:a45d6541fc938983d4ce88289f010948184cb51f499fa237cd8bc7692371e18d",
-    "sizeBytes": 82567152
+    "id": "sha256:b9fa50dc40e269b863569a465a0b966c39bcf44ff45fbc60c576732d0a78cce5",
+    "sizeBytes": 82567154
   },
   "chain": {
     "kind": "local nearcore sandbox (not testnet, not mainnet)",
-    "chainId": "test-chain-9fOoJ",
+    "chainId": "test-chain-BXaAN",
     "accounts": {
       "escrow": "escrow.dockside-root.testnet",
       "relayer": "relayer.dockside-root.testnet",
@@ -265,36 +265,36 @@
     },
     "escrowCodeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
     "setupTransactions": {
-      "create:escrow": "EziFEnVA8TfuHw7f3VzQ8q5vAEgsKHr3pKRqxfxvqY7s",
-      "create:relayer": "AZ5bLT3qBW6UE5GrjraD8E8JJmvNbcNszLbzxmfjF4u2",
-      "create:buyer": "6aJtiPdFmXYnSSxxP9pyp4WRfQBjGdbLVigq9ZvWTLwv",
-      "create:supplier": "47uVTxoai4v9wziAdR75jQbihGLgHuy419dgcAZMtdR2",
-      "deploy+new": "BVVnSsue8GbsVXHvE9jf96QuPt5NvpbNDf9k1qmyQ5ss",
-      "add_key relayer": "61Ler4rq2ioggH6vgRaumGN9nFH987xd7bKaje238Rn4"
+      "create:escrow": "8XgMYBZQitp4QPak7vZHX5DP6mr5my4uoBnUD3wBWWbp",
+      "create:relayer": "EsahQB4QsoFoHn2yAdhPhr9sjXhFE6NwENxaYz9vgwF",
+      "create:buyer": "6syaV6GURNgY83GU5crGT8MrdPcaHfUppJWNLwReHM3t",
+      "create:supplier": "Pa5nni9CydUKSYVDKxcKoz7KgBCobjep72Jt46ucPDC",
+      "deploy+new": "mcUrHhoXd4ZRxxkU8jyvn69i1z9WyBJzxtuy9r5h6LR",
+      "add_key relayer": "F58HpnQYXjQYRjsi5Eamv5u4qyGzHLATcL3iw86pGcw8"
     },
-    "relayerFunctionCallPublicKey": "ed25519:2rRt28RUQjMGdkisUSc2ZNxuKR9CLHJzfuqXYwpRwoUk"
+    "relayerFunctionCallPublicKey": "ed25519:BgTYyCU6Qei61z8Ea3TnngqdCC5KLSt8q33tiL46D9Y8"
   },
   "seed": {
     "organizations": [
       {
         "role": "buyer",
         "name": "Dockside Demo Buyer",
-        "organizationId": "org_d22179035e2e5087a448be817edee810",
-        "adminPrincipalId": "prn_fbecf51f950ef0e0395d493ba4b098d0",
+        "organizationId": "org_128dd64adb9e78ce335a6bcca988fda0",
+        "adminPrincipalId": "prn_4b6d0e86f749d58164b7511ee922ac9d",
         "created": true
       },
       {
         "role": "supplier",
         "name": "Dockside Demo Supplier",
-        "organizationId": "org_2bbc4ed048890a73ac67ef23c68e5964",
-        "adminPrincipalId": "prn_d05bacbe5cecb9523a2e9ac63ad455ce",
+        "organizationId": "org_76e31b4de2b7f46c2e58aecce6ba2701",
+        "adminPrincipalId": "prn_65816ce23cdb25990bc39e0915792459",
         "created": true
       },
       {
         "role": "inspector",
         "name": "Dockside Demo Inspection",
-        "organizationId": "org_aabd016e599352b594955a46e54bd90e",
-        "adminPrincipalId": "prn_96ff274b9378cb03921e35392aa08ccf",
+        "organizationId": "org_7bcbe5f17ae29e8152a221f365bcd442",
+        "adminPrincipalId": "prn_0406fb53491f014e17e1d77384cdbfb4",
         "created": true
       }
     ],
@@ -637,16 +637,16 @@
       {
         "serviceId": "manifest-attestor",
         "capability": "MANIFEST_ATTEST",
-        "enrollmentId": "svc_9fe6883b45a08872a1ad409fc1024f68",
-        "publicKey": "ed25519:4zbw8SsS6KnEP3PNkfT3NnzCveSUKUjYgeyP8VV5s7Ye",
+        "enrollmentId": "svc_d0793d962957c3c75eaeaacbdb13fe56",
+        "publicKey": "ed25519:GyQ1vhD8gbvddcsttYLNfJ7KL2fzcjU1v37zaZPuP3Q1",
         "status": "ACTIVE",
         "created": true
       },
       {
         "serviceId": "deterministic-policy",
         "capability": "DETERMINISTIC_POLICY_SET",
-        "enrollmentId": "svc_59a3fa59c0a5035848663c6cbb2cc3ca",
-        "publicKey": "ed25519:aAwCDvvro8Ecq13SuhDD25FxbqjNvXT5HDNKzAp2Jen",
+        "enrollmentId": "svc_6bd4e15f8ad3955c57262e4ba51b54ad",
+        "publicKey": "ed25519:88nFRKSoD7jZPHcx7okjijpfAVcLNUFjTz3Wc78EqYbB",
         "status": "ACTIVE",
         "created": true
       }
@@ -655,33 +655,33 @@
       {
         "role": "buyer",
         "capability": "BUYER_APPROVER",
-        "invitationId": "inv_6b9dc5b20528557cba4493167b70c2ec",
-        "expiresAt": 1794822616475,
+        "invitationId": "inv_a7075929672fdb7015859cf23f9476de",
+        "expiresAt": 1794822953215,
         "granted": false
       },
       {
         "role": "buyer",
         "capability": "RISK_RESOLVER",
-        "invitationId": "inv_b0080d4c3efb57ab69c6a85aa580aa3b",
-        "expiresAt": 1794822616483,
+        "invitationId": "inv_96e2fcc36e7d6d6c3bc8cb6d7b5f3665",
+        "expiresAt": 1794822953224,
         "granted": false
       },
       {
         "role": "supplier",
         "capability": "SUPPLIER_SIGNER",
-        "invitationId": "inv_b6e7d81adbf6a90ae88a7b7983831780",
-        "expiresAt": 1794822616489,
+        "invitationId": "inv_76a137cbc1aad536a36debc2544c4edd",
+        "expiresAt": 1794822953232,
         "granted": false
       },
       {
         "role": "inspector",
         "capability": "INSPECTOR",
-        "invitationId": "inv_0c76d420f6afe6b0c98ac5b858c7650e",
-        "expiresAt": 1794822616496,
+        "invitationId": "inv_e56195be4093959ef25222aab0a711b4",
+        "expiresAt": 1794822953241,
         "granted": false
       }
     ]
   },
-  "durationSeconds": 113,
+  "durationSeconds": 87,
   "passed": true
 }
