@@ -1,0 +1,28 @@
+What was copied from the owner's three run directories (.data/testnet-run/, git-ignored) and what was not.
+
+Copied unchanged (no secret, no local path): artifact.json, preflight.json, deployment.json, relayer.json,
+journey.json, journey-checks.json, journey-state.json (the resume checkpoint: every completed step, its mirror replay
+and the read-only observations, such as the get_holds/get_release view taken while the hold was active) and
+run-record.json.
+
+Copied with local paths redacted: run-params.json. Its wasm and manifest paths are written as <repo>/... and the relayer
+key file path as <home>/...; the file name of the key file is the public key, which is on chain anyway. No other field
+was changed.
+
+Not copied:
+  - the journey key-seed file (each run): the random seed every Dockside principal key of that trade derives from. Whoever holds
+    it can sign for every role of the trade. It stays private in the owner's run directory.
+  - the relayer key file: never in a run directory; run-all reads only its public_key.
+  - args/ (each run): the per-call argument files; every call they describe is in journey.json and on chain.
+  - relayer-key.txt, deploy.txt: not produced by these runs (all three reused the M34 deployment and relayer key,
+    deployTx null), so no raw near-cli-rs output exists to summarise.
+
+run-hold-testnet-20261113T040345Z     hold journey, PASS, run-all at commit cd315af (M41/M42 merge), RPC
+                                      https://rpc.testnet.near.org (before the switch)
+aborted-refund-testnet-20261113T040953Z refund journey attempt, stopped before its first call; NO transaction sent
+                                      (see docs/status/M44.md, "Aborted attempt")
+run-refund-testnet-20261113T041648Z   refund journey, PASS, run-all at commit 73e573f (M43 merge), RPC
+                                      https://test.rpc.fastnear.com (passed with --rpc-url)
+
+onchain-reverify.json: read-only re-verification of all eighteen journey transactions and of the three trades on
+gnanam1990-dock-escrow2.testnet through https://test.rpc.fastnear.com at finality final (sentTransactions 0).

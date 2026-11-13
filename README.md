@@ -19,10 +19,12 @@ Built during NEAR HACKATHON (November 2026). License: [MIT](LICENSE). Architectu
   needs both parties' signatures and a delay. Refunds go only to the original funder, from the bucket its money came
   from. The product shows PAID, REFUNDED or FAILED only after it has read the chain receipts.
 - **What is in the repository.** A Rust escrow contract (near-sdk), a TypeScript API, journal worker and reconciler,
-  and a React web app, with 630 automated tests plus browser and contract suites.
+  and a React web app, with 665 automated tests plus browser and contract suites.
 - **What has run on NEAR testnet.** The security-hardened contract is deployed on `gnanam1990-dock-escrow2.testnet`.
-  One real trade ran there from funding to PAID: the buyer deposited 0.05 NEAR and the supplier received exactly
-  0.05 NEAR. The API, worker and web app have run only locally, against a simulated NEAR chain.
+  Three real trades ran there: one from funding to PAID (the supplier received exactly the 0.05 NEAR the buyer
+  deposited), one where a policy hold blocked the release until the risk resolver cleared it and then PAID, and one
+  where a mutual cancellation and an excess-funding return sent all 0.06 NEAR back to the buyer. One operator signed
+  for every role in these runs. The API, worker and web app have run only locally, against a simulated NEAR chain.
   Claim level: `IMPLEMENTED_UNVERIFIED` (see [Honest status](#honest-status)).
 
 Demo video: <added after recording>
@@ -56,13 +58,13 @@ Read the trade's ledger straight from the contract (read-only, no account needed
 `{"trade_id":"trd_197c633d724eeb2cddc64d6dabf55976"}`:
 
 ```sh
-curl -s https://rpc.testnet.near.org -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function","finality":"final","account_id":"gnanam1990-dock-escrow2.testnet","method_name":"get_ledger","args_base64":"eyJ0cmFkZV9pZCI6InRyZF8xOTdjNjMzZDcyNGVlYjJjZGRjNjRkNmRhYmY1NTk3NiJ9"}}' \
+curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function","finality":"final","account_id":"gnanam1990-dock-escrow2.testnet","method_name":"get_ledger","args_base64":"eyJ0cmFkZV9pZCI6InRyZF8xOTdjNjMzZDcyNGVlYjJjZGRjNjRkNmRhYmY1NTk3NiJ9"}}' \
   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(Buffer.from(JSON.parse(s).result.result).toString()))'
 ```
 
 ```powershell
 $body = '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function","finality":"final","account_id":"gnanam1990-dock-escrow2.testnet","method_name":"get_ledger","args_base64":"eyJ0cmFkZV9pZCI6InRyZF8xOTdjNjMzZDcyNGVlYjJjZGRjNjRkNmRhYmY1NTk3NiJ9"}}'
-$r = Invoke-RestMethod -Method Post -Uri https://rpc.testnet.near.org -ContentType 'application/json' -Body $body
+$r = Invoke-RestMethod -Method Post -Uri https://test.rpc.fastnear.com -ContentType 'application/json' -Body $body
 [Text.Encoding]::UTF8.GetString([byte[]]$r.result.result)
 ```
 
@@ -70,6 +72,40 @@ You should see `"funded":"50000000000000000000000"` and `"released":"50000000000
 yoctoNEAR) from the one funder `gnanam1990-dock-buyer.testnet`, every other bucket `"0"`, and `"conservation":true`.
 The full run record, the on-chain code hash check and every transaction hash are in
 [docs/status/M34.md](docs/status/M34.md) and [docs/evidence/M34/](docs/evidence/M34/).
+
+### Hold journey: release blocked by a policy hold, resolved, then PAID
+
+Trade `trd_75c1de55a8c9f1aa532ec37eb611f46f` on the same escrow. After the inspection PASS, the deterministic-policy
+service sets a `DOC_MISMATCH` hold; while it is active the contract reports the release as blocked (`HOLD_ACTIVE`).
+Only the separate risk/policy resolver clears it, and then the release pays out.
+
+| Call | Signer | Transaction |
+|---|---|---|
+| `fund` 0.05 NEAR | buyer (its own key) | [7oT9cjuV…VtNW](https://testnet.nearblocks.io/txns/7oT9cjuVZbKW7c7zzGxPAHF9NyKL7ezVz7GJmhguVtNW) |
+| `set_hold` (`DOC_MISMATCH`, deterministic policy `doc-mismatch@1`) | relayer | [6uGfXf4K…ux3Y](https://testnet.nearblocks.io/txns/6uGfXf4KkBcBoYQ2RrVKZB1kpUyd8GfFmrMVhGCrux3Y) |
+| `resolve_hold` (`RELEASE_HOLD`, risk/policy resolver) | relayer | [4mLX4EEb…bDHC](https://testnet.nearblocks.io/txns/4mLX4EEbcEm1sbhb7NPh8a7TJrrnu4tpo1MqxaeSbDHC) |
+| `approve_release` | relayer | [CvMBWdNB…9U42](https://testnet.nearblocks.io/txns/CvMBWdNBj6BzP82B6NkoGS2hgsvjhyq2AYJrGScd9U42) |
+| **`execute_release`**: exactly 0.05 NEAR to the supplier | relayer | [2uSgWxtF…vGGf](https://testnet.nearblocks.io/txns/2uSgWxtFqF5N9GRj5d7BR44B3xZnfy5ESjFh6KAKvGGf) |
+
+### Refund journey: mutual cancel and excess return to the original funder
+
+Trade `trd_a54930d5d5af718e0fc8a8c9d43b9a2d`. The buyer deposits 0.06 NEAR for a 0.05 NEAR trade; the contract
+quarantines the 0.01 excess. Buyer and supplier both sign a `MUTUAL_CANCEL`, the buyer's own account asks for the
+`EXCESS_FUNDING_RETURN`, and after the one-hour cooling period on chain time both refunds go to the buyer from the
+bucket the money came from. The supplier receives nothing.
+
+| Call | Signer | Transaction |
+|---|---|---|
+| `fund` 0.06 NEAR (0.05 accepted, 0.01 quarantined) | buyer (its own key) | [Ek1ChXhU…oUZG](https://testnet.nearblocks.io/txns/Ek1ChXhUX3nV7em6juGk98PtCAeJ9yusehPWYbWtoUZG) |
+| `request_refund` `MUTUAL_CANCEL` (buyer and supplier signatures) | relayer | [8MCwD4eX…oTDa](https://testnet.nearblocks.io/txns/8MCwD4eXbvysFYeQ97kjzwm3wft6s1UxfKNdU4boTDa) |
+| `request_refund` `EXCESS_FUNDING_RETURN` | buyer (its own account) | [29pPocuL…QcUQ](https://testnet.nearblocks.io/txns/29pPocuLoJotuvPZG8BsAwhf4RtKuD5yiRvESKK2QcUQ) |
+| **`execute_refund`** `MUTUAL_CANCEL`: exactly 0.05 NEAR to the buyer | relayer | [HWYQAKSP…QSVG](https://testnet.nearblocks.io/txns/HWYQAKSP4rdwAunFhzmh2kgnZQnSmtmQJtn9vJ8yQSVG) |
+| **`execute_refund`** `EXCESS_FUNDING_RETURN`: exactly 0.01 NEAR to the buyer | relayer | [H27cwCWs…by9T](https://testnet.nearblocks.io/txns/H27cwCWsjYyZFYhCcXevtGQVxNRvW4gKjsNkdGsPby9T) |
+
+Both journeys' records, every transaction hash and a read-only re-check of all of them (final, successful, exact
+transfers, ledgers conserve) are in [docs/status/M44.md](docs/status/M44.md) and
+[docs/evidence/M44/](docs/evidence/M44/). To read either ledger with the commands above, replace `args_base64` with
+the base64 of `{"trade_id":"<trade id>"}`.
 
 ## Try it (about 10 minutes)
 
@@ -95,7 +131,7 @@ reproduction (`pnpm run contract:reproduce`, [docs/status/M18.md](docs/status/M1
    pnpm test
    ```
 
-   You see `Test Files  64 passed | 1 skipped (65)` and `Tests  630 passed | 3 skipped (633)`. These tests use real
+   You see `Test Files  68 passed | 2 skipped (70)` and `Tests  665 passed | 8 skipped (673)`. These tests use real
    SQLite files, real Ed25519 keys, isolated signer processes and the compiled contract wasm on a simulated NEAR host.
    Repeated `ExperimentalWarning: SQLite is an experimental feature` lines are expected and harmless: Node 22
    flags its built-in `node:sqlite` module as experimental, and many test processes load it.
@@ -164,9 +200,12 @@ scripts/testnet-deploy/run-all --network testnet
 The script deploys and initialises the contract in one transaction and checks the on-chain code hash against the
 build manifest. It then adds a relayer function-call key restricted to the escrow and runs one trade from `fund` to
 `execute_release`. It prints `run-all: PASS`, writes `run-record.json`, and the supplier's balance rises by exactly
-the trade amount. `--network` has no default and mainnet is refused. Details:
+the trade amount. `--journey hold` and `--journey refund` run the two other journeys above. The default RPC is
+`https://test.rpc.fastnear.com` (NEAR deprecated `https://rpc.testnet.near.org`); `--rpc-url` overrides it, also on a
+`--resume`. `--network` has no default and mainnet is refused. Details:
 [scripts/testnet-deploy/README.md](scripts/testnet-deploy/README.md). The repository owner ran this on testnet
-(M24, then M34 for the hardened contract). It was not re-run for this README.
+(M24, then M34 for the hardened contract, then the hold and refund journeys in M44). It was not re-run for this
+README.
 
 ## NEAR integration
 
@@ -205,9 +244,10 @@ transactions, and mainnet (refused at startup and by the contract's `new`).
 | Whole product (contract, API, worker, web app) on a simulated NEAR chain | runs and is tested locally (steps 2–4 above) |
 | Contract on a local nearcore node (near-sandbox) | real transactions: deploy, funding, release, refunds, destination change, a runtime-refunded transfer, NEP-141 recovery (M16) |
 | Contract on NEAR testnet | **deployed** (`gnanam1990-dock-escrow2.testnet`, commit `4ff233b`); **one trade funded and released to PAID** with real transactions (M34) |
-| Holds, cancel/abandon, destination change, refunds, recovery on testnet | not run |
+| Holds and refunds on testnet | **run, one operator** (M44): a deterministic-policy hold SET, release blocked by `HOLD_ACTIVE`, RESOLVED by the risk/policy resolver, then PAID; `MUTUAL_CANCEL` and `EXCESS_FUNDING_RETURN` REFUNDED exactly to the original funder. Partial for the gate: the rejection paths, hold expiry, the other refund reasons, recovery and unexpected assets were not run on testnet |
+| Cancel/abandon, destination change on testnet | not run |
 | API, worker and web app against testnet | not run; the worker needs a relayer signer with real key custody and exits with code 78 until one is provided |
-| Separate people on separate devices for the four roles | not run; the testnet trade was signed by one operator's run-all journey |
+| Separate people on separate devices for the four roles | not run; every testnet trade was signed by one operator's run-all journey |
 | Manual accessibility review | not run (automated axe checks pass) |
 | CI on GitHub | **runs and is green on `main`**: [run 43353700412](https://github.com/gnanam1990/dockside-near/actions/runs/43353700412) at commit `cf52cc5`, all three jobs passed (`ubuntu-24.04`, `windows-2022`, Linux container reproduction with the near-sandbox suites) |
 | 1Click (optional), funded mainnet payouts | `NOT_RUN`, `BLOCKED` |
@@ -266,6 +306,8 @@ are refused at startup and by the contract. Reviewer kit for an independent revi
 All pinned in `pnpm-lock.yaml` and `contract/Cargo.lock`: near-sdk, React, Vite, Vitest, Playwright with axe-core,
 Biome, fast-check and lucide-react, plus Node's built-in `node:sqlite`. near-cli-rs, near-sandbox and near-workspaces
 are used for deployment and tests.
+
+Development was AI-assisted (coding agents); all code was tested and reviewed in this repository.
 
 ## License
 

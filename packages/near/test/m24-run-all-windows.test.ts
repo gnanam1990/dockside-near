@@ -366,9 +366,9 @@ describe("fallback RPC URLs for read-only calls", () => {
       "https://b.example",
     ]);
     expect(tools.parseFallbackRpcUrls(undefined)).toEqual([]);
-    const p = tools.networkProfile("testnet", undefined, ["https://test.rpc.fastnear.com"]);
-    expect(p.rpcUrl).toBe("https://rpc.testnet.near.org");
-    expect(p.rpcUrls).toEqual(["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"]);
+    const p = tools.networkProfile("testnet", undefined, ["https://rpc.testnet.example"]);
+    expect(p.rpcUrl).toBe("https://test.rpc.fastnear.com");
+    expect(p.rpcUrls).toEqual(["https://test.rpc.fastnear.com", "https://rpc.testnet.example"]);
     expect(() => tools.networkProfile("testnet", undefined, ["http://plain.example"])).toThrow(/https/);
     expect(() => tools.networkProfile("testnet", undefined, ["https://rpc.mainnet.near.org"])).toThrow(
       /mainnet/,

@@ -1,0 +1,31 @@
+{
+  "refundsRefunded": true,
+  "reasons": [
+    "EXCESS_FUNDING_RETURN",
+    "MUTUAL_CANCEL"
+  ],
+  "buyerReceived": [
+    {
+      "refundIntentId": "rfd_f5bf5e9fbb1cd1cf25bfd098e311a964",
+      "reason": "MUTUAL_CANCEL",
+      "amount": "50000000000000000000000",
+      "deltaYocto": "50000000000000000000000",
+      "exact": true
+    },
+    {
+      "refundIntentId": "rfd_0ea340f9e86a84399e27ea6ea0046583",
+      "reason": "EXCESS_FUNDING_RETURN",
+      "amount": "10000000000000000000000",
+      "deltaYocto": "10000000000000000000000",
+      "exact": true
+    }
+  ],
+  "buyerReceivedExactAmounts": true,
+  "buyerFundedYocto": "60000000000000000000000",
+  "buyerRefundedYocto": "60000000000000000000000",
+  "buyerRefundedEverything": true,
+  "buyerNothingLeft": true,
+  "releasedTotal": "0",
+  "supplierUnchanged": true,
+  "ledgerConservation": true
+}

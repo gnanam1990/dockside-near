@@ -107,7 +107,9 @@ $env:DOCKSIDE_ESCROW_ACCOUNT = "<escrow>.testnet"   # and the other three
 .\scripts\testnet-deploy\run-all.ps1 --network testnet
 ```
 
-Options: `--rpc-url` (default `https://rpc.testnet.near.org`; must be https and not a mainnet host),
+Options: `--rpc-url` (default `https://test.rpc.fastnear.com` since M44: NEAR deprecated
+`https://rpc.testnet.near.org`, which now answers HTTP 429; any explicit https, non-mainnet URL is
+still accepted),
 `--fallback-rpc-urls <a,b>` (or `DOCKSIDE_FALLBACK_RPC_URLS`: further RPC URLs, checked by the same
 rules, that the read-only checks use when the primary fails at transport level),
 `--wasm`, `--manifest`, `--amount-yocto` (default 50000000000000000000000, 0.05 NEAR), `--out`
@@ -136,7 +138,8 @@ fresh nonce and block hash), at most 3 attempts. Nothing else is retried: not a 
 id, a timeout or an unavailable RPC (the transaction may still be included; check it on chain before
 running again), and not a contract refusal. Failure messages carry near-cli-rs's own error lines, and
 the record files (`deploy.txt`, `relayer-key.txt`) hold every attempt. near-cli-rs submits through
-its own `testnet` connection (`near config edit-connection testnet` changes its RPC);
+its own `testnet` connection (`near config edit-connection testnet` changes its RPC; if that
+connection still names `rpc.testnet.near.org`, point it at `https://test.rpc.fastnear.com`);
 `--fallback-rpc-urls` covers only run-all's read-only checks.
 
 A journey that stops part way leaves its trade on chain, possibly funded. Since M42 run-all keeps
@@ -162,7 +165,10 @@ Before its first transaction a journey writes three files to its run directory:
 the wasm, the on-chain code hash and the relayer key again (read-only), replays the completed
 steps on the mirror, requires the chain's `get_ledger` and `get_refunds` to equal the replay, and
 continues with the next step. It takes no other settings (`--network`, `--journey`, `--out` and the
-like are refused) except `--no-wait`, `--stop-after`, `--fallback-rpc-urls` and `--pending-tx`.
+like are refused) except `--no-wait`, `--stop-after`, `--fallback-rpc-urls`, `--pending-tx` and
+`--rpc-url`. `--rpc-url` on a resumed run replaces only the recorded RPC endpoint (for example a run
+recorded with the deprecated `https://rpc.testnet.near.org`); it must pass the same rules for the
+run's recorded network, run-all prints both URLs, and `run-params.json` keeps the recorded one.
 A call whose transaction id was printed is settled from the chain (included: recorded; refused or
 never included: built and sent again). If the run stopped while near-cli-rs was still sending, so
 the id is unknown, run-all refuses with `PENDING_UNKNOWN`; look the transaction up for the named
