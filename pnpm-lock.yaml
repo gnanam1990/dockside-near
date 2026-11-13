@@ -201,6 +201,9 @@ importers:
       '@dockside/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@dockside/near':
+        specifier: workspace:*
+        version: link:../../packages/near
       '@dockside/worker':
         specifier: workspace:*
         version: link:../worker

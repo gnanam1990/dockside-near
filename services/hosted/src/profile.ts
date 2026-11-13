@@ -29,6 +29,12 @@ export interface HostedProfile {
   readonly relayerKeyFile: string | null;
   readonly apiEnv: Readonly<Record<string, string>>;
   readonly workerEnv: Readonly<Record<string, string>>;
+  /** The proof site (site/proof) served under /proof/, with the attack console at /proof/attack/. */
+  readonly proofRoot: string;
+  /** Loopback port of the attack relay (M53). */
+  readonly attackPort: number;
+  /** Environment of the attack relay process: its own settings only, never the API's or worker's. */
+  readonly attackEnv: Readonly<Record<string, string>>;
 }
 
 /** DOCKSIDE_* settings the launcher derives itself; setting one by hand is refused. */
@@ -96,11 +102,14 @@ export function resolveHostedProfile(
   const listen = { host: env["HOSTED_BIND"] || "0.0.0.0", port: port(env, "PORT", 8080) };
   const apiPort = port(env, "HOSTED_API_PORT", 8787);
   const relayPort = port(env, "HOSTED_RELAY_PORT", 8788);
+  const attackPort = port(env, "HOSTED_ATTACK_PORT", 8789);
   if (relayPort === apiPort) refuse("HOSTED_RELAY_PORT", "the relay and the API need different ports");
   if (apiPort === listen.port)
     refuse("HOSTED_API_PORT", "the API and the public listener need different ports");
   if (relayPort === listen.port)
     refuse("HOSTED_RELAY_PORT", "the relay and the public listener need different ports");
+  if (new Set([apiPort, relayPort, attackPort, listen.port]).size !== 4)
+    refuse("HOSTED_ATTACK_PORT", "the attack relay needs its own port");
 
   const origin = publicOrigin(env);
   const dataDir = env["HOSTED_DATA_DIR"] || "/data";
@@ -152,6 +161,27 @@ export function resolveHostedProfile(
   loadConfig(apiEnv);
   loadConfig(workerEnv);
 
+  const proofRoot = env["HOSTED_PROOF_ROOT"] || join(opts.appRoot, "site", "proof");
+  const allowed = env["HOSTED_ATTACK_ALLOWED_ORIGINS"] ?? "";
+  for (const o of allowed
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean))
+    if (!/^https:\/\/[a-z0-9.-]+(:[0-9]{1,5})?$/.test(o))
+      refuse("HOSTED_ATTACK_ALLOWED_ORIGINS", "list https origins separated by commas");
+  const attackEnv: Record<string, string> = {
+    ...(env["PATH"] === undefined ? {} : { PATH: env["PATH"] }),
+    ...(env["SystemRoot"] === undefined ? {} : { SystemRoot: env["SystemRoot"] }),
+    NODE_ENV: "production",
+    NODE_NO_WARNINGS: "1",
+    HOSTED_ATTACK_PORT: String(attackPort),
+    HOSTED_ATTACK_CONFIG: env["HOSTED_ATTACK_CONFIG"] || join(proofRoot, "attack", "attack-demo.json"),
+    HOSTED_ATTACK_LOG: join(dataDir, "attack-attempts.jsonl"),
+    HOSTED_ATTACK_ALLOWED_ORIGINS: allowed,
+    DOCKSIDE_NEAR_RPC_URL: String(env["DOCKSIDE_NEAR_RPC_URL"]),
+    ...(env["HOSTED_ATTACK_KEY_FILE"] ? { HOSTED_ATTACK_KEY_FILE: env["HOSTED_ATTACK_KEY_FILE"] } : {}),
+  };
+
   return Object.freeze({
     listen,
     origin,
@@ -163,5 +193,8 @@ export function resolveHostedProfile(
     relayerKeyFile,
     apiEnv: Object.freeze(apiEnv),
     workerEnv: Object.freeze(workerEnv),
+    proofRoot,
+    attackPort,
+    attackEnv: Object.freeze(attackEnv),
   });
 }

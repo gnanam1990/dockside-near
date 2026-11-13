@@ -108,8 +108,8 @@ const EXPECTED = [
 ];
 
 describe("refusal journey plan", () => {
-  it("is a journey run-all knows, next to paid, hold and refund", () => {
-    expect(j.JOURNEYS).toEqual(["paid", "hold", "refund", "refusal"]);
+  it("is a journey run-all knows, next to paid, hold and refund (and M53's attack demo)", () => {
+    expect(j.JOURNEYS).toEqual(["paid", "hold", "refund", "refusal", "attack-demo"]);
   });
 
   it("names six refusals, each with the code the contract must answer", () => {
@@ -222,8 +222,8 @@ function tool(args: string[]) {
 describe("run-all wiring", () => {
   const script = readFileSync(RUN_ALL, "utf8");
   it("accepts --journey refusal and documents it", () => {
-    expect(script).toMatch(/paid\|hold\|refund\|refusal\) ;;/);
-    expect(script).toMatch(/--journey <paid\|hold\|refund\|refusal>/);
+    expect(script).toMatch(/paid\|hold\|refund\|refusal(\|attack-demo)?\) ;;/);
+    expect(script).toMatch(/--journey <paid\|hold\|refund\|refusal(\|attack-demo)?>/);
     expect(script).toMatch(/refusal\s+six calls the contract must reject/);
   });
   it("records which transactions were refused and with which code", () => {

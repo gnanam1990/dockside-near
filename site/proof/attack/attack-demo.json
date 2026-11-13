@@ -1,0 +1,23 @@
+{
+  "schema": "dockside/attack-demo@1",
+  "network": "testnet",
+  "status": "NOT_SET_UP",
+  "rpc": [
+    "https://test.rpc.fastnear.com",
+    "https://archival-rpc.testnet.fastnear.com"
+  ],
+  "explorer": "https://testnet.nearblocks.io/txns/",
+  "relay": null,
+  "escrow": null,
+  "tradeId": null,
+  "releaseIntentId": null,
+  "holdId": null,
+  "amountYocto": null,
+  "parties": null,
+  "attacker": null,
+  "baselineNonce": null,
+  "setup": [],
+  "terms": null,
+  "approval": null,
+  "recorded": []
+}

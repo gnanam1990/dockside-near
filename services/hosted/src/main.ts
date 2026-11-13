@@ -11,7 +11,9 @@ import { type HostedProfile, resolveHostedProfile } from "./profile.js";
  * Hosted launcher (M55, ADR-0027): the single process a container host runs. It starts the real
  * control API (`services/api/dist/main.js`) and the real worker (`services/worker/dist/main.js`)
  * with the M43 testnet runtime profile, both on loopback, and then opens the one public listener
- * that serves the web build and forwards `/v1`, `/healthz`, `/readyz` and `/relay`.
+ * that serves the web build and forwards `/v1`, `/healthz`, `/readyz` and `/relay`. The proof site
+ * and the attack console (M53) are served under `/proof/`, and the console's own relay process
+ * (`attack/main.js`, the demo account's function-call key only) runs beside them on loopback.
  *
  * Fail-closed, like the processes it starts: a refused configuration, a failed chain preflight, a
  * missing or unsuitable relayer key, or a child that exits at any time ends the whole container
@@ -30,6 +32,7 @@ const SCRIPTS = {
   worker: join(APP_ROOT, "services/worker/dist/main.js"),
   serviceKey: join(APP_ROOT, "services/api/dist/cli/service-key.js"),
   exportKey: join(APP_ROOT, "services/api/dist/cli/export-key.js"),
+  attack: join(APP_ROOT, "services/hosted/dist/attack/main.js"),
 };
 
 const log = (line: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(line)}\n`);
@@ -188,11 +191,20 @@ async function main(): Promise<void> {
     const worker = start("worker", SCRIPTS.worker, profile.workerEnv, "worker.started", 180_000, onExit);
     children.push(worker);
     await worker.ready;
+    // The attack console's relay (M53). It never refuses to start: without a live demo or a demo
+    // key it answers RELAY_OFF and the page replays recorded attempts.
+    const withProof = existsSync(join(profile.proofRoot, "attack", "index.html"));
+    if (withProof) {
+      const attack = start("attack", SCRIPTS.attack, profile.attackEnv, "attack.listening", 90_000, onExit);
+      children.push(attack);
+      await attack.ready;
+    }
     const server = createFront({
       webRoot: profile.webRoot,
       origin: profile.origin,
       apiPort: profile.apiPort,
       relayPort: profile.relayPort,
+      ...(withProof ? { proof: { root: profile.proofRoot, attackPort: profile.attackPort } } : {}),
     });
     front = server;
     await new Promise<void>((ok, fail) => {
