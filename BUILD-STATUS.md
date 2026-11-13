@@ -83,6 +83,7 @@ supports `DRY_COMPATIBLE`). Separate funded-mainnet gate: **BLOCKED**.
 | M24 first NEAR testnet run, run-all Windows fixes | escrow deployed on testnet and one trade to PAID (owner's run); run-all fixes unit-tested and validated on near-sandbox; that escrow now superseded (M34) | [docs/status/M24.md](docs/status/M24.md) |
 | M34 hardened contract on testnet | security-hardened contract (`4ff233b`) deployed on `gnanam1990-dock-escrow2.testnet` and one trade to PAID (owner's run); re-verified read-only on chain | [docs/status/M34.md](docs/status/M34.md) |
 | M44 hold and refund journeys on testnet, RPC switch | hold journey to PAID and refund journey to REFUNDED on escrow2 (owner's runs, one operator); an aborted attempt sent no transaction; re-verified read-only through `https://test.rpc.fastnear.com`, now the default testnet RPC (`rpc.testnet.near.org` is deprecated); `run-all --resume` takes an `--rpc-url` override | [docs/status/M44.md](docs/status/M44.md) |
+| M55 hosted runtime (one container: API, worker, web) | image, launcher, front, demo seed and host configurations implemented; verified in a local container against a local nearcore sandbox (`pnpm run hosted:verify`, 31 checks) and by a read-only preflight against testnet; **not deployed to a host** (owner's step) | [docs/status/M55.md](docs/status/M55.md), ADR-0027 |
 
 ## Test IDs
 

@@ -1,0 +1,687 @@
+{
+  "checks": [
+    {
+      "name": "the image builds from the Dockerfile",
+      "ok": true
+    },
+    {
+      "name": "the image contains no key file, no seed, no .env, no sources and no development tools",
+      "ok": true,
+      "detail": [
+        "==FILES",
+        "==KEYS",
+        "==DATA",
+        "==TOOLS",
+        "==END"
+      ]
+    },
+    {
+      "name": "without a relayer key from the host the container exits 78 (RELAYER_SIGNER_NOT_PROVISIONED)",
+      "ok": true,
+      "detail": {
+        "exit": 78
+      }
+    },
+    {
+      "name": "with a full-access relayer key the container exits 78 (FULL_ACCESS_KEY)",
+      "ok": true,
+      "detail": {
+        "exit": 78,
+        "refusal": {
+          "event": "worker.refused",
+          "code": "CONFIG_INVALID",
+          "reason": "FULL_ACCESS_KEY",
+          "message": "the relayer key is a full-access key; use a function-call key for the escrow"
+        }
+      }
+    },
+    {
+      "name": "the container starts and becomes ready",
+      "ok": true
+    },
+    {
+      "name": "the API passed the chain preflight against the sandbox escrow (code hash equals the manifest)",
+      "ok": true,
+      "detail": {
+        "chainId": "test-chain-9fOoJ",
+        "escrow": "escrow.dockside-root.testnet",
+        "codeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N"
+      }
+    },
+    {
+      "name": "the worker passed the custody checks: nearcore confirms the function-call key restricted to the escrow",
+      "ok": true,
+      "detail": {
+        "event": "worker.started",
+        "network": "near-testnet",
+        "chainId": "test-chain-9fOoJ",
+        "escrow": "escrow.dockside-root.testnet",
+        "codeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
+        "relayer": "relayer.dockside-root.testnet",
+        "relayerPublicKey": "ed25519:2rRt28RUQjMGdkisUSc2ZNxuKR9CLHJzfuqXYwpRwoUk",
+        "relayPort": 9034,
+        "services": {
+          "manifestAttestor": true,
+          "deterministicPolicy": true
+        }
+      }
+    },
+    {
+      "name": "first start created the three service keys on the volume",
+      "ok": true,
+      "detail": [
+        "audit-export",
+        "manifest-attestor",
+        "deterministic-policy"
+      ]
+    },
+    {
+      "name": "GET /healthz answers 200 {status: ok}",
+      "ok": true
+    },
+    {
+      "name": "GET /readyz reports the migrated database, near-testnet rules and funded payouts BLOCKED",
+      "ok": true,
+      "detail": {
+        "ready": true,
+        "schemaVersion": 10,
+        "network": "near-testnet",
+        "fundedPayouts": "BLOCKED"
+      }
+    },
+    {
+      "name": "GET / serves the web app with the strict content security policy",
+      "ok": true
+    },
+    {
+      "name": "every script and stylesheet the page names is served",
+      "ok": true,
+      "detail": [
+        "/assets/index-D2FtvFIz.js",
+        "/assets/index-BAW0Nv__.css"
+      ]
+    },
+    {
+      "name": "an application route (/sign-in) gets the app shell",
+      "ok": true
+    },
+    {
+      "name": "GET /relay/v1/status reaches the worker's relay (relayer and escrow of this deployment)",
+      "ok": true,
+      "detail": {
+        "relayer": "relayer.dockside-root.testnet",
+        "contractId": "escrow.dockside-root.testnet",
+        "network": "near-testnet",
+        "chain": "NEAR_TEST-CHAIN-9FOOJ",
+        "note": "function-call key ed25519:2rRt28RUQjMGdkisUSc2ZNxuKR9CLHJzfuqXYwpRwoUk restricted to escrow.dockside-root.testnet; the contract re-verifies every signature in the call."
+      }
+    },
+    {
+      "name": "the relay refuses to send the buyer deposit (fund): the answer through the front is its 403",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "error": "FORBIDDEN: this method is not relayed: the party's own wallet sends it (for example fund)"
+      }
+    },
+    {
+      "name": "an unauthenticated API call is refused by the API (401)",
+      "ok": true
+    },
+    {
+      "name": "every Node.js process of the product runs as the unprivileged user (uid 10001)",
+      "ok": true,
+      "detail": [
+        "287645 10001 node /app/services/hosted/dist/main.js",
+        "287925 10001 /usr/local/bin/node /app/services/api/dist/main.js",
+        "288851 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=AUDIT_EXPORT_KEY_ENROLLMENT,AUDIT_EXPORT --seed-file=/data/keys/audit-export.seed",
+        "289055 10001 /usr/local/bin/node /app/services/worker/dist/main.js",
+        "289071 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=SERVICE_POP_CHALLENGE,MANIFEST_ATTESTATION --seed-file=/data/keys/manifest-attestor.seed",
+        "289086 10001 /usr/local/bin/node /app/packages/authority/signer/isolated-signer.mjs --allow=SERVICE_POP_CHALLENGE,HOLD_SET --seed-file=/data/keys/deterministic-policy.seed"
+      ]
+    },
+    {
+      "name": "the relayer key is an owner-only private copy outside the volume; service seeds are on the volume",
+      "ok": true,
+      "detail": [
+        "600 dockside",
+        "700 dockside",
+        "audit-export.seed",
+        "deterministic-policy.seed",
+        "manifest-attestor.seed",
+        "drwx------",
+        "0"
+      ]
+    },
+    {
+      "name": "no log line contains the relayer key",
+      "ok": true
+    },
+    {
+      "name": "seed-demo enroll: three organisations, the evidence policy, two active services, four invitations",
+      "ok": true
+    },
+    {
+      "name": "seed-demo enroll again creates nothing and shows no secret",
+      "ok": true
+    },
+    {
+      "name": "a person outside the container accepts an invitation with their own key through the public port",
+      "ok": true,
+      "detail": {
+        "status": 201
+      }
+    },
+    {
+      "name": "seed-demo grant gives that person the invited role and reports the others as pending",
+      "ok": true,
+      "detail": [
+        {
+          "role": "buyer",
+          "capability": "BUYER_APPROVER",
+          "invitationId": "inv_6b9dc5b20528557cba4493167b70c2ec",
+          "state": "GRANTED",
+          "principalId": "prn_5345e3575065a19f0aab097d534893c7"
+        },
+        {
+          "role": "buyer",
+          "capability": "RISK_RESOLVER",
+          "invitationId": "inv_b0080d4c3efb57ab69c6a85aa580aa3b",
+          "state": "PENDING"
+        },
+        {
+          "role": "supplier",
+          "capability": "SUPPLIER_SIGNER",
+          "invitationId": "inv_b6e7d81adbf6a90ae88a7b7983831780",
+          "state": "PENDING"
+        },
+        {
+          "role": "inspector",
+          "capability": "INSPECTOR",
+          "invitationId": "inv_0c76d420f6afe6b0c98ac5b858c7650e",
+          "state": "PENDING"
+        }
+      ]
+    },
+    {
+      "name": "that person's own session now carries BUYER_APPROVER (proof-signed request through the front)",
+      "ok": true,
+      "detail": [
+        "BUYER_APPROVER"
+      ]
+    },
+    {
+      "name": "docker stop ends the container cleanly (exit 0)",
+      "ok": true,
+      "detail": {
+        "exit": "0"
+      }
+    },
+    {
+      "name": "the container restarts on the same volume with the key supplied as a secret variable",
+      "ok": true
+    },
+    {
+      "name": "the restart reuses the service keys and the database (no key created, same audit-export key, no migration)",
+      "ok": true,
+      "detail": {
+        "auditExportKeySame": true,
+        "migrationsApplied": []
+      }
+    },
+    {
+      "name": "no running process of the container has the secret variable in its environment",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no log line contains the relayer key after the restart",
+      "ok": true
+    },
+    {
+      "name": "after the restart the organisations, the granted person and the services are still there",
+      "ok": true
+    },
+    {
+      "name": "the person's session from before the restart still authenticates",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    }
+  ],
+  "image": {
+    "id": "sha256:a45d6541fc938983d4ce88289f010948184cb51f499fa237cd8bc7692371e18d",
+    "sizeBytes": 82567152
+  },
+  "chain": {
+    "kind": "local nearcore sandbox (not testnet, not mainnet)",
+    "chainId": "test-chain-9fOoJ",
+    "accounts": {
+      "escrow": "escrow.dockside-root.testnet",
+      "relayer": "relayer.dockside-root.testnet",
+      "buyer": "buyer.dockside-root.testnet",
+      "supplier": "supplier.dockside-root.testnet"
+    },
+    "escrowCodeHash": "7GEti5E6NWcjq8kHj5Gweed5HwggY1cxPD7cfbB65h8N",
+    "setupTransactions": {
+      "create:escrow": "EziFEnVA8TfuHw7f3VzQ8q5vAEgsKHr3pKRqxfxvqY7s",
+      "create:relayer": "AZ5bLT3qBW6UE5GrjraD8E8JJmvNbcNszLbzxmfjF4u2",
+      "create:buyer": "6aJtiPdFmXYnSSxxP9pyp4WRfQBjGdbLVigq9ZvWTLwv",
+      "create:supplier": "47uVTxoai4v9wziAdR75jQbihGLgHuy419dgcAZMtdR2",
+      "deploy+new": "BVVnSsue8GbsVXHvE9jf96QuPt5NvpbNDf9k1qmyQ5ss",
+      "add_key relayer": "61Ler4rq2ioggH6vgRaumGN9nFH987xd7bKaje238Rn4"
+    },
+    "relayerFunctionCallPublicKey": "ed25519:2rRt28RUQjMGdkisUSc2ZNxuKR9CLHJzfuqXYwpRwoUk"
+  },
+  "seed": {
+    "organizations": [
+      {
+        "role": "buyer",
+        "name": "Dockside Demo Buyer",
+        "organizationId": "org_d22179035e2e5087a448be817edee810",
+        "adminPrincipalId": "prn_fbecf51f950ef0e0395d493ba4b098d0",
+        "created": true
+      },
+      {
+        "role": "supplier",
+        "name": "Dockside Demo Supplier",
+        "organizationId": "org_2bbc4ed048890a73ac67ef23c68e5964",
+        "adminPrincipalId": "prn_d05bacbe5cecb9523a2e9ac63ad455ce",
+        "created": true
+      },
+      {
+        "role": "inspector",
+        "name": "Dockside Demo Inspection",
+        "organizationId": "org_aabd016e599352b594955a46e54bd90e",
+        "adminPrincipalId": "prn_96ff274b9378cb03921e35392aa08ccf",
+        "created": true
+      }
+    ],
+    "policy": {
+      "policyId": "commercial-docs",
+      "revision": 1,
+      "digest": "ea435ce3e8c70c6fae8414397192fafc48ea1bac236fb7993699253a0495cc1d",
+      "relayTyped": {
+        "struct": {
+          "schema": {
+            "str": "dockside/evidence-policy@1"
+          },
+          "policyId": {
+            "str": "commercial-docs"
+          },
+          "revision": {
+            "u64": "1"
+          },
+          "attestationLifetimeMs": {
+            "u64": "86400000"
+          },
+          "slots": {
+            "list": [
+              {
+                "struct": {
+                  "schema": {
+                    "str": "dockside/evidence-slot-policy@1"
+                  },
+                  "slotId": {
+                    "str": "commercial-invoice"
+                  },
+                  "purpose": {
+                    "str": "commercial-invoice for the milestone"
+                  },
+                  "minItems": {
+                    "u64": "1"
+                  },
+                  "maxItems": {
+                    "u64": "1"
+                  },
+                  "allowedMime": {
+                    "list": [
+                      {
+                        "str": "application/pdf"
+                      },
+                      {
+                        "str": "text/plain"
+                      }
+                    ]
+                  },
+                  "contentClass": {
+                    "str": "DOCUMENT"
+                  },
+                  "maxItemBytes": {
+                    "u64": "65536"
+                  },
+                  "maxAggregateBytes": {
+                    "u64": "65536"
+                  },
+                  "limits": {
+                    "struct": {
+                      "maxPages": {
+                        "u64": "20"
+                      },
+                      "maxPixels": {
+                        "u64": "4000000"
+                      },
+                      "maxDecompressedBytes": {
+                        "u64": "1048576"
+                      },
+                      "maxDecompressionRatioPermille": {
+                        "u64": "100000"
+                      },
+                      "maxParseTimeMs": {
+                        "u64": "2000"
+                      }
+                    }
+                  },
+                  "parserProfiles": {
+                    "list": [
+                      {
+                        "str": "dockside-sniff@1"
+                      }
+                    ]
+                  },
+                  "uploaderCapabilities": {
+                    "list": [
+                      {
+                        "str": "SUPPLIER_SIGNER"
+                      },
+                      {
+                        "str": "EVIDENCE_UPLOADER"
+                      }
+                    ]
+                  },
+                  "issuerCapabilities": {
+                    "list": [
+                      {
+                        "str": "SUPPLIER_SIGNER"
+                      }
+                    ]
+                  },
+                  "issuedAtRequired": {
+                    "bool": true
+                  },
+                  "freshnessMs": {
+                    "u64": "2592000000"
+                  },
+                  "replacement": {
+                    "str": "SUPERSEDE_CURRENT"
+                  },
+                  "requiredDerived": {
+                    "list": [
+                      {
+                        "struct": {
+                          "artifactClass": {
+                            "str": "TEXT_EXTRACT"
+                          },
+                          "transformProfile": {
+                            "str": "dockside-text@1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "struct": {
+                  "schema": {
+                    "str": "dockside/evidence-slot-policy@1"
+                  },
+                  "slotId": {
+                    "str": "inspection-report"
+                  },
+                  "purpose": {
+                    "str": "inspection-report for the milestone"
+                  },
+                  "minItems": {
+                    "u64": "1"
+                  },
+                  "maxItems": {
+                    "u64": "1"
+                  },
+                  "allowedMime": {
+                    "list": [
+                      {
+                        "str": "application/pdf"
+                      },
+                      {
+                        "str": "text/plain"
+                      }
+                    ]
+                  },
+                  "contentClass": {
+                    "str": "DOCUMENT"
+                  },
+                  "maxItemBytes": {
+                    "u64": "65536"
+                  },
+                  "maxAggregateBytes": {
+                    "u64": "65536"
+                  },
+                  "limits": {
+                    "struct": {
+                      "maxPages": {
+                        "u64": "20"
+                      },
+                      "maxPixels": {
+                        "u64": "4000000"
+                      },
+                      "maxDecompressedBytes": {
+                        "u64": "1048576"
+                      },
+                      "maxDecompressionRatioPermille": {
+                        "u64": "100000"
+                      },
+                      "maxParseTimeMs": {
+                        "u64": "2000"
+                      }
+                    }
+                  },
+                  "parserProfiles": {
+                    "list": [
+                      {
+                        "str": "dockside-sniff@1"
+                      }
+                    ]
+                  },
+                  "uploaderCapabilities": {
+                    "list": [
+                      {
+                        "str": "INSPECTOR"
+                      }
+                    ]
+                  },
+                  "issuerCapabilities": {
+                    "list": [
+                      {
+                        "str": "INSPECTOR"
+                      }
+                    ]
+                  },
+                  "issuedAtRequired": {
+                    "bool": true
+                  },
+                  "freshnessMs": {
+                    "u64": "604800000"
+                  },
+                  "replacement": {
+                    "str": "SUPERSEDE_CURRENT"
+                  },
+                  "requiredDerived": {
+                    "list": [
+                      {
+                        "struct": {
+                          "artifactClass": {
+                            "str": "TEXT_EXTRACT"
+                          },
+                          "transformProfile": {
+                            "str": "dockside-text@1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "struct": {
+                  "schema": {
+                    "str": "dockside/evidence-slot-policy@1"
+                  },
+                  "slotId": {
+                    "str": "cargo-photos"
+                  },
+                  "purpose": {
+                    "str": "cargo-photos for the milestone"
+                  },
+                  "minItems": {
+                    "u64": "1"
+                  },
+                  "maxItems": {
+                    "u64": "2"
+                  },
+                  "allowedMime": {
+                    "list": [
+                      {
+                        "str": "image/png"
+                      },
+                      {
+                        "str": "image/jpeg"
+                      }
+                    ]
+                  },
+                  "contentClass": {
+                    "str": "IMAGE"
+                  },
+                  "maxItemBytes": {
+                    "u64": "65536"
+                  },
+                  "maxAggregateBytes": {
+                    "u64": "100000"
+                  },
+                  "limits": {
+                    "struct": {
+                      "maxPages": {
+                        "u64": "20"
+                      },
+                      "maxPixels": {
+                        "u64": "4000000"
+                      },
+                      "maxDecompressedBytes": {
+                        "u64": "1048576"
+                      },
+                      "maxDecompressionRatioPermille": {
+                        "u64": "100000"
+                      },
+                      "maxParseTimeMs": {
+                        "u64": "2000"
+                      }
+                    }
+                  },
+                  "parserProfiles": {
+                    "list": [
+                      {
+                        "str": "dockside-sniff@1"
+                      }
+                    ]
+                  },
+                  "uploaderCapabilities": {
+                    "list": [
+                      {
+                        "str": "INSPECTOR"
+                      },
+                      {
+                        "str": "BUYER_APPROVER"
+                      }
+                    ]
+                  },
+                  "issuerCapabilities": {
+                    "list": [
+                      {
+                        "str": "INSPECTOR"
+                      }
+                    ]
+                  },
+                  "issuedAtRequired": {
+                    "bool": true
+                  },
+                  "freshnessMs": {
+                    "u64": "2592000000"
+                  },
+                  "replacement": {
+                    "str": "SUPERSEDE_CURRENT"
+                  },
+                  "requiredDerived": {
+                    "list": [
+                      {
+                        "struct": {
+                          "artifactClass": {
+                            "str": "IMAGE_METADATA"
+                          },
+                          "transformProfile": {
+                            "str": "dockside-image-meta@1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "created": true
+    },
+    "services": [
+      {
+        "serviceId": "manifest-attestor",
+        "capability": "MANIFEST_ATTEST",
+        "enrollmentId": "svc_9fe6883b45a08872a1ad409fc1024f68",
+        "publicKey": "ed25519:4zbw8SsS6KnEP3PNkfT3NnzCveSUKUjYgeyP8VV5s7Ye",
+        "status": "ACTIVE",
+        "created": true
+      },
+      {
+        "serviceId": "deterministic-policy",
+        "capability": "DETERMINISTIC_POLICY_SET",
+        "enrollmentId": "svc_59a3fa59c0a5035848663c6cbb2cc3ca",
+        "publicKey": "ed25519:aAwCDvvro8Ecq13SuhDD25FxbqjNvXT5HDNKzAp2Jen",
+        "status": "ACTIVE",
+        "created": true
+      }
+    ],
+    "invitations": [
+      {
+        "role": "buyer",
+        "capability": "BUYER_APPROVER",
+        "invitationId": "inv_6b9dc5b20528557cba4493167b70c2ec",
+        "expiresAt": 1794822616475,
+        "granted": false
+      },
+      {
+        "role": "buyer",
+        "capability": "RISK_RESOLVER",
+        "invitationId": "inv_b0080d4c3efb57ab69c6a85aa580aa3b",
+        "expiresAt": 1794822616483,
+        "granted": false
+      },
+      {
+        "role": "supplier",
+        "capability": "SUPPLIER_SIGNER",
+        "invitationId": "inv_b6e7d81adbf6a90ae88a7b7983831780",
+        "expiresAt": 1794822616489,
+        "granted": false
+      },
+      {
+        "role": "inspector",
+        "capability": "INSPECTOR",
+        "invitationId": "inv_0c76d420f6afe6b0c98ac5b858c7650e",
+        "expiresAt": 1794822616496,
+        "granted": false
+      }
+    ]
+  },
+  "durationSeconds": 113,
+  "passed": true
+}

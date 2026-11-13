@@ -1,0 +1,19 @@
+# Build context of the hosted image (Dockerfile). Only what the build needs goes to the engine:
+# no local state, no keys, no build output, no contract toolchain.
+.git
+.github
+.data
+.dockside-secrets
+.env
+.env.*
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/*.log
+**/test-results
+**/playwright-report
+coverage
+neardev
+contract
+fixtures
+docs

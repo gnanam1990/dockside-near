@@ -1,0 +1,51 @@
+# Fly.io configuration for the hosted Dockside demo (M55). Guide: docs/runbooks/hosted-deploy.md.
+#
+# One machine built from the Dockerfile: control API, worker and web app in one container, HTTPS
+# terminated by Fly, SQLite and the evidence objects on a volume. Testnet only: the product refuses
+# to start against anything but NEAR testnet and the escrow whose on-chain code hash equals the
+# manifest in the image.
+#
+# The public origin is https://<app>.fly.dev, derived from FLY_APP_NAME, which Fly sets by itself.
+# The relayer's function-call key is NOT in this file and not in the image: it is the Fly secret
+# RELAYER_KEY_JSON_B64 (guide, step 4). The entrypoint writes it to a private file and removes it
+# from the environment before the product starts.
+app = "dockside-demo"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DOCKSIDE_ESCROW_CONTRACT_ID = "gnanam1990-dock-escrow2.testnet"
+  DOCKSIDE_NEAR_RPC_URL = "https://test.rpc.fastnear.com"
+  DOCKSIDE_RELAYER_ACCOUNT_ID = "gnanam1990-dock-relayer.testnet"
+
+# SQLite on one volume: exactly one machine, always running (the worker reconciles on a timer).
+[mounts]
+  source = "dockside_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/readyz"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "180s"
+
+# A refused start (exit 78: missing or unsuitable relayer key, wrong chain, wrong code hash) is not
+# retried forever.
+[[restart]]
+  policy = "on-failure"
+  retries = 3
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
