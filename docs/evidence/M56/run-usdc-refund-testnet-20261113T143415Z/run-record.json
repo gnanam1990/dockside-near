@@ -1,0 +1,148 @@
+{
+  "schema": "dockside/testnet-run@1",
+  "network": "testnet",
+  "contractNetwork": "near-testnet",
+  "asset": {
+    "kind": "nep141",
+    "token": {
+      "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "decimals": 6
+    }
+  },
+  "scriptCommit": "74cafa55404a3a8aba618abc2eacd77e58c02c72",
+  "artifact": {
+    "bytes": 862018,
+    "sha256": "025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770",
+    "nearCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "commit": "74cafa55404a3a8aba618abc2eacd77e58c02c72",
+    "platform": "linux-x64"
+  },
+  "deployTx": null,
+  "deployment": {
+    "contractId": "gnanam1990-dock-escrow3.testnet",
+    "onChainCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "match": true,
+    "blockHeight": 277522847,
+    "config": {
+      "network": "near-testnet",
+      "minDepositYocto": "1000000000000000000000",
+      "minDepositNep141": "10000",
+      "maxTradeAmount": {
+        "nearYocto": "0",
+        "nep141": "0"
+      },
+      "nep141Token": {
+        "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+        "decimals": 6
+      },
+      "trades": 3,
+      "unexpectedAssets": 0,
+      "refundPolicy": {
+        "id": "dockside-refund-v1",
+        "revision": 1
+      }
+    }
+  },
+  "relayer": {
+    "relayer": "gnanam1990-dock-relayer.testnet",
+    "publicKey": "ed25519:C3EMNRphXDfHC5JEJXo1ZveMnAg3N8kMJm5pJa2xYZXp",
+    "receiverId": "gnanam1990-dock-escrow3.testnet",
+    "methodNames": [],
+    "allowance": "981374355339365800000000"
+  },
+  "journey": {
+    "kind": "refund",
+    "ok": true,
+    "tradeId": "trd_dfeab127b611450a9f0047f7ddb58982",
+    "releaseIntentId": null,
+    "checks": {
+      "refundsRefunded": true,
+      "reasons": [
+        "EXCESS_FUNDING_RETURN",
+        "MUTUAL_CANCEL"
+      ],
+      "buyerReceived": [
+        {
+          "refundIntentId": "rfd_ff4f60ab26dee3e5c2b328ff21d17f2d",
+          "reason": "MUTUAL_CANCEL",
+          "amount": "4000000",
+          "deltaYocto": "4000000",
+          "exact": true
+        },
+        {
+          "refundIntentId": "rfd_9edd9a83571f56ca7053fbf0d0bca49c",
+          "reason": "EXCESS_FUNDING_RETURN",
+          "amount": "1000000",
+          "deltaYocto": "1000000",
+          "exact": true
+        }
+      ],
+      "buyerReceivedExactAmounts": true,
+      "buyerFundedYocto": "5000000",
+      "buyerRefundedYocto": "5000000",
+      "buyerRefundedEverything": true,
+      "buyerNothingLeft": true,
+      "releasedTotal": "0",
+      "supplierUnchanged": true,
+      "ledgerConservation": true
+    },
+    "transactions": [
+      {
+        "step": "register",
+        "method": "register_trade",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "4MW5KM7SJs2g4SDBWtQX7ohG4wWvfi3km1dwqLBsBCmi",
+        "blockTimeMs": 1794580463983
+      },
+      {
+        "step": "fund",
+        "method": "ft_transfer_call",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "GZZzML8uCt4dRfi3TyUva41J9CNC5gdVALvEvYoCRk29",
+        "blockTimeMs": 1794580471952
+      },
+      {
+        "step": "refund:cancel",
+        "method": "request_refund",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "FGahhC6FYu1UwvHh2YE52UW4koDC9zdtV3DrCs5oq323",
+        "blockTimeMs": 1794580478896
+      },
+      {
+        "step": "refund:excess",
+        "method": "request_refund",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "GvpqdHhMZNH5qLpmxsLDXVyZDHMkHKxCYkjwQhMgwQh2",
+        "blockTimeMs": 1794580486133
+      },
+      {
+        "step": "authorize:cancel",
+        "method": "authorize_refund",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "2ikMQuTT7DbZCsyEFUygwKJaiU15dtcxLJTE5913A7kT",
+        "blockTimeMs": 1794584084228
+      },
+      {
+        "step": "execute:cancel",
+        "method": "execute_refund",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "9X6ccU7QxAYrN5ySyTSQ8wkNxB3bQPic6cTpcQ3pn9Aj",
+        "blockTimeMs": 1794584089651
+      },
+      {
+        "step": "authorize:excess",
+        "method": "authorize_refund",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "6A4v2Yxg3EDV9NZF1VibVFxNSjHXtb6cEA4oNxPpH9Cn",
+        "blockTimeMs": 1794584096951
+      },
+      {
+        "step": "execute:excess",
+        "method": "execute_refund",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "J4tcqMKfWxdTncqttvVgexdoagk9zYYe4WEwoqdfHwHR",
+        "blockTimeMs": 1794584102366
+      }
+    ]
+  }
+}

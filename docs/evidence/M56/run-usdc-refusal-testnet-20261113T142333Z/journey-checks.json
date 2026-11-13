@@ -1,0 +1,87 @@
+{
+  "settledTrue": true,
+  "releasePaid": true,
+  "supplierDeltaYocto": "5000000",
+  "supplierReceivedExactAmount": true,
+  "ledgerConservation": true,
+  "releasedTotal": "5000000",
+  "holdWasActive": true,
+  "releaseBlockedByHold": true,
+  "holdSetBy": "POLICY_SETTER (doc-mismatch@1)",
+  "holdResolved": true,
+  "deterministicPolicyHold": true,
+  "refusals": [
+    {
+      "step": "refuse:fund_wrong_terms",
+      "what": "funding with a wrong terms digest",
+      "method": "ft_transfer_call",
+      "signer": "gnanam1990-dock-buyer.testnet",
+      "expected": "STALE_REVISION",
+      "code": "STALE_REVISION",
+      "message": "deposit names another trade revision digest",
+      "txHash": "4u9sbsZJecFijqPxNP4LL9yXZYkbFJgznCBxjRr1qDBX",
+      "stateUnchanged": true
+    },
+    {
+      "step": "refuse:relayer_refund",
+      "what": "a relayer attempting a funder-only refund",
+      "method": "request_refund",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "expected": "FORBIDDEN",
+      "code": "FORBIDDEN",
+      "message": "caller is not the original funder",
+      "txHash": "qKB4NxwH4ZARn1kQgqkGXh3UQpzdoJcceVcvNvQbzgw",
+      "stateUnchanged": true
+    },
+    {
+      "step": "refuse:replayed_nonce",
+      "what": "a replayed nonce (the accepted inspection sent again)",
+      "method": "submit_inspection",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "expected": "NONCE_REPLAYED",
+      "code": "NONCE_REPLAYED",
+      "message": "nonce already consumed",
+      "txHash": "HuR557dMzDP4jLKVzXw3rSWCDFJbHVuMz5vrSomLuegn",
+      "stateUnchanged": true
+    },
+    {
+      "step": "refuse:payout_redirect",
+      "what": "payout redirected to an unbound account",
+      "method": "create_release_intent",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "expected": "DESTINATION_MISMATCH",
+      "code": "DESTINATION_MISMATCH",
+      "message": "intent destination is not the revision-bound destination",
+      "txHash": "Dex2SQYEgCFJDF3P61KuWLGmHA4xFngWSBkQ5YvGtm1Y",
+      "stateUnchanged": true
+    },
+    {
+      "step": "refuse:release_while_held",
+      "what": "release while a hold is active",
+      "method": "execute_release",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "expected": "HOLD_ACTIVE",
+      "code": "HOLD_ACTIVE",
+      "message": "release conjunction incomplete: HOLD_ACTIVE,APPROVAL_MISSING",
+      "txHash": "9z68Gk7xY17SVMLGGptiaRt7DbTx4JgY47ATRx2Zi5D3",
+      "stateUnchanged": true
+    },
+    {
+      "step": "refuse:unbound_approval",
+      "what": "approval signed by an unbound key",
+      "method": "approve_release",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "expected": "SIGNATURE_INVALID",
+      "code": "SIGNATURE_INVALID",
+      "message": "signature does not verify for the bound key and domain",
+      "txHash": "5Eu7FQ2CaGr9rqrxToCJEwmEsrtHMbij3CzijPj95gLN",
+      "stateUnchanged": true
+    }
+  ],
+  "allRefusedWithExpectedCode": true,
+  "refusalsChangedNothing": true,
+  "refusedDepositReturned": true,
+  "relayerReceivedNothing": true,
+  "supplierTotalDeltaYocto": "5000000",
+  "fundedExactlyTheTradeAmount": true
+}
