@@ -7,7 +7,7 @@ import { Callout, FailureState, LoadingState } from "../components/States";
 import { StatusBadge } from "../components/Status";
 import { isApiIdentifier } from "../lib/api/endpoints";
 import { type BrowserExportCheck, verifySignedExportInBrowser } from "../lib/export-verify";
-import { type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
+import { type FunctionCall, type Relation, TradeApi, type TradeProjection } from "../lib/api/trade";
 import { formatAge, formatUtc } from "../lib/format";
 import { describeStatus } from "../lib/status";
 import { AuthorityRevisionCallout } from "./trade/Authority";
@@ -198,15 +198,44 @@ function Funding() {
                     <code>{tr.escrowContractId}</code> on {tr.network} from its own NEAR account, naming{" "}
                     <code>terms_digest</code> <code>{tr.termsDigest}</code>, the revision both parties signed.
                     The contract refuses (and returns) a deposit whose digest differs from the trade it
-                    reaches. This build has no wallet connector (BLOCKED); the contract records each deposit
-                    against the original funder.
+                    reaches. This build has no wallet connector: the funder's own wallet sends it, and the
+                    contract records each deposit against the original funder.
                   </p>
                 </Callout>
               ) : null}
+              {!l.fullyFunded && r.fundingWallet ? <FundingWalletPanel w={r.fundingWallet} /> : null}
             </>
           );
         }}
       </Section>
+    </section>
+  );
+}
+
+/** The exact deposit for the buyer's own wallet (M43): never relayed, never sent by Dockside. */
+function FundingWalletPanel({ w }: { w: { signerId: string; call: FunctionCall; nearCli: string } }) {
+  const t = useTrade();
+  return (
+    <section aria-labelledby="fund-wallet-title" data-testid="funding-wallet">
+      <h4 id="fund-wallet-title">Deposit from the buyer's own wallet</h4>
+      <p>
+        Only <code className="wrap">{w.signerId}</code> sends this deposit, from its own NEAR wallet or
+        keychain: the relayer's function-call key cannot attach a deposit, and the account that signs it
+        becomes the deposit's original funder (refunds can only return to it).
+      </p>
+      <IdentityList
+        items={[
+          ["Signer account", <code key="s">{w.signerId}</code>],
+          ["Contract", <code key="c">{w.call.receiverId}</code>],
+          ["Method", <code key="m">{w.call.methodName}</code>],
+          ["Attached deposit", <Near key="d" yocto={w.call.depositYocto} network={t.p.trade.network} />],
+          ["Exact deposit", `${w.call.depositYocto} yoctoNEAR`],
+        ]}
+      />
+      <h4>Exact call for the buyer's wallet</h4>
+      <AddressDisplay value={JSON.stringify(w.call)} label="fund call" />
+      <h4>Same call with near-cli-rs (the buyer's keychain signs)</h4>
+      <AddressDisplay value={w.nearCli} label="near-cli-rs command" />
     </section>
   );
 }

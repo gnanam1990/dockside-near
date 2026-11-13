@@ -11,7 +11,9 @@
     }
   },
   "dependencies": {
+    "@dockside/authority": "workspace:*",
     "@dockside/core": "workspace:*",
+    "@dockside/evidence": "workspace:*",
     "@dockside/journal": "workspace:*",
     "@dockside/near": "workspace:*",
     "@dockside/store": "workspace:*"
