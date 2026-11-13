@@ -6,7 +6,14 @@
 //!
 //! Requests:
 //!   {"op":"init","accounts":{...},"seed":"<hex>","trade":"<label>","amountYocto":"<u128>","delayMs":<u64>,"t0":<ms>}
-//!   {"op":"build","what":"register|policy|fund|attestation|inspection|intent|approval|execute_release","now":<ms>,"label":"<n>","intentId":"<rli_>"}
+//!   {"op":"build","what":"<payload>","now":<ms>,"label":"<n>",...} where <payload> is one of
+//!     register | policy | fund ("depositYocto" overrides the trade amount) | attestation |
+//!     inspection | intent | approval ("intentId") | execute_release ("intentId") |
+//!     hold_set ("hold", "issuer" POLICY_SETTER|RISK_RESOLVER, "ttlMs") |
+//!     hold_resolve ("hold", "code") | refund_mutual_cancel | refund_excess |
+//!     authorize_refund ("refundId") | execute_refund ("refundId")
+//!   The response names the method, its arguments, the attached deposit and who signs it:
+//!   "signer":"funder" (the buyer's own account, the recorded funder) or "relayer".
 //!   {"op":"apply","method":"<m>","args":{...},"now":<ms>,"predecessor":"<acct>","deposit":"<u128>","promiseOk":<bool|null>}
 //!   {"op":"view","method":"<get_*>","args":{...},"now":<ms>}
 //! Responses: {"ok":true,...} or {"ok":false,"code":"<CODE>","message":"..."}.
@@ -64,18 +71,50 @@ fn build(st: &State, req: &J) -> Result<J, String> {
     let label = text(req, "label").unwrap_or_else(|_| "j".into());
     let t = st.fx.trade_id();
     let rec = || st.mirror.trades.get(&t).ok_or_else(|| "trade not registered on the mirror".to_string());
+    let buyer = st.fx.accounts.buyer.clone();
+    let funder = |r: &dockside_escrow_core::TradeRecord| r.ledger.funder(&buyer);
     let (method, args, deposit) = match what.as_str() {
         "register" => ("register_trade", register_args(&st.fx), 0),
         "policy" => ("register_evidence_policy", policy_args(rec()?), 0),
-        "fund" => ("fund", fund_args(&t, &rec()?.terms_digest), st.fx.amount_yocto),
+        "fund" => {
+            let deposit = match req.get("depositYocto") {
+                None | Some(J::Null) => st.fx.amount_yocto,
+                _ => yocto(req, "depositYocto")?,
+            };
+            ("fund", fund_args(&t, &rec()?.terms_digest), deposit)
+        }
         "attestation" => ("submit_manifest_attestation", attestation_args(&st.fx, rec()?, next_manifest_revision(rec()?), now, &label), 0),
         "inspection" => ("submit_inspection", inspection_args(&st.fx, rec()?, "PASS", now, &label), 0),
         "intent" => ("create_release_intent", intent_args(&st.fx, rec()?, now, &label), 0),
         "approval" => ("approve_release", approval_args(&st.fx, rec()?, &text(req, "intentId")?, now, &label), 0),
         "execute_release" => ("execute_release", execute_release_args(rec()?, &text(req, "intentId")?), 0),
+        "hold_set" => {
+            let issuer = text(req, "issuer").unwrap_or_else(|_| "POLICY_SETTER".into());
+            let ttl = num(req, "ttlMs").unwrap_or(7 * dockside_fixtures::DAY);
+            ("set_hold", hold_set_args(&st.fx, rec()?, &issuer, now, ttl, &text(req, "hold")?), 0)
+        }
+        "hold_resolve" => ("resolve_hold", hold_resolve_args(&st.fx, rec()?, &text(req, "hold")?, &text(req, "code")?, now), 0),
+        // MUTUAL_CANCEL of the buyer's AVAILABLE value: buyer-initiated, both parties sign the one
+        // request, so the one-hour cooling period starts at once.
+        "refund_mutual_cancel" => {
+            let r = rec()?;
+            let amount = funder(r).available;
+            let p = refund_request(&st.fx, r, &label, "MUTUAL_CANCEL", &buyer, amount, "AVAILABLE", "BUYER", now);
+            ("request_refund", request_refund_args(&st.fx, r, &p, &["buyer", "supplier"]), 0)
+        }
+        // EXCESS_FUNDING_RETURN of the buyer's QUARANTINED excess, from the funder's own account.
+        "refund_excess" => {
+            let r = rec()?;
+            let amount = funder(r).quarantined;
+            let p = refund_request(&st.fx, r, &label, "EXCESS_FUNDING_RETURN", &buyer, amount, "QUARANTINED", "FUNDER", now);
+            ("request_refund", request_refund_args(&st.fx, r, &p, &[]), 0)
+        }
+        "authorize_refund" => ("authorize_refund", refund_op_args(rec()?, &text(req, "refundId")?), 0),
+        "execute_refund" => ("execute_refund", refund_op_args(rec()?, &text(req, "refundId")?), 0),
         other => return Err(format!("unknown payload {other}")),
     };
-    Ok(json!({ "ok": true, "method": method, "args": args, "deposit": deposit.to_string(), "tradeId": t }))
+    let signer = if method == "fund" || what == "refund_excess" { "funder" } else { "relayer" };
+    Ok(json!({ "ok": true, "method": method, "args": args, "deposit": deposit.to_string(), "tradeId": t, "signer": signer }))
 }
 
 fn handle(state: &mut Option<State>, req: &J) -> J {
