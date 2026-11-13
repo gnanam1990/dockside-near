@@ -370,6 +370,8 @@ export interface RefundView {
   readonly candidates: RefundCandidate[];
   readonly candidateSource: string;
   readonly viewerRole: RefundRole | null;
+  /** The `fund` deposit only the buyer's own funding account can send, while the trade is not fully funded (M43). */
+  readonly fundingWallet?: (FunderWalletCall & { readonly nearCli: string }) | null;
   readonly operations: OperationSummary[];
   readonly source: string;
   readonly observedAt: number;

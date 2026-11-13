@@ -39,6 +39,13 @@ export interface AccessKeyView {
   readonly permission: "FullAccess" | "FunctionCall";
   readonly nonce: bigint;
   readonly blockHeight: number;
+  /** The restriction of a function-call key, when the node reported it (M43 relayer custody checks). */
+  readonly functionCall?: {
+    readonly receiverId: string;
+    readonly methodNames: readonly string[];
+    /** null: unlimited allowance. */
+    readonly allowanceYocto: bigint | null;
+  };
 }
 
 export type TxStatus =
@@ -117,7 +124,12 @@ export class JsonRpcNearClient implements NearRpc {
     } catch (e) {
       if (e instanceof DocksideError) throw e;
       if (ctl.signal.aborted) fail("UPSTREAM_TIMEOUT", "NEAR RPC timed out", { method });
-      fail("UPSTREAM_ERROR", "NEAR RPC transport failed", { method });
+      // The transport's own error code (for example ECONNRESET), never a request or response body.
+      const c = (e as { cause?: { code?: unknown } }).cause?.code;
+      fail("UPSTREAM_ERROR", "NEAR RPC transport failed", {
+        method,
+        transport: typeof c === "string" ? c : (e as Error).name,
+      });
     } finally {
       clearTimeout(timer);
     }
@@ -249,7 +261,19 @@ export class JsonRpcNearClient implements NearRpc {
     const permission =
       p === "FullAccess" ? "FullAccess" : isObj(p) && "FunctionCall" in p ? "FunctionCall" : null;
     if (!permission) fail("UPSTREAM_INVALID", "access key permission malformed");
-    return { permission, nonce: big(r["nonce"]), blockHeight: num(r["block_height"]) };
+    const base: AccessKeyView = { permission, nonce: big(r["nonce"]), blockHeight: num(r["block_height"]) };
+    const fc = isObj(p) && isObj(p["FunctionCall"]) ? p["FunctionCall"] : null;
+    if (!fc || typeof fc["receiver_id"] !== "string") return base;
+    const names = Array.isArray(fc["method_names"]) ? fc["method_names"] : [];
+    return {
+      ...base,
+      functionCall: {
+        receiverId: fc["receiver_id"],
+        methodNames: names.filter((m): m is string => typeof m === "string"),
+        allowanceYocto:
+          fc["allowance"] === null || fc["allowance"] === undefined ? null : big(fc["allowance"]),
+      },
+    };
   }
 
   async txStatus(txHash: string, senderAccountId: string): Promise<TxStatus> {

@@ -12,9 +12,11 @@ import {
   type TradeTerms,
   type TypedJson,
   toTypedJson,
+  tradeRevisionDigest,
 } from "@dockside/core";
 import {
   type EscrowContract,
+  type FunctionCall,
   type RefundReason,
   refundAuthorizePayload,
   refundDisputePayload,
@@ -584,6 +586,7 @@ export function refundRoutes(d: AppDeps): Route[] {
         candidateSource:
           "projection of the escrow contract ledger; the contract recomputes and refuses a stale view",
         viewerRole,
+        fundingWallet: fundingWallet(m.escrow, t, ledger.required, ledger.committed),
         operations: operationSummary(m, t.tradeId).filter((o) => o.kind === "REFUND"),
         source: "escrow-contract-view",
         observedAt: d.clock.now(),
@@ -907,4 +910,45 @@ export function refundRoutes(d: AppDeps): Route[] {
       return { ...out, state: m.journal.journal.op(out.operationId).state };
     }),
   ];
+}
+
+/**
+ * The funding deposit only the buyer's own funding account can send (M43): the exact `fund` call
+ * for the amount still missing, naming the trade revision digest both parties signed, plus the same
+ * call as a near-cli-rs command line for that account's keychain. Dockside never sends it: a
+ * function-call relayer key cannot attach a deposit, and the contract records the transaction signer
+ * as the deposit's original funder (the only account a funder refund can return to).
+ */
+function fundingWallet(
+  escrow: EscrowContract,
+  t: TradeTerms,
+  required: bigint | string,
+  committed: bigint | string,
+): { signerId: string; call: FunctionCall; nearCli: string } | null {
+  const missing = BigInt(String(required)) - BigInt(String(committed));
+  if (missing <= 0n) return null;
+  const call = escrow.fundCall(t.tradeId, tradeRevisionDigest(t), missing);
+  const args = Buffer.from(JSON.stringify(call.args), "utf8").toString("base64");
+  const tgas = BigInt(call.gas) / 1_000_000_000_000n;
+  const network = t.network === "near-testnet" ? "testnet" : "unsupported";
+  return {
+    signerId: t.buyer.accountId,
+    call,
+    nearCli: [
+      "near contract call-function as-transaction",
+      call.receiverId,
+      call.methodName,
+      "base64-args",
+      args,
+      "prepaid-gas",
+      `'${tgas}.0 Tgas'`,
+      "attached-deposit",
+      `'${call.depositYocto} yoctoNEAR'`,
+      "sign-as",
+      t.buyer.accountId,
+      "network-config",
+      network,
+      "sign-with-keychain send",
+    ].join(" "),
+  };
 }
