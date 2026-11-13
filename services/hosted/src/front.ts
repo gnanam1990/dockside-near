@@ -27,12 +27,13 @@ export const FRONT_CSP = [
 /**
  * Policy of the proof site and the attack console under /proof/ (M53) and of the payment receipts
  * under /receipt/ (M54): the same as the pages' own meta policy, with the public NEAR RPC endpoints
- * they read the chain from; the relay is 'self'.
+ * they read the chain from; the relay is 'self'. Fonts are the site's own files (M62).
  */
 export const PROOF_CSP = [
   "default-src 'none'",
   "script-src 'self'",
   "style-src 'self'",
+  "font-src 'self'",
   "img-src 'self'",
   "connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://rpc.mainnet.fastnear.com https://archival-rpc.mainnet.fastnear.com",
   "base-uri 'none'",

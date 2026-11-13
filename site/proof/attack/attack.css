@@ -1,15 +1,156 @@
-/* Attack console (M53): additions to the proof page styles (../proof.css, ADR-0026 tokens). */
+/* Attack console (M53, redesigned in M62): additions to the proof site styles (../proof.css). The
+   payment is the vault on the left, the five attempts are numbered exhibits on the right; each
+   attempt ends in the contract's own refusal code, shown as a stamped outcome. */
+
+.console {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.console > .panel {
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .console {
+    grid-template-columns: minmax(340px, 5fr) minmax(0, 7fr);
+    gap: 24px;
+  }
+
+  .console > .notes {
+    grid-column: 1 / -1;
+    margin-top: 16px;
+  }
+}
+
+/* ---------- The vault: the payment as read now ---------- */
+
+.vault {
+  min-height: 320px;
+}
+
+.vault .verdict {
+  margin-bottom: 16px;
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .vault .verdict {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+.loading-line {
+  padding: 16px 0;
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.readout-cell {
+  padding: 12px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+  min-width: 0;
+}
+
+.readout-label {
+  margin: 0 0 2px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.readout-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.readout-value strong {
+  font-weight: 500;
+}
+
+/* The counter was read again and changed: its frame marks it once (not a loop, not the number). */
+@media (prefers-reduced-motion: no-preference) {
+  .counted {
+    animation: counted 600ms var(--ease-out) both;
+  }
+
+  @keyframes counted {
+    from {
+      box-shadow: 0 0 0 3px var(--action-primary);
+    }
+
+    to {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+}
+
+.vault-facts {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px 16px;
+}
+
+.vault-facts dt {
+  margin-top: 8px;
+}
+
+@media (min-width: 640px) {
+  .vault-facts {
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 10px 16px;
+  }
+
+  .vault-facts dt {
+    margin: 0;
+    padding-top: 1px;
+  }
+}
+
+.num.bad {
+  color: var(--status-negative);
+  font-weight: 600;
+}
+
+/* ---------- Mode: live relay or replay of recorded attempts ---------- */
+
 .mode {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
   margin: 0 0 16px;
   padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
   background: var(--tint-neutral);
   color: var(--text-secondary);
 }
+
+.mode .icon {
+  margin-top: 2px;
+  color: var(--action-primary);
+}
+
+.mode[data-mode="live"] {
+  color: var(--text-primary);
+  border-color: var(--action-primary);
+}
+
 .mode:empty {
   display: none;
 }
+
+/* ---------- Exhibits: the five attempts ---------- */
+
 .attack-list {
   list-style: none;
   margin: 0;
@@ -17,57 +158,196 @@
   display: grid;
   gap: 12px;
 }
+
 .attack {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 14px;
+  padding: 16px;
   border: 1px solid var(--border-default);
-  border-radius: 6px;
-  padding: 14px 16px;
+  border-radius: var(--radius-panel);
   background: var(--surface-panel);
   min-width: 0;
 }
+
+.exhibit-num {
+  grid-row: span 2;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--action-primary);
+}
+
+.attack-body {
+  min-width: 0;
+}
+
 .attack h3 {
-  margin-top: 0;
+  margin: 0 0 6px;
 }
-.attack .btn[disabled] {
-  opacity: 0.55;
-  cursor: not-allowed;
+
+.attack-body p:last-child {
+  margin-bottom: 0;
 }
+
+.attack-action {
+  grid-column: 2;
+  margin-top: 10px;
+}
+
+@media (min-width: 640px) {
+  .attack {
+    padding: 18px 20px;
+  }
+}
+
+@media (max-width: 639px) {
+  .exhibits {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .attack {
+    padding: 14px 12px;
+    gap: 4px 10px;
+  }
+
+  .attack-out {
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+}
+
+.attack-out {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+}
+
 .attack-out:empty {
   display: none;
 }
-.attack-out {
-  margin-top: 12px;
-}
+
+/* ---------- The outcome: the contract's answer, stamped ---------- */
+
 .result {
-  border-left: 4px solid var(--border-default);
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-default);
+  border-left: 6px solid var(--border-strong);
+  border-radius: var(--radius-control);
   overflow-wrap: anywhere;
 }
+
 .result-refused {
-  border-left-color: var(--status-positive);
+  border-color: var(--status-positive);
   background: var(--tint-positive);
 }
+
 .result-other {
-  border-left-color: var(--status-negative);
+  border-color: var(--status-negative);
   background: var(--tint-negative);
 }
-.result-title {
-  margin: 0 0 4px;
+
+.result-head {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 8px 10px;
+  margin-bottom: 6px;
 }
+
+.result-icon {
+  margin-top: 2px;
+  color: var(--status-positive);
+}
+
+.result-other .result-icon {
+  color: var(--status-negative);
+}
+
+.result-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-weight: 500;
+}
+
+.result-code {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 2px solid currentcolor;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--status-positive);
+  background: var(--surface-panel);
+}
+
+.result-other .result-code {
+  color: var(--status-negative);
+}
+
 .result-message {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   font-family: var(--font-mono);
   font-size: 0.875rem;
 }
+
+.result-tx {
+  margin: 0;
+}
+
 .result-note {
   margin: 0;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
-.num.bad {
-  color: var(--status-negative);
-  font-weight: 600;
+
+.pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .result.arrive {
+    animation-name: stamp;
+  }
+
+  @keyframes stamp {
+    from {
+      transform: scale(0.985);
+    }
+
+    to {
+      transform: none;
+    }
+  }
+}
+
 .facts dd {
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 479px) {
+  .vault {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .readout-value {
+    font-size: 1.25rem;
+  }
+
+  .vault .ledger th,
+  .vault .ledger td {
+    padding: 8px 6px;
+  }
+
+  .vault .ledger thead th {
+    white-space: normal;
+  }
 }

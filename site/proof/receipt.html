@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://rpc.mainnet.fastnear.com https://archival-rpc.mainnet.fastnear.com; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' https://test.rpc.fastnear.com https://archival-rpc.testnet.fastnear.com https://rpc.mainnet.fastnear.com https://archival-rpc.mainnet.fastnear.com; base-uri 'none'; form-action 'none'"
     />
     <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
@@ -16,11 +16,17 @@
     <title>Dockside payment receipt</title>
     <link rel="stylesheet" href="./proof.css" />
   </head>
-  <body class="receipt-page">
+  <body class="page-receipt">
     <a class="skip" href="#receipt">Skip to the receipt</a>
-    <header class="top">
+    <header class="masthead">
+      <div class="wrap masthead-row">
+        <p class="brand"><span class="mark" aria-hidden="true">D</span> Dockside <span class="brand-sub">public proof</span></p>
+        <nav id="site-nav" class="site-nav no-print" aria-label="Proof site"></nav>
+      </div>
+    </header>
+    <div class="hero">
       <div class="wrap">
-        <p class="brand"><span class="mark" aria-hidden="true">D</span> Dockside</p>
+        <p class="eyebrow">Payment receipt · verified against NEAR on every visit</p>
         <h1>Payment receipt</h1>
         <p class="lede">
           Every fact on this receipt is read from the NEAR escrow contract by your browser, and checked there:
@@ -29,38 +35,45 @@
           asked, and this page cannot send a transaction.
         </p>
       </div>
-    </header>
-    <main class="wrap">
+    </div>
+    <main class="wrap main">
       <div id="receipt" class="tabpanel" tabindex="-1">
         <noscript>
           <div class="verdict verdict-none">
-            <p class="verdict-title">This page needs JavaScript</p>
-            <p>It reads NEAR from your browser. Without JavaScript nothing on a receipt can be verified.</p>
+            <div class="verdict-body">
+              <p class="verdict-title">This page needs JavaScript</p>
+              <p>It reads NEAR from your browser. Without JavaScript nothing on a receipt can be verified.</p>
+            </div>
           </div>
         </noscript>
       </div>
       <section class="panel notes no-print" aria-labelledby="notes-title">
         <h2 id="notes-title">What is checked, and what is not</h2>
-        <ul>
+        <ul class="terms">
           <li>
-            <strong>Code.</strong> The escrow account's code hash equals the audited build in the proof manifest.
+            <strong>Code.</strong>
+            <span>The escrow account's code hash equals the audited build in the proof manifest.</span>
           </li>
           <li>
-            <strong>Trade and parties.</strong> Buyer, supplier, payout account, asset and amount are the contract's
-            own records for this trade.
+            <strong>Trade and parties.</strong>
+            <span>Buyer, supplier, payout account, asset and amount are the contract's own records for this
+            trade.</span>
           </li>
           <li>
-            <strong>Inspection.</strong> The inspection recorded on the contract passed, and the release approval
-            names that inspection and that evidence manifest.
+            <strong>Inspection.</strong>
+            <span>The inspection recorded on the contract passed, and the release approval names that inspection
+            and that evidence manifest.</span>
           </li>
           <li>
-            <strong>Payment.</strong> A release intent is PAID, the ledger conserves value and shows it released, and
-            the release transaction is final, succeeded, executed this trade's release and transferred the amount
-            to the payout account.
+            <strong>Payment.</strong>
+            <span>A release intent is PAID, the ledger conserves value and shows it released, and the release
+            transaction is final, succeeded, executed this trade's release and transferred the amount to the payout
+            account.</span>
           </li>
           <li>
-            <strong>Not checked here.</strong> Who held which key, the contents of the off-chain documents, and the
-            signature of a downloaded PDF receipt (verify that with <code>pnpm run verify-receipt</code>).
+            <strong>Not checked here.</strong>
+            <span>Who held which key, the contents of the off-chain documents, and the signature of a downloaded PDF
+            receipt (verify that with <code>pnpm run verify-receipt</code>).</span>
           </li>
         </ul>
         <p><a href="./index.html">The full proof page</a> checks every journey transaction of the deployment.</p>
