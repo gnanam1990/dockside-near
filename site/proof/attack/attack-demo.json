@@ -1,23 +1,365 @@
 {
   "schema": "dockside/attack-demo@1",
   "network": "testnet",
-  "status": "NOT_SET_UP",
+  "status": "LIVE",
   "rpc": [
     "https://test.rpc.fastnear.com",
     "https://archival-rpc.testnet.fastnear.com"
   ],
   "explorer": "https://testnet.nearblocks.io/txns/",
   "relay": null,
-  "escrow": null,
-  "tradeId": null,
-  "releaseIntentId": null,
-  "holdId": null,
-  "amountYocto": null,
-  "parties": null,
-  "attacker": null,
-  "baselineNonce": null,
-  "setup": [],
-  "terms": null,
-  "approval": null,
-  "recorded": []
+  "escrow": "gnanam1990-dock-escrow3.testnet",
+  "tradeId": "trd_0f0efb61b5d32937af351ca9a5cba150",
+  "releaseIntentId": "rli_08d61e16b64556e0e2ac4f3bf32d5a5b",
+  "holdId": "hld_1c6b8086fdfcc4ac3a18a11e63fbeee9",
+  "amountYocto": "2000000",
+  "parties": {
+    "buyer": "gnanam1990-dock-buyer.testnet",
+    "supplier": "gnanam1990-dock-supplier.testnet"
+  },
+  "attacker": {
+    "accountId": "gnanam1990-dock-attacker.testnet",
+    "publicKey": "ed25519:7jXWXNQXtBLC73AoHJa2vcETEvUdJAwV2NgTGVvqNnFi"
+  },
+  "baselineNonce": "277599622000000",
+  "setup": [
+    {
+      "step": "register",
+      "method": "register_trade",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "8m7soBp8vS1udyZgybuxtM4MZhrW5MQqKxh144eq9oZ9"
+    },
+    {
+      "step": "policy",
+      "method": "register_evidence_policy",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "A3tnNJyvHzfCfnX1LfUYDpX96qMpidwAz9t346uBSBxH"
+    },
+    {
+      "step": "fund",
+      "method": "ft_transfer_call",
+      "signer": "gnanam1990-dock-buyer.testnet",
+      "txHash": "iVoYdXweuHhjpxXTJ6fZQBiwuaQvvamXKaShW24LjMR"
+    },
+    {
+      "step": "attestation",
+      "method": "submit_manifest_attestation",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "2XW7vVn6ZGG3xD4TaLrRrBMnaUvEbhwmaW4AJsnrnVCx"
+    },
+    {
+      "step": "inspection",
+      "method": "submit_inspection",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "52igXGtFhuaACP6S4xWnw8mUxAPo2tp23YXZFo4btqcR"
+    },
+    {
+      "step": "payee_storage",
+      "method": "check_payee_storage",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "8b4QCwU9uyvDacFipyS9QCoomP6GWqnGzrA2KXhT2cxB"
+    },
+    {
+      "step": "intent",
+      "method": "create_release_intent",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "DCM8pcmLwrzoUYYK8m3zXDsnhLDqKN4u2zhEX2PZuvKr"
+    },
+    {
+      "step": "approval",
+      "method": "approve_release",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "AkmxdeTXgnaHKsU1BDXCb9Z19c2V4idFB3kcnYddyyaj"
+    },
+    {
+      "step": "hold_set",
+      "method": "set_hold",
+      "signer": "gnanam1990-dock-relayer.testnet",
+      "txHash": "DkDfR6QXS3X3roaUPe3Hp3m4s2DiLftvFjXkRY3C42GA"
+    }
+  ],
+  "terms": {
+    "struct": {
+      "amountYocto": {
+        "u128": "2000000"
+      },
+      "asset": {
+        "struct": {
+          "decimals": {
+            "u64": "6"
+          },
+          "kind": {
+            "str": "NEP141"
+          },
+          "network": {
+            "str": "near-testnet"
+          },
+          "tokenAccountId": {
+            "str": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af"
+          }
+        }
+      },
+      "buyer": {
+        "struct": {
+          "accountId": {
+            "str": "gnanam1990-dock-buyer.testnet"
+          },
+          "keyVersionId": {
+            "str": "key_343f6b8cae021fe55c495523941d2855"
+          },
+          "organizationId": {
+            "str": "org_8dc1ac4bbb797eb4071746a0eaea1697"
+          },
+          "principalId": {
+            "str": "prn_875e9c837e100883ef2f5c3c2e9c4a85"
+          },
+          "publicKey": {
+            "str": "ed25519:6TqVdC5B4JNb1Wa6maC8UniAxfVeyLFyGDW3MGPZ97tT"
+          }
+        }
+      },
+      "delayPolicy": {
+        "struct": {
+          "destinationChangeDelayMs": {
+            "u64": "3600000"
+          }
+        }
+      },
+      "escrowContractId": {
+        "str": "gnanam1990-dock-escrow3.testnet"
+      },
+      "evidencePolicy": {
+        "struct": {
+          "digest": {
+            "str": "c08d9881e7dc1c2612875d33afd891084a1a5578a97bb361c509b313a9ccb6f8"
+          },
+          "id": {
+            "str": "commercial-docs"
+          },
+          "revision": {
+            "u64": "1"
+          }
+        }
+      },
+      "expiresAt": {
+        "u64": "1797217152159"
+      },
+      "inspector": {
+        "struct": {
+          "attestationSchema": {
+            "str": "dockside/inspection-attestation@1"
+          },
+          "keyVersionId": {
+            "str": "key_fcfbb76b0bd8ed97f91c7d9e2f933ff4"
+          },
+          "principalId": {
+            "str": "prn_2926a0016ffd8c2a036f2b5daca2f8a4"
+          },
+          "publicKey": {
+            "str": "ed25519:AoC6pwL69j1p9SG2GuHVWny3hbgm5ZB9XHK5oEb3zQ2s"
+          }
+        }
+      },
+      "manifestAttestor": {
+        "struct": {
+          "attestationSchema": {
+            "str": "dockside/manifest-attestation@1"
+          },
+          "capability": {
+            "str": "MANIFEST_ATTEST"
+          },
+          "enrollmentId": {
+            "str": "svc_16a13eaec7b32f8266426f3d31089682"
+          },
+          "keyVersion": {
+            "u64": "1"
+          },
+          "publicKey": {
+            "str": "ed25519:6XU73Z29Sedwtq8gVDZaDsYPWw9Xhtyt7mHkbhaK1pKJ"
+          },
+          "scope": {
+            "struct": {
+              "evidencePolicyId": {
+                "str": "commercial-docs"
+              },
+              "evidencePolicyRevision": {
+                "u64": "1"
+              },
+              "organizationId": {
+                "str": "org_8dc1ac4bbb797eb4071746a0eaea1697"
+              },
+              "tradeId": {
+                "null": null
+              }
+            }
+          },
+          "serviceId": {
+            "str": "manifest-attestor"
+          }
+        }
+      },
+      "milestone": {
+        "struct": {
+          "description": {
+            "str": "Container loaded"
+          },
+          "id": {
+            "str": "shipment-1"
+          }
+        }
+      },
+      "network": {
+        "str": "near-testnet"
+      },
+      "payout": {
+        "struct": {
+          "destination": {
+            "str": "gnanam1990-dock-supplier.testnet"
+          },
+          "network": {
+            "str": "near-testnet"
+          },
+          "recipientType": {
+            "str": "NEAR_ACCOUNT"
+          }
+        }
+      },
+      "policySetter": {
+        "struct": {
+          "attestationSchema": {
+            "str": "dockside/hold-set@1"
+          },
+          "capability": {
+            "str": "DETERMINISTIC_POLICY_SET"
+          },
+          "enrollmentId": {
+            "str": "svc_5b5115aa638c74f9a9c20bb20f44b589"
+          },
+          "keyVersion": {
+            "u64": "1"
+          },
+          "publicKey": {
+            "str": "ed25519:4wDpfsoj5efyREGQ2g347PuzVSj7YyqmBoPwEgd9BdXr"
+          },
+          "scope": {
+            "struct": {
+              "evidencePolicyId": {
+                "str": "commercial-docs"
+              },
+              "evidencePolicyRevision": {
+                "u64": "1"
+              },
+              "organizationId": {
+                "str": "org_8dc1ac4bbb797eb4071746a0eaea1697"
+              },
+              "tradeId": {
+                "str": "trd_0f0efb61b5d32937af351ca9a5cba150"
+              }
+            }
+          },
+          "serviceId": {
+            "str": "deterministic-policy"
+          }
+        }
+      },
+      "predecessorDigest": {
+        "null": null
+      },
+      "profileVersion": {
+        "str": "dockside-direct-testnet-v1"
+      },
+      "refundPolicy": {
+        "struct": {
+          "id": {
+            "str": "dockside-refund-v1"
+          },
+          "revision": {
+            "u64": "1"
+          }
+        }
+      },
+      "revision": {
+        "u64": "1"
+      },
+      "riskResolver": {
+        "struct": {
+          "keyVersionId": {
+            "str": "key_916b42bee2cc82f9a2dd40b9b14968ae"
+          },
+          "principalId": {
+            "str": "prn_10c2c4c3b46cbc113f6705a3550d4bf0"
+          },
+          "publicKey": {
+            "str": "ed25519:b42PvBMJ7w1hSDGwsRBXcGKhJb7t1nue1xS4SXo4Quo"
+          }
+        }
+      },
+      "schemaVersion": {
+        "u64": "1"
+      },
+      "supplier": {
+        "struct": {
+          "accountId": {
+            "str": "gnanam1990-dock-supplier.testnet"
+          },
+          "keyVersionId": {
+            "str": "key_12f73e37fd7af581c1d234a7d4ea9401"
+          },
+          "organizationId": {
+            "str": "org_d2048c1c1f5f39e9b56e4c6b3c8dd5c3"
+          },
+          "principalId": {
+            "str": "prn_ed72503c4bd38fb4972415aab76f308a"
+          },
+          "publicKey": {
+            "str": "ed25519:3bdb8gRfVXySsQNGrN6cJ36LXBie1G339Xz5jNAgNsXf"
+          }
+        }
+      },
+      "tradeId": {
+        "str": "trd_0f0efb61b5d32937af351ca9a5cba150"
+      }
+    }
+  },
+  "approval": {
+    "txHash": "AkmxdeTXgnaHKsU1BDXCb9Z19c2V4idFB3kcnYddyyaj",
+    "argsBase64": "eyJwYXlsb2FkIjp7InN0cnVjdCI6eyJhbW91bnRZb2N0byI6eyJ1MTI4IjoiMjAwMDAwMCJ9LCJhdHRlc3RhdGlvbkRpZ2VzdCI6eyJzdHIiOiI4MTUyNjhmZDVkZDVjMjdmZTQ4MjFkYzlhZjRkYWM3ZWUwOGUxNjVmNmU2M2ZiOTU2MmMyZjRiYmRmNDZmOTIyIn0sImNvbnRyYWN0SWQiOnsic3RyIjoiZ25hbmFtMTk5MC1kb2NrLWVzY3JvdzMudGVzdG5ldCJ9LCJkZXN0aW5hdGlvbiI6eyJzdHIiOiJnbmFuYW0xOTkwLWRvY2stc3VwcGxpZXIudGVzdG5ldCJ9LCJkZXN0aW5hdGlvbkRpZ2VzdCI6eyJzdHIiOiI3ODc4ZWI3MjAzZGY1Zjg3Y2E0Y2Q0Njc0MmFhOTQ0MzYyOTYyZmNjMmU3NWM1Njg3N2U1MmViNmJmMDkwYjcxIn0sImV4ZWN1dGlvblByb2ZpbGUiOnsic3RyIjoiRElSRUNUX1RFU1RORVQifSwiZXhwaXJlc0F0Ijp7InU2NCI6IjE3OTQ3MTE1OTcyMTMifSwiaG9sZHNWaWV3RGlnZXN0Ijp7InN0ciI6IjIzODliODhjNDU2NGRjZjU2NTNkOGFjZDZiNGE1ODkxYzk5MWVlZjFiY2NmZWM4ZjVlMjVkMzg2OTE4OTY0NDUifSwiaW5zcGVjdGlvbkRpZ2VzdCI6eyJzdHIiOiJiMDA3NTI3MGQ3MzQ4NmMyYzE3MjYzYWZlYjc1MGE1OWM3OTVmYTliMjY0Yjc3YWZkYzk2YTc3ZmQ3ZWRlYTk4In0sImludGVudFN0YXRlVmVyc2lvbiI6eyJ1NjQiOiIxIn0sImlzc3VlZEF0Ijp7InU2NCI6IjE3OTQ2MjUxOTcyMTMifSwibWFuaWZlc3REaWdlc3QiOnsic3RyIjoiMTdhMTlmOGM3MGY5OTRkZDQyYzM4NzY2NjQ2ZDY1MDk2ZTA0YzIzZGY5YWIwZDIwOGUwMDJmZmI1ZWQwNTM4OCJ9LCJtYW5pZmVzdFJldmlzaW9uIjp7InU2NCI6IjEifSwibm9uY2UiOnsic3RyIjoiNTk2MmNkNTQyNmJhYjVhNmUwOTAxMWE3ZDc2NjhiNDk0ZjM2ZGQ5OTg0MjljMmEzODMyYmUxOTcxNTMxYjkyZSJ9LCJyZWxlYXNlSW50ZW50SWQiOnsic3RyIjoicmxpXzA4ZDYxZTE2YjY0NTU2ZTBlMmFjNGYzYmYzMmQ1YTViIn0sInNpZ25lclJvbGUiOnsic3RyIjoiQlVZRVJfQVBQUk9WRVIifSwidHJhZGVEaWdlc3QiOnsic3RyIjoiNzQ2NmJmMzg3YmJlNjYwNDI4ZGE5YmVhOThlZDNmZDdiZDIxZWY2NzQwYTk0ZmJiZTJmNmY3YmNhMjcyZGEyOCJ9LCJ0cmFkZUlkIjp7InN0ciI6InRyZF8wZjBlZmI2MWI1ZDMyOTM3YWYzNTFjYTlhNWNiYTE1MCJ9LCJ0cmFkZVJldmlzaW9uIjp7InU2NCI6IjEifX19LCJzaWduYXR1cmUiOiJlZDI1NTE5OjYyaHZvd0VnRm56QlhxdHJ5TTd4cVB0MkJQMzZaWTZGOFhlQTNWQmJnY2c1akszRHdjR3I3b2VWR2VKWlNhTFVCamRhTE5XNDlqMWtOU3lWWnk5MnhNeE0iLCJ0cmFkZV9pZCI6InRyZF8wZjBlZmI2MWI1ZDMyOTM3YWYzNTFjYTlhNWNiYTE1MCJ9"
+  },
+  "recorded": [
+    {
+      "attack": "change-payout",
+      "txHash": "ANnXUPm26E6RdVgFMHRTAVjfXdu34cpixJPNymZSTBbW",
+      "signer": "gnanam1990-dock-attacker.testnet",
+      "code": "SIGNATURE_INVALID",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "release-during-hold",
+      "txHash": "2nSav2YPSVfxYqKy1QUQMeFn1TBZmKLXAiPZG55Pz6sC",
+      "signer": "gnanam1990-dock-attacker.testnet",
+      "code": "HOLD_ACTIVE",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "approve-wrong-key",
+      "txHash": "E1V8fn7vWciwofM8txDCqadYde1MLwadAsmeDVT3BtFB",
+      "signer": "gnanam1990-dock-attacker.testnet",
+      "code": "SIGNATURE_INVALID",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "replay-approval",
+      "txHash": "DAnUWidsR3oHhY3GkdwFMhhRuG7Se81bMFaZ3jTcHVA2",
+      "signer": "gnanam1990-dock-attacker.testnet",
+      "code": "INVALID_STATE",
+      "blockTimeMs": null
+    },
+    {
+      "attack": "refund-to-stranger",
+      "txHash": "WzvZPmuNwtB2oB4w7MkMZLhojrpQdSdjgjE3tuwy5Jf",
+      "signer": "gnanam1990-dock-attacker.testnet",
+      "code": "NOTHING_ELIGIBLE",
+      "blockTimeMs": null
+    }
+  ]
 }
