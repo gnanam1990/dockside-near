@@ -56,6 +56,8 @@ interface Opts {
   config?: Record<string, unknown>;
   relay?: "none" | "recorded";
   mutate?: Mutate;
+  /** Answers for requests the recording does not hold (undefined: not recorded). */
+  extra?: (rpc: { method: string; params: Record<string, unknown> }) => unknown;
 }
 
 /** Route the page's config, relay and RPC requests; returns counters of what it asked for. */
@@ -87,7 +89,11 @@ async function route(page: Page, o: Opts = {}) {
       const rpc = JSON.parse(req.postData() ?? "{}");
       const recorded = recording.answers[requestKey(rpc)] as Record<string, unknown> | undefined;
       const result =
-        recorded === undefined ? undefined : o.mutate ? o.mutate(rpc, structuredClone(recorded)) : recorded;
+        recorded === undefined
+          ? o.extra?.(rpc)
+          : o.mutate
+            ? o.mutate(rpc, structuredClone(recorded))
+            : recorded;
       const body =
         result === undefined
           ? { jsonrpc: "2.0", id: rpc.id, error: { name: "HANDLER_ERROR", cause: { name: "NOT_RECORDED" } } }
@@ -197,6 +203,71 @@ test("a ledger that moved by one yoctoNEAR is shown as changed", async ({ page }
   await open(page);
   await expect(page.locator(".verdict-title")).toHaveText("The trade is not in its demo state");
   await expect(page.locator('tr[data-row="released"]')).toHaveAttribute("data-ok", "false");
+});
+
+/**
+ * The live demo trade holds test USDC (NEP-141, 6 decimals). The sandbox recording is a NEAR
+ * trade, so this run alters exactly the asset: the config's amount and terms name the token, the
+ * ledger reports the token and the same buckets in its base units, and the token contract answers
+ * ft_metadata with its symbol.
+ */
+const USDC = "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af";
+const toUsdc = (v: string) => (v === "0" ? "0" : "2000000");
+const usdcDemo = () => {
+  const c = structuredClone(demo) as unknown as Record<string, unknown> & {
+    terms: { struct: Record<string, unknown> };
+  };
+  c.amountYocto = "2000000";
+  c.terms.struct["amountYocto"] = { u128: "2000000" };
+  c.terms.struct["asset"] = {
+    struct: {
+      decimals: { u64: "6" },
+      kind: { str: "NEP141" },
+      network: { str: "near-testnet" },
+      tokenAccountId: { str: USDC },
+    },
+  };
+  return c;
+};
+const usdcLedger: Mutate = (rpc, r) => {
+  if (viewOf(rpc) !== "get_ledger") return r;
+  const v = decode(r);
+  v.asset = { kind: "NEP141", network: "near-testnet", tokenAccountId: USDC, decimals: 6 };
+  for (const k of Object.keys(v.totals))
+    if (typeof v.totals[k] === "string" && /^\d+$/.test(v.totals[k])) v.totals[k] = toUsdc(v.totals[k]);
+  return encode(r, v);
+};
+const ftMetadata = (rpc: { params: Record<string, unknown> }) =>
+  viewOf(rpc) === "ft_metadata" && rpc.params["account_id"] === USDC
+    ? {
+        block_height: 1,
+        block_hash: "11111111111111111111111111111111",
+        logs: [],
+        result: [
+          ...Buffer.from(JSON.stringify({ spec: "ft-1.0.0", name: "USDC", symbol: "USDC", decimals: 6 })),
+        ],
+      }
+    : undefined;
+
+test("a USDC trade's amounts are stated in USDC at the token's decimals, never as NEAR", async ({ page }) => {
+  await route(page, { config: usdcDemo(), mutate: usdcLedger, extra: ftMetadata });
+  await open(page);
+  await expect(page.locator(".verdict-title")).toHaveText("The money has not moved");
+  await expect(page.locator("#trade .verdict")).toContainText("All 2.00 USDC is still funded and reserved");
+  await expect(page.locator("#trade .readout-value").first()).toHaveText("2.00 USDC");
+  for (const id of ["funded", "reserved"]) {
+    await expect(page.locator(`tr[data-row="${id}"] td`).nth(0)).toHaveText("2.00 USDC");
+    await expect(page.locator(`tr[data-row="${id}"] td`).nth(1)).toHaveText("2.00 USDC");
+  }
+  await expect(page.locator('tr[data-row="released"] td').nth(1)).toHaveText("0.00 USDC");
+  await expect(page.locator("#trade")).not.toContainText(/[0-9] NEAR/);
+});
+
+test("a token without readable metadata is named by its contract, not as NEAR", async ({ page }) => {
+  await route(page, { config: usdcDemo(), mutate: usdcLedger });
+  await open(page);
+  await expect(page.locator('tr[data-row="funded"] td').nth(1)).toHaveText(`2.00 tokens of ${USDC}`);
+  await expect(page.locator("#trade")).not.toContainText(/[0-9] NEAR/);
 });
 
 test("an unreadable chain is reported, not passed", async ({ page }) => {

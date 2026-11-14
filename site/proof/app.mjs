@@ -2,7 +2,7 @@
 // the expected values come from proof-manifest.json (generated from the committed run records),
 // the actual values from the public RPC endpoints listed in it. No server of ours is involved, and
 // chain data is only ever written to the page as text.
-import { formatNear, verdict, verifyNetwork } from "./lib/verify.mjs";
+import { assetUnit, formatAmount, formatUnits, verdict, verifyNetwork } from "./lib/verify.mjs";
 import { arrive, badge, el, external, icon, mono, mountNav, VERDICT_ICON } from "./lib/ui.mjs";
 
 const BUCKETS = [
@@ -115,14 +115,18 @@ function txTable(rows, tradeId) {
   );
 }
 
-function ledgerTable(ledger) {
+function ledgerTable(ledger, unit) {
+  const asset = ledger.asset ?? null;
+  const base = asset?.kind === "NEAR_NATIVE" ? "yoctoNEAR" : "base units";
   const funders = Object.entries(ledger.funders ?? {});
   const line = (label, f, cls) =>
     el(
       "tr",
       { class: cls },
       el("th", { scope: "row", class: "mono", text: label }),
-      BUCKETS.map(([k]) => el("td", { class: "mono num", title: `${f[k]} yoctoNEAR`, text: amount(f[k]) })),
+      BUCKETS.map(([k]) =>
+        el("td", { class: "mono num", title: `${f[k]} ${base}`, text: amount(f[k], asset) }),
+      ),
     );
   return el(
     "div",
@@ -130,7 +134,7 @@ function ledgerTable(ledger) {
     el(
       "table",
       { class: "ledger" },
-      el("caption", { class: "sr-only", text: "Ledger buckets in NEAR, read from get_ledger" }),
+      el("caption", { class: "sr-only", text: `Ledger buckets in ${unit}, read from get_ledger` }),
       el(
         "thead",
         {},
@@ -151,11 +155,11 @@ function ledgerTable(ledger) {
   );
 }
 
-function amount(yocto) {
+function amount(value, asset) {
   try {
-    return formatNear(yocto).replace(" NEAR", "");
+    return formatUnits(value, asset);
   } catch {
-    return String(yocto);
+    return String(value);
   }
 }
 
@@ -384,15 +388,17 @@ function renderResult(panel, network, result, rerun, networkName) {
             ),
         t.trade
           ? facts([
-              ["Amount", mono(`${formatNear(t.trade.amountYocto)}`)],
+              ["Amount", mono(formatAmount(t.trade.amountYocto, t.asset, t.symbol))],
               ["Buyer", mono(t.trade.buyerAccount)],
               ["Supplier", mono(t.trade.supplierAccount)],
               ["Terms digest", mono(t.trade.termsDigest)],
               ["Run record", mono(j.evidence)],
             ])
           : null,
-        t.ledger ? el("h4", { text: "Ledger (NEAR), read from get_ledger" }) : null,
-        t.ledger ? ledgerTable(t.ledger) : null,
+        t.ledger
+          ? el("h4", { text: `Ledger (${assetUnit(t.asset, t.symbol)}), read from get_ledger` })
+          : null,
+        t.ledger ? ledgerTable(t.ledger, assetUnit(t.asset, t.symbol)) : null,
         el("h4", { text: "Ledger and outcome checks" }),
         checksTable(by(`trade:${t.tradeId}`), `Checks of trade ${t.tradeId}`),
         el("h4", { text: `Transactions (${by(`tx:${t.tradeId}`).length})` }),

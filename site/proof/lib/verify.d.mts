@@ -22,7 +22,15 @@ export interface ProofResult {
   summary: ProofSummary;
   block: { height: number; hash: string; timestampMs: number } | null;
   config: Record<string, unknown> | null;
-  trades: { tradeId: string; kind: string; evidence: string; ledger: unknown; trade: unknown }[];
+  trades: {
+    tradeId: string;
+    kind: string;
+    evidence: string;
+    ledger: unknown;
+    trade: unknown;
+    asset: unknown;
+    symbol: string | null;
+  }[];
   rpcCalls: number;
 }
 export interface VerifyOptions {
@@ -35,6 +43,10 @@ export const PASS: "PASS";
 export const FAIL: "FAIL";
 export const ERROR: "ERROR";
 export function formatNear(yocto: string | bigint): string;
+export function formatUnits(amount: string | bigint, asset: unknown): string;
+export function assetUnit(asset: unknown, symbol?: string | null): string;
+export function formatAmount(amount: string | bigint, asset: unknown, symbol?: string | null): string;
+export function tokenSymbol(meta: unknown): string | null;
 export function checkConservation(ledger: unknown): {
   ok: boolean;
   problems: string[];

@@ -19,8 +19,11 @@ import { type Replay, startReplay } from "../../../scripts/proof/replay-rpc.mjs"
 import { base58Encode, hexToBytes } from "../../../site/proof/lib/near-rpc.mjs";
 import {
   checkConservation,
+  formatAmount,
   formatNear,
+  formatUnits,
   type ProofResult,
+  tokenSymbol,
   verdict,
   verifyNetwork,
 } from "../../../site/proof/lib/verify.mjs";
@@ -160,6 +163,25 @@ describe("M46 proof verifier on recorded testnet answers", () => {
     );
     // The recorded flag still says true: the recomputation is what caught it.
     expect(r.rows.find((x) => x.id === `${RELEASE}:conservation-flag`)?.status).toBe("PASS");
+  });
+
+  it("states a NEP-141 trade's amounts in the token's units, never as NEAR", async () => {
+    const r = await run("nep141");
+    const usdcContract = "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af";
+    const released = r.rows.find((x) => x.id === `${RELEASE}:released`);
+    expect(released?.expected).toBe(
+      `50000000000000000.00 tokens of ${usdcContract} (50000000000000000000000 base units)`,
+    );
+    expect(released?.actual).toBe(released?.expected);
+    expect(r.rows.find((x) => x.id === `${RELEASE}:release-intent`)?.expected).not.toContain("NEAR");
+    for (const row of r.rows.filter((x) => x.group.startsWith("trade:"))) {
+      expect(row.expected).not.toMatch(/ NEAR|yocto/);
+      expect(row.actual).not.toMatch(/ NEAR|yocto/);
+    }
+    const view = r.trades.find((t) => t.tradeId === RELEASE) as { asset: unknown; symbol: unknown };
+    expect(view.asset).toMatchObject({ kind: "NEP141", decimals: 6, tokenAccountId: usdcContract });
+    // The replay holds no ft_metadata answer: the token is named by its account, not guessed.
+    expect(view.symbol).toBeNull();
   });
 
   it("fails a config row when the contract reports another value", async () => {
@@ -321,6 +343,34 @@ describe("M46 proof helpers", () => {
     expect(formatNear("0")).toBe("0 NEAR");
     expect(formatNear("1000000000000000000000001")).toBe("1.000000000000000000000001 NEAR");
     expect(formatNear("12000000000000000000000000")).toBe("12 NEAR");
+  });
+
+  it("formats an amount from the trade's asset: NEAR exactly, NEP-141 at the token's decimals", () => {
+    const native = { kind: "NEAR_NATIVE", network: "near-testnet" };
+    const usdc = { kind: "NEP141", network: "near-testnet", tokenAccountId: "usdc.testnet", decimals: 6 };
+    expect(formatAmount("50000000000000000000000", native)).toBe("0.05 NEAR");
+    expect(formatAmount("2000000", usdc, "USDC")).toBe("2.00 USDC");
+    expect(formatAmount(2_500_000n, usdc, "USDC")).toBe("2.50 USDC");
+    expect(formatAmount("1234567", usdc, "USDC")).toBe("1.234567 USDC");
+    expect(formatAmount("1", usdc, "USDC")).toBe("0.000001 USDC");
+    expect(formatAmount("0", usdc, "USDC")).toBe("0.00 USDC");
+    expect(formatAmount("2000000", usdc, null)).toBe("2.00 tokens of usdc.testnet");
+    expect(formatAmount("7", { kind: "NEP141", tokenAccountId: "x.testnet", decimals: 0 }, "X")).toBe(
+      "7.00 X",
+    );
+    expect(formatAmount("2000000", { kind: "SOMETHING" })).toBe("2000000 base units");
+    expect(formatAmount("2000000", null)).toBe("2000000 base units");
+    expect(formatUnits("2000000", usdc)).toBe("2.00");
+    expect(formatUnits("50000000000000000000000", native)).toBe("0.05");
+  });
+
+  it("takes a token's symbol from ft_metadata only when it is a plain short name", () => {
+    expect(tokenSymbol({ symbol: "USDC", decimals: 6 })).toBe("USDC");
+    expect(tokenSymbol({ symbol: "wNEAR" })).toBe("wNEAR");
+    expect(tokenSymbol({ symbol: "<img src=x>" })).toBeNull();
+    expect(tokenSymbol({ symbol: "A".repeat(17) })).toBeNull();
+    expect(tokenSymbol({ symbol: "" })).toBeNull();
+    expect(tokenSymbol(null)).toBeNull();
   });
 
   it("encodes base58 like the core package, so a SHA-256 maps to its NEAR code hash", () => {

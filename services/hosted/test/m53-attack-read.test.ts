@@ -8,12 +8,14 @@ import { describe, expect, it } from "vitest";
 import { requestKey } from "../../../scripts/proof/replay-rpc.mjs";
 import {
   attemptCount,
+  formatAmount,
   formatNear,
   fundsState,
   judgeAttempt,
   keyScope,
   ATTACKS as PAGE_ATTACKS,
   recordedFor,
+  tradeAsset,
 } from "../../../site/proof/lib/attack-read.mjs";
 import { ATTACKS, parseDemoConfig } from "../src/attack/attacks.js";
 
@@ -135,5 +137,39 @@ describe("funds and counter", () => {
   it("replays the newest recorded attempt of each attack", () => {
     expect(recordedFor(demo, "release-during-hold")?.txHash).toBe(demo.recorded[5]?.txHash);
     expect(recordedFor({ recorded: [] }, "change-payout")).toBeNull();
+  });
+});
+
+describe("amounts in the trade's asset", () => {
+  const live = JSON.parse(
+    readFileSync(new URL("../../../site/proof/attack/attack-demo.json", import.meta.url), "utf8"),
+  ) as Json;
+  const USDC = "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af";
+
+  it("takes the asset from the ledger the chain returned, else from the registered terms", () => {
+    expect(tradeAsset(demo, { ledger: view("get_ledger") })).toEqual({
+      kind: "NEAR_NATIVE",
+      network: "near-testnet",
+    });
+    expect(tradeAsset(demo, { ledger: null })).toEqual({ kind: "NEAR_NATIVE", network: "near-testnet" });
+    // The committed live demo is a USDC trade: 6 decimals, Circle's testnet token contract.
+    expect(tradeAsset(live, { ledger: null })).toEqual({
+      kind: "NEP141",
+      network: "near-testnet",
+      tokenAccountId: USDC,
+      decimals: 6,
+    });
+    expect(tradeAsset({ terms: null }, { ledger: null })).toBeNull();
+  });
+
+  it("states USDC held by the live demo trade as USDC, not as NEAR", () => {
+    const asset = tradeAsset(live, { ledger: null });
+    expect(formatAmount(2_000_000n, asset, "USDC")).toBe("2.00 USDC");
+    expect(formatAmount(live["amountYocto"] as string, asset, "USDC")).toBe("2.00 USDC");
+    expect(formatAmount(2_000_000n, asset, null)).toBe(`2.00 tokens of ${USDC}`);
+    expect(formatAmount(0n, asset, "USDC")).toBe("0.00 USDC");
+    expect(formatAmount(-1n, asset, "USDC")).toBe("unreadable");
+    // NEAR keeps its own rendering.
+    expect(formatAmount(20_000_000_000_000_000_000_000n, { kind: "NEAR_NATIVE" }, null)).toBe("0.02 NEAR");
   });
 });
