@@ -79,9 +79,7 @@ export async function completeEvidence(supplier: Page, inspector: Page, tradeId:
     buffer: pdf(`Commercial invoice for ${tradeId}`),
   });
   await invoice.getByRole("button", { name: "Upload to commercial-invoice" }).click();
-  await expect(invoice.getByTestId("upload-commercial-invoice-status")).toContainText(
-    "manifest is now revision",
-  );
+  await expectUploaded(supplier, "commercial-invoice");
   await openTab(inspector, tradeId, "evidence");
   const report = inspector.getByTestId("slot-inspection-report");
   await report.getByLabel("File for inspection-report").setInputFiles({
@@ -90,16 +88,32 @@ export async function completeEvidence(supplier: Page, inspector: Page, tradeId:
     buffer: Buffer.from(`Inspection report for ${tradeId}: seals intact.\n`),
   });
   await report.getByRole("button", { name: "Upload to inspection-report" }).click();
-  await expect(report.getByTestId("upload-inspection-report-status")).toContainText(
-    "manifest is now revision",
-  );
+  await expectUploaded(inspector, "inspection-report");
   const photos = inspector.getByTestId("slot-cargo-photos");
   await photos
     .getByLabel("File for cargo-photos")
     .setInputFiles({ name: "cargo.png", mimeType: "image/png", buffer: png(24, 12, 3) });
   await photos.getByRole("button", { name: "Upload to cargo-photos" }).click();
-  await expect(photos.getByTestId("upload-cargo-photos-status")).toContainText("manifest is now revision");
+  await expectUploaded(inspector, "cargo-photos");
   await waitAttested(inspector, tradeId);
+}
+
+/**
+ * The upload into `slotId` finished, and this page now shows the manifest revision it created (or a
+ * later one). An upload compare-and-swaps on the revision the page shows, and the page learns the
+ * new revision from the refresh that follows an upload; a next upload clicked before that refresh
+ * lands is refused as VERSION_CONFLICT. Waiting here keeps back-to-back uploads deterministic.
+ */
+export async function expectUploaded(page: Page, slotId: string): Promise<number> {
+  const status = page.getByTestId(`slot-${slotId}`).getByTestId(`upload-${slotId}-status`);
+  await expect(status).toContainText(/manifest is now revision \d+/);
+  const revision = Number(/manifest is now revision (\d+)/.exec(await status.innerText())?.[1]);
+  await expect
+    .poll(async () => Number(await page.getByTestId("manifest-revision").innerText()), {
+      message: `the page shows manifest revision ${revision} after the ${slotId} upload`,
+    })
+    .toBeGreaterThanOrEqual(revision);
+  return revision;
 }
 
 export async function waitAttested(page: Page, tradeId: string): Promise<void> {

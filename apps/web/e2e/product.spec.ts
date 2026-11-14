@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
+import { expectUploaded } from "./flows";
 import { expectAccessible, expectNoBodyOverflow, VIEWPORTS, waitForScreen } from "./helpers";
 import { control, enroll, eventually, openTab, type Person, pdf, png, signAction } from "./stack";
 
@@ -198,12 +199,13 @@ test("T-037 evidence slots show the exact predicate and recovery, refuse bad con
       },
     );
   });
+  await expectUploaded(i, "inspection-report");
   const photos = i.getByTestId("slot-cargo-photos");
   await photos
     .getByLabel("File for cargo-photos")
     .setInputFiles({ name: "cargo.png", mimeType: "image/png", buffer: png(32, 16) });
   await photos.getByRole("button", { name: "Upload to cargo-photos" }).click();
-  await expect(photos.getByTestId("upload-cargo-photos-status")).toContainText("manifest is now revision");
+  await expectUploaded(i, "cargo-photos");
 
   // The isolated attestor service signs the complete manifest; the panel shows it current.
   await eventually(i, async () => {

@@ -18,6 +18,7 @@
  * the in-flight trade and requires a new trade revision.
  */
 import { type Browser, expect, type Page, test } from "@playwright/test";
+import { expectUploaded } from "./flows";
 import {
   bootstrapOrganization,
   expectAccessible,
@@ -285,12 +286,13 @@ test("M12 buyer and supplier bind the organization's services in a trade; eviden
       },
     );
   });
+  await expectUploaded(i, "inspection-report");
   const photos = i.getByTestId("slot-cargo-photos");
   await photos
     .getByLabel("File for cargo-photos")
     .setInputFiles({ name: "p.png", mimeType: "image/png", buffer: png(24, 12, 3) });
   await photos.getByRole("button", { name: "Upload to cargo-photos" }).click();
-  await expect(photos.getByTestId("upload-cargo-photos-status")).toContainText("manifest is now revision");
+  await expectUploaded(i, "cargo-photos");
   await eventually(b, async () => {
     await openTab(b, tradeId, "evidence");
     await expect(b.getByTestId("attestation-panel")).toContainText("Attestation current");
