@@ -8,6 +8,9 @@ back to whoever paid.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Demo video (2 min, captions): https://gnanam1990.github.io/dockside-near/video/dockside-demo.mp4
+
+Demo post on X (video and write-up): https://x.com/0xweeky/status/2121509466562846914
+
 Besides the video, the fastest checks need no install: the proof page, the payment receipt and the attack console
 below (live on GitHub Pages), and the one-line `get_ledger` call below; `pnpm judge` re-checks everything in one
 command.

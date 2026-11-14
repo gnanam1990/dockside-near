@@ -18,8 +18,8 @@ What remains yours, in short:
 | Yours | Why it cannot be done here | Section |
 |---|---|---|
 | ~~Push the repository and check the first CI run~~ | **done**: `main` was pushed and CI passed at `cf52cc5` ([run 43353700412](https://github.com/gnanam1990/dockside-near/actions/runs/43353700412)); keep it green | §1 |
-| Make the repository public and enable GitHub Pages (Settings → Pages → GitHub Actions), then confirm `pages.yml` deployed | only the repository owner can change these settings | §1 |
-| Record and publish the demo video | needs the owner's screen, voice and accounts | [demo/DEMO-SCRIPT.md](demo/DEMO-SCRIPT.md) |
+| ~~Make the repository public and enable GitHub Pages~~ | **done**: public, and `pages.yml` deploys the proof page, receipt, attack console and video to https://gnanam1990.github.io/dockside-near/ | §1 |
+| ~~Record and publish the demo video~~ | **done**: https://gnanam1990.github.io/dockside-near/video/dockside-demo.mp4, posted on X at https://x.com/0xweeky/status/2121509466562846914 | [demo/DEMO-SCRIPT.md](demo/DEMO-SCRIPT.md) |
 | Deploy the hosted container (M55) | needs a hosting account | [runbooks/hosted-deploy.md](runbooks/hosted-deploy.md) |
 | ~~Create four NEAR testnet accounts and run `scripts/testnet-deploy/run-all --network testnet`~~ | **done** (M24; hardened contract on escrow2 in M34; USDC journeys on escrow3 in M56) | §2–§3 |
 | Run the web app, API and worker against testnet at least once | they have only run against a simulated chain; needs the relayer key custody of §4 | §4–§5, [runbooks/testnet-product.md](runbooks/testnet-product.md) |
