@@ -8,15 +8,18 @@ back to whoever paid.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Demo video: **pending** (not recorded yet; it will follow [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)).
-Until the video, the proof page and a hosted app are live, there is **nothing to open without installing**: the
-fastest checks are the one-line `get_ledger` call below (no install) and `pnpm judge` (one command).
+Until the video, the fastest checks need no install: the proof page, the payment receipt and the attack console
+below (live on GitHub Pages), and the one-line `get_ledger` call below; `pnpm judge` re-checks everything in one
+command.
 
 - **Proof page** (reads NEAR live in your browser, no install): https://gnanam1990.github.io/dockside-near/ —
-  published after the Pages workflow runs ([`.github/workflows/pages.yml`](.github/workflows/pages.yml); not live
-  yet). Payment receipt:
-  https://gnanam1990.github.io/dockside-near/receipt.html?trade=trd_197c633d724eeb2cddc64d6dabf55976 (same
-  condition). Until then, `pnpm proof:serve` serves the same page locally ([M46](docs/status/M46.md)). The page
-  re-checks the native-NEAR escrow2; the USDC escrow3 is re-checked by `pnpm judge` (below), not by the page yet.
+  published by the Pages workflow ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)). Payment receipt:
+  https://gnanam1990.github.io/dockside-near/receipt.html?trade=trd_197c633d724eeb2cddc64d6dabf55976.
+  `pnpm proof:serve` serves the same pages locally ([M46](docs/status/M46.md)). The page re-checks the
+  native-NEAR escrow2; the USDC escrow3 is re-checked by `pnpm judge` (below), not by the page yet.
+- **Attack console** ("try to steal this payment", reads NEAR live in your browser):
+  https://gnanam1990.github.io/dockside-near/attack/ — the testnet demo trade on escrow3 holds 2 test USDC
+  ([M53](docs/status/M53.md)).
 - **Hosted app:** pending (the container is built and verified locally, [M55](docs/status/M55.md); not deployed).
 - Architecture and every developer command: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Item-by-item status:
   [BUILD-STATUS.md](BUILD-STATUS.md).
@@ -185,11 +188,11 @@ Each merged module, one line. "Owner" marks a step that needs the repository own
 - Reviewer kits — [docs/review-kits/](docs/review-kits/)
 - Native NEAR journeys on testnet: paid, hold, refund — [M24](docs/status/M24.md), [M34](docs/status/M34.md), [M44](docs/status/M44.md)
 - Relayer signer custody and the testnet product runtime (API and worker against testnet: owner, not run) — [M43](docs/status/M43.md), [runbook](docs/runbooks/testnet-product.md)
-- Proof page and `pnpm judge` (GitHub Pages: owner, not enabled) — [M46](docs/status/M46.md)
+- Proof page and `pnpm judge` (live on GitHub Pages) — [M46](docs/status/M46.md)
 - Refusal journey: six rejected calls, then PAID (ran in USDC on testnet; native run: owner) — [M47](docs/status/M47.md), [M56](docs/status/M56.md)
 - USDC rail (NEP-141 trade asset) and a mainnet guard with caps; audited; all four journeys on testnet (mainnet: owner) — [M50](docs/status/M50.md), [M56](docs/status/M56.md)
 - Supplier cash-out to another chain through NEAR Intents 1Click, dry quotes only (real cash-out: owner, not run) — [M52](docs/status/M52.md)
-- "Try to steal this payment" attack console (testnet demo trade: owner, not run) — [M53](docs/status/M53.md), [runbook](docs/runbooks/attack-console.md)
+- "Try to steal this payment" attack console (live on GitHub Pages; testnet demo trade in USDC on escrow3) — [M53](docs/status/M53.md), [runbook](docs/runbooks/attack-console.md)
 - Verifiable payment receipt page and signed PDF with an offline verifier — [M54](docs/status/M54.md)
 - Hosted runtime: one container for API, worker and web (host deployment: owner) — [M55](docs/status/M55.md), [runbook](docs/runbooks/hosted-deploy.md)
 
@@ -265,7 +268,8 @@ exists and the contract journeys ran on testnet, but the full real-product gate 
 | Contract: destination change, NEP-141 recovery, runtime-refunded transfer, the USDC rail | local nearcore node (near-sandbox) |
 | API, worker, web app, four roles, audit export, receipts, cash-out | locally, against a **simulated** NEAR chain (worker relayer custody validated on a local nearcore node, M43) |
 | Who signed on testnet | **one operator** for every role (keys derived from one seed); separate people on separate devices: not run |
-| Hosted app, GitHub Pages proof page | built and verified locally; **not deployed** (the proof page covers escrow2; `pnpm judge` covers both escrows) |
+| GitHub Pages proof page, payment receipt, attack console | **live** at https://gnanam1990.github.io/dockside-near/ (the proof page covers escrow2; `pnpm judge` covers both escrows) |
+| Hosted app | built and verified locally; **not deployed** |
 | Demo video | **not recorded yet** (script: [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)) |
 | Mainnet | **mainnet-ready, same audited contract, capped at 25 USDC per trade; deployment pending** |
 | 1Click real quote and cash-out | not run (only dry quotes against a local simulator) |

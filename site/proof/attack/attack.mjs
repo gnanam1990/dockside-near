@@ -8,11 +8,13 @@ import {
   ATTACKS,
   attemptCount,
   explorerTx,
-  formatNear,
+  formatAmount,
   fundsState,
   judgeAttempt,
   keyScope,
   recordedFor,
+  tokenSymbol,
+  tradeAsset,
 } from "../lib/attack-read.mjs";
 import { createRpc } from "../lib/near-rpc.mjs";
 import { arrive, el, external, icon, mono, mountNav, VERDICT_ICON } from "../lib/ui.mjs";
@@ -55,7 +57,17 @@ async function readTrade() {
     state.rpc.callView(c.escrow, "get_holds", args),
     state.rpc.viewAccessKey(c.attacker.accountId, c.attacker.publicKey),
   ]);
-  return { ledger, release, holds, key };
+  // Amounts are shown in the trade's asset; a NEP-141 token is named by its own ft_metadata.
+  const asset = tradeAsset(c, { ledger });
+  let symbol = null;
+  if (asset?.kind === "NEP141" && typeof asset.tokenAccountId === "string") {
+    try {
+      symbol = tokenSymbol(await state.rpc.callView(asset.tokenAccountId, "ft_metadata", {}));
+    } catch {
+      symbol = null; // unreadable metadata: the token is named by its account instead
+    }
+  }
+  return { ledger, release, holds, key, asset, symbol };
 }
 
 /** The payment's verdict: one box, icon and words, the same shape as the proof page's. */
@@ -98,6 +110,7 @@ function renderTrade(read, error) {
   const count = attemptCount(read.key, c);
   const scope = keyScope(read.key, c);
   const funded = f.rows.find((r) => r.id === "funded");
+  const amount = (v) => formatAmount(v, read.asset, read.symbol);
   const changedCount = state.lastCount !== null && count !== null && count !== state.lastCount;
   state.lastCount = count;
   section.append(
@@ -109,7 +122,7 @@ function renderTrade(read, error) {
         "p",
         {},
         f.unchanged
-          ? `All ${formatNear(c.amountYocto)} is still funded and reserved for the bound supplier; nothing was released or refunded.`
+          ? `All ${amount(c.amountYocto)} is still funded and reserved for the bound supplier; nothing was released or refunded.`
           : "Read the rows below: the page compares every value with the demo's starting state.",
       ),
     ),
@@ -120,7 +133,7 @@ function renderTrade(read, error) {
         "div",
         { class: "readout-cell" },
         el("p", { class: "readout-label", text: "Held in escrow, read now" }),
-        el("p", { class: "readout-value mono", text: funded ? formatNear(funded.actual) : "unreadable" }),
+        el("p", { class: "readout-value mono", text: funded ? amount(funded.actual) : "unreadable" }),
       ),
       el(
         "div",
@@ -180,8 +193,8 @@ function renderTrade(read, error) {
               "tr",
               { "data-row": r.id, "data-ok": String(r.ok) },
               el("th", { scope: "row", text: r.label }),
-              el("td", { class: "num mono", text: formatNear(r.expected) }),
-              el("td", { class: `num mono ${r.ok ? "" : "bad"}`, text: formatNear(r.actual) }),
+              el("td", { class: "num mono", text: amount(r.expected) }),
+              el("td", { class: `num mono ${r.ok ? "" : "bad"}`, text: amount(r.actual) }),
             ),
           ),
         ),

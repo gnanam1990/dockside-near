@@ -31,6 +31,52 @@ export function formatNear(yocto) {
   return `${whole}${frac ? `.${frac}` : ""} NEAR`;
 }
 
+/**
+ * An amount for people, in the unit of the trade's asset as the contract reports it (get_ledger's
+ * `asset`): NEAR exactly for NEAR_NATIVE; for NEP141 the token's base units shifted by its
+ * decimals, with at least two decimal places ("2000000" at 6 decimals is "2.00"). Exact: no
+ * rounding, no floating point. An asset this code does not know keeps its base units.
+ */
+export function formatUnits(amount, asset) {
+  const n = BigInt(amount);
+  if (asset?.kind === "NEAR_NATIVE") return formatNear(n).replace(/ NEAR$/, "");
+  if (!isToken(asset)) return n.toString();
+  const scale = 10n ** BigInt(asset.decimals);
+  const frac = (n % scale).toString().padStart(asset.decimals, "0").replace(/0+$/, "").padEnd(2, "0");
+  return `${n / scale}.${frac}`;
+}
+
+/** The unit an amount of this asset is stated in: "NEAR", the token's symbol, or its account. */
+export function assetUnit(asset, symbol = null) {
+  if (asset?.kind === "NEAR_NATIVE") return "NEAR";
+  if (isToken(asset)) return symbol ?? `tokens of ${asset.tokenAccountId}`;
+  return "base units";
+}
+
+/** "2000000" of a 6-decimal token whose symbol is USDC -> "2.00 USDC"; NEAR as formatNear does. */
+export function formatAmount(amount, asset, symbol = null) {
+  return `${formatUnits(amount, asset)} ${assetUnit(asset, symbol)}`;
+}
+
+/** The symbol a token's ft_metadata names, only when it is a short plain name; otherwise null. */
+export function tokenSymbol(meta) {
+  const s = meta?.symbol;
+  return typeof s === "string" && /^[A-Za-z0-9.$_-]{1,16}$/.test(s) ? s : null;
+}
+
+function isToken(asset) {
+  return (
+    asset?.kind === "NEP141" &&
+    typeof asset.tokenAccountId === "string" &&
+    Number.isInteger(asset.decimals) &&
+    asset.decimals >= 0 &&
+    asset.decimals <= 36
+  );
+}
+
+/** The base-unit name shown next to an exact amount: yocto for NEAR, base units otherwise. */
+const baseUnits = (asset) => (asset?.kind === "NEAR_NATIVE" ? "yocto" : "base units");
+
 const big = (v) => {
   if (typeof v !== "string" || !/^\d+$/.test(v)) throw new Error(`not an amount: ${JSON.stringify(v)}`);
   return BigInt(v);
@@ -139,11 +185,11 @@ const sortTransfers = (list) =>
   [...list]
     .map((t) => ({ to: t.to, amount: t.amount }))
     .sort((a, b) => (transferKey(a) < transferKey(b) ? -1 : 1));
-const showTransfers = (list) =>
+const showTransfers = (list, fmt = formatNear) =>
   list.length === 0
     ? "no transfer"
     : sortTransfers(list)
-        .map((t) => `${formatNear(t.amount)} to ${t.to}`)
+        .map((t) => `${fmt(t.amount)} to ${t.to}`)
         .join("; ");
 
 function describeTx(s) {
@@ -154,10 +200,10 @@ function describeTx(s) {
   return `${what} by ${s.signer} on ${where}, ${how}, ${s.finality}${failed}`;
 }
 
-function showRefunds(list) {
+function showRefunds(list, fmt) {
   return [...list]
     .sort((a, b) => (a.refundIntentId < b.refundIntentId ? -1 : 1))
-    .map((r) => `${r.reason} ${formatNear(r.amount)} ${r.state}`)
+    .map((r) => `${r.reason} ${fmt(r.amount)} ${r.state}`)
     .join("; ");
 }
 
@@ -393,7 +439,17 @@ export async function verifyNetwork(network, options = {}) {
   for (const j of network.journeys) {
     const group = `trade:${j.tradeId}`;
     const exp = j.expected;
-    const view = { tradeId: j.tradeId, kind: j.kind, evidence: j.evidence, ledger: null, trade: null };
+    const view = {
+      tradeId: j.tradeId,
+      kind: j.kind,
+      evidence: j.evidence,
+      ledger: null,
+      trade: null,
+      asset: null,
+      symbol: null,
+    };
+    // Amounts are stated in the trade's asset once get_ledger has named it.
+    const fmt = (v) => formatAmount(v, view.asset, view.symbol);
     trades.push(view);
     const call = (method) => rpc.callView(d.contractId, method, { trade_id: j.tradeId }, at);
     let ledger = null;
@@ -431,6 +487,14 @@ export async function verifyNetwork(network, options = {}) {
       async () => {
         ledger = await call("get_ledger");
         view.ledger = ledger;
+        view.asset = ledger?.asset ?? null;
+        if (view.asset?.kind === "NEP141" && typeof view.asset.tokenAccountId === "string") {
+          try {
+            view.symbol = tokenSymbol(await rpc.callView(view.asset.tokenAccountId, "ft_metadata", {}, at));
+          } catch {
+            view.symbol = null; // unreadable metadata: the token is named by its account instead
+          }
+        }
         const c = checkConservation(ledger);
         return { ok: c.ok, actual: c.ok ? c.equation : c.problems.join("; ") };
       },
@@ -450,8 +514,8 @@ export async function verifyNetwork(network, options = {}) {
           id: `${j.tradeId}:${id}`,
           group,
           title,
-          expected: `${formatNear(want)} (${want} yocto)`,
-          actual: `${formatNear(got)} (${got} yocto)`,
+          expected: `${fmt(want)} (${want} ${baseUnits(view.asset)})`,
+          actual: `${fmt(got)} (${got} ${baseUnits(view.asset)})`,
           status: want === got ? PASS : FAIL,
         });
       try {
@@ -480,7 +544,7 @@ export async function verifyNetwork(network, options = {}) {
           id: `${j.tradeId}:release-intent`,
           group,
           title: "Release intent state",
-          expected: `${exp.release.intentId} PAID, ${formatNear(exp.release.amount)}`,
+          expected: `${exp.release.intentId} PAID, ${fmt(exp.release.amount)}`,
         },
         async () => {
           release = await call("get_release");
@@ -488,7 +552,7 @@ export async function verifyNetwork(network, options = {}) {
           if (!it) return { ok: false, actual: "intent not found" };
           return {
             ok: it.state === "PAID" && it.amount === exp.release.amount,
-            actual: `${it.releaseIntentId} ${it.state}, ${formatNear(it.amount)}`,
+            actual: `${it.releaseIntentId} ${it.state}, ${fmt(it.amount)}`,
           };
         },
       );
@@ -521,7 +585,10 @@ export async function verifyNetwork(network, options = {}) {
           id: `${j.tradeId}:refund-intents`,
           group,
           title: "Refund intents",
-          expected: showRefunds(exp.refunds.map((r) => ({ ...r, state: "REFUNDED" }))),
+          expected: showRefunds(
+            exp.refunds.map((r) => ({ ...r, state: "REFUNDED" })),
+            fmt,
+          ),
         },
         async () => {
           refunds = await call("get_refunds");
@@ -535,7 +602,7 @@ export async function verifyNetwork(network, options = {}) {
               x.reason === exp.refunds[i].reason &&
               x.amount === exp.refunds[i].amount,
           );
-          return { ok, actual: showRefunds(got) };
+          return { ok, actual: showRefunds(got, fmt) };
         },
       );
     }
@@ -569,7 +636,8 @@ export async function verifyNetwork(network, options = {}) {
         }
         return {
           ok: same(sortTransfers(want), sortTransfers(got)),
-          expected: showTransfers(want),
+          expected: showTransfers(want, fmt),
+          // Transfer receipts move NEAR itself, whatever the trade's asset.
           actual: showTransfers(got),
         };
       },

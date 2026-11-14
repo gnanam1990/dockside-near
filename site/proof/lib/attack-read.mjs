@@ -3,6 +3,10 @@
 // transaction or holds a key. The console's relay sends the attempts; this file only judges
 // what the chain says about them.
 
+import { formatAmount as formatInAsset, tokenSymbol } from "./verify.mjs";
+
+export { tokenSymbol };
+
 export const ATTACKS = [
   {
     id: "change-payout",
@@ -151,6 +155,29 @@ export function formatNear(yocto) {
   const whole = v / 10n ** 24n;
   const frac = (v % 10n ** 24n).toString().padStart(24, "0").replace(/0+$/, "");
   return `${whole}${frac ? `.${frac.slice(0, 6)}` : ""} NEAR`;
+}
+
+/**
+ * The trade's asset: what get_ledger returned from the chain, else the asset of the terms the
+ * demo registered (typed JSON in the config). Null when neither names one.
+ */
+export function tradeAsset(config, { ledger }) {
+  if (ledger?.asset && typeof ledger.asset.kind === "string") return ledger.asset;
+  const a = config?.terms?.struct?.asset?.struct;
+  const kind = a?.kind?.str;
+  if (typeof kind !== "string") return null;
+  const asset = { kind, network: a.network?.str ?? null };
+  if (a.tokenAccountId?.str !== undefined) asset.tokenAccountId = a.tokenAccountId.str;
+  if (a.decimals?.u64 !== undefined) asset.decimals = Number(a.decimals.u64);
+  return asset;
+}
+
+/** An amount in the trade's asset: NEAR as formatNear does, a NEP-141 token as "2.00 USDC". */
+export function formatAmount(amount, asset, symbol = null) {
+  const v = typeof amount === "bigint" ? amount : big(amount);
+  if (v < 0n) return "unreadable";
+  if (asset?.kind === "NEAR_NATIVE") return formatNear(v);
+  return formatInAsset(v, asset, symbol);
 }
 
 /** The newest recorded attempt of each attack, for the replay mode. */

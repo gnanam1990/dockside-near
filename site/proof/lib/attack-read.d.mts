@@ -57,6 +57,18 @@ export declare function keyScope(
 };
 export declare function explorerTx(config: Record<string, unknown>, txHash: string): string;
 export declare function formatNear(yocto: bigint | string): string;
+export interface TradeAsset {
+  kind: string;
+  network?: string | null;
+  tokenAccountId?: string;
+  decimals?: number;
+}
+export declare function tradeAsset(
+  config: Record<string, unknown>,
+  read: { ledger: unknown },
+): TradeAsset | null;
+export declare function formatAmount(amount: bigint | string, asset: unknown, symbol?: string | null): string;
+export declare function tokenSymbol(meta: unknown): string | null;
 export declare function recordedFor(
   config: Record<string, unknown>,
   attackId: string,
