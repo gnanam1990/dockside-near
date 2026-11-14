@@ -502,6 +502,15 @@ main:focus {
 .panel > section > h4:first-child {
   margin-top: 0;
 }
+/* Inside a trade tab, each record block (checklist, intents, execution, exits) opens on a hairline. */
+.tab-body > section + section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.tab-body > section > :is(h3, h4):first-child {
+  margin-top: 0;
+}
 .panel-grid {
   display: grid;
   gap: var(--space-4);

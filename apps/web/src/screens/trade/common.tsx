@@ -51,7 +51,7 @@ export function Section<T>({
   if (!outcome.ok)
     return <FailureState failure={outcome.error} what={what} onRetry={reload} headingLevel={3} />;
   return (
-    <div aria-busy={state === "refreshing" ? "true" : "false"}>
+    <div className="tab-body" aria-busy={state === "refreshing" ? "true" : "false"}>
       {children(outcome.data, outcome.receivedAt)}
     </div>
   );

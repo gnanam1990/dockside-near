@@ -27,11 +27,11 @@ Files: `apps/web/src/styles/tokens.css`, `apps/web/src/styles/app.css`, `apps/we
 (brand, enter phase, `PageHeader` `facts`), `apps/web/src/components/Icon.tsx` (`BrandMark`),
 `apps/web/src/screens/SignIn.tsx` (layout + enforcement panel), `apps/web/src/screens/Trades.tsx` (card roles and
 labels), `apps/web/src/screens/TradeWorkspace.tsx` (identity strip), `apps/web/test/tokens.test.ts` (rail and ink
-contrast checks).
+contrast checks), `apps/web/src/screens/trade/common.tsx` (`tab-body` hook for section rules).
 
 ## Validation
 
-- `pnpm run check` (format, lint, typecheck, 896 unit tests including the token contrast suite, secret scan): pass.
+- `pnpm run check` (format, lint, typecheck, 905 unit tests including the token contrast suite, secret scan): pass.
 - `pnpm run web:e2e` — default, asset-recovery, refund-reasons, clock and cash-out Playwright configs, run against the
   real local stack (simulated chain): pass. These include axe with WCAG 2.2 AA tags on every route signed out and
   signed in at 375/768/1024/1440 px, body-overflow checks at the same widths and at 720 px (200 % zoom), the dark
@@ -41,9 +41,14 @@ contrast checks).
   factor 2. Two rounds of fixes came from inspecting those captures (header cells crowding between 1024 and 1440 px
   and the network label overflowing its cell; brand tag clipped in the 240 px rail; phone record cards with ragged
   rules and a squeezed caption; missing space between a tab's promise line and its first section and after tables;
-  phone identity strip stacking six rows).
+  phone identity strip stacking six rows). A third round, after merging main, opened each record block inside a
+  trade tab on a hairline (the release tab's intents table ran straight into the execution heading).
 
 ## Not covered
 
 - Manual screen-reader passes (NVDA, VoiceOver) were not run for this milestone; automated axe checks only.
 - Safari/WebKit was not run; the suites are Chromium-only, as before.
+- On phones, long account names inside the refund and deposit tables still break mid-word inside their horizontal
+  scrollers; the tables stay operable and pass the overflow checks.
+- Full-page captures at 390 px show the fixed bottom navigation part-way down the image; on a real phone it sits
+  at the bottom of the viewport.
