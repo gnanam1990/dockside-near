@@ -1,4 +1,11 @@
-/* Dockside application styles. Uses semantic tokens only (see tokens.css, ADR-0026). */
+/*
+ * Dockside application styles. Semantic tokens only (tokens.css; ADR-0026, ADR-0032).
+ *
+ * Visual idea: every screen reads like a trade document. A navy harbour rail carries
+ * navigation; each screen opens with a double-ruled document head; labelled facts sit in
+ * ruled ledger boxes (label above value, like the fields of a bill of lading); trade sections
+ * are index tabs attached to their sheet. Motion is opacity/colour only, 120-180 ms.
+ */
 *,
 *::before,
 *::after {
@@ -44,17 +51,17 @@ h4 {
   text-wrap: balance;
 }
 h1 {
-  font-size: var(--text-2xl);
-  letter-spacing: -0.015em;
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 h2 {
   font-size: var(--text-xl);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 h3 {
   font-size: var(--text-lg);
-  letter-spacing: -0.005em;
+  letter-spacing: -0.006em;
 }
 h4 {
   font-size: var(--text-base);
@@ -79,7 +86,9 @@ a {
   color: var(--action-secondary);
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
-  transition: color var(--duration-fast) var(--ease-out);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    text-decoration-color var(--duration-fast) var(--ease-out);
 }
 a:hover {
   text-decoration-thickness: 2px;
@@ -92,6 +101,9 @@ samp {
   font-family: var(--font-mono);
   font-size: 0.9em;
   overflow-wrap: anywhere;
+}
+:not(pre) > code {
+  font-variant-ligatures: none;
 }
 
 .tabular {
@@ -140,86 +152,139 @@ samp {
   grid-template-rows: auto 1fr;
 }
 
+/*
+ * Header. Phones and tablets: a navy band (brand, menu, session) over a light manifest strip.
+ * Desktop (>= 1024 px): one row; the brand cell continues the navy rail, the manifest strip
+ * fills the middle and the session action closes the row.
+ */
 .topbar {
   grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "brand toggle session"
+    "context context context";
   align-items: center;
-  gap: var(--space-2) var(--space-4);
-  min-height: 60px;
-  padding: var(--space-2) var(--space-4);
-  background: var(--surface-panel);
+  column-gap: var(--space-2);
+  background: var(--rail-bg);
+  color: var(--rail-text);
   border-bottom: 1px solid var(--border-default);
 }
 
 .brand {
-  display: inline-flex;
+  grid-area: brand;
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-content: start;
   align-items: center;
-  gap: var(--space-1-5);
+  column-gap: var(--space-1-5);
+  min-height: 56px;
+  padding: 0 var(--space-3);
+  color: var(--rail-text);
+  text-decoration: none;
+  min-width: 0;
+}
+.brand:focus-visible,
+.topbar > .session-action:focus-visible,
+.topbar > .nav-toggle:focus-visible {
+  outline-color: var(--rail-focus);
+}
+.brand__mark {
+  grid-row: 1 / span 2;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid var(--rail-border);
+  border-radius: var(--radius-control);
+  background: var(--rail-selected);
+  color: var(--rail-text);
+}
+.brand__name {
   font-weight: var(--weight-semibold);
   font-size: var(--text-lg);
   letter-spacing: -0.01em;
-  color: var(--text-primary);
-  text-decoration: none;
-  min-height: 44px;
-  flex: none;
+  line-height: 1.15;
+  align-self: end;
 }
-.brand > svg {
-  box-sizing: content-box;
-  padding: 5px;
-  border-radius: var(--radius-control);
-  background: var(--action-primary);
-  color: var(--on-action-primary);
+.brand__tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
+  color: var(--rail-text-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  align-self: start;
 }
 
-.context-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) 0;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  /* Its own full-width strip under the brand row, so long identifiers never squeeze actions. */
-  order: 3;
-  flex: 1 1 100%;
-  justify-content: flex-start;
-  min-width: 0;
-  margin: 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-2));
-  padding: var(--space-2) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-  background: var(--surface-canvas);
+.topbar > .nav-toggle {
+  grid-area: toggle;
 }
-.topbar > .btn:last-child {
-  margin-left: auto;
+.topbar > .session-action {
+  grid-area: session;
+  margin-right: var(--space-3);
+}
+/* Controls on the navy band: outlined in the rail's own colours. */
+.topbar > .btn {
+  background: transparent;
+  color: var(--rail-text);
+  border-color: var(--rail-text-muted);
+  box-shadow: none;
+}
+.topbar > .btn:hover,
+.topbar > .btn:active {
+  background: var(--rail-hover);
+}
+
+/* The manifest strip: organization, network, role, API and last sync as ruled cells. */
+.context-bar {
+  grid-area: context;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  min-width: 0;
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--rail-border);
+  font-size: var(--text-sm);
 }
 .context-bar > div {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
+  display: grid;
+  align-content: center;
+  gap: 2px;
   min-width: 0;
-  padding: 0 var(--space-3);
-  border-left: 1px solid var(--border-subtle);
+  padding: 6px var(--space-3);
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .context-bar > div:first-child {
-  border-left: 0;
+  grid-column: 1 / -1;
 }
 .context-bar dt {
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-overline);
   text-transform: uppercase;
+  line-height: 1.3;
 }
 .context-bar dd {
   margin: 0;
   color: var(--text-primary);
   font-weight: var(--weight-medium);
   overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 .context-bar dd.mono {
   font-weight: var(--weight-regular);
+  font-size: var(--text-sm);
 }
 .context-bar .network-label {
   font-size: var(--text-sm);
+  justify-self: start;
 }
 .context-bar .status {
   align-items: center;
@@ -238,9 +303,10 @@ samp {
   min-height: 0;
 }
 
+/* The harbour rail. */
 .sidenav {
-  border-right: 1px solid var(--border-default);
-  background: var(--surface-panel);
+  background: var(--rail-bg);
+  color: var(--rail-text);
   padding: var(--space-3) var(--space-2);
 }
 .sidenav > ul {
@@ -261,10 +327,10 @@ samp {
   display: flex;
   align-items: center;
   gap: var(--space-1-5);
-  min-height: 40px;
+  min-height: 42px;
   padding: 0 var(--space-1-5);
   border-radius: var(--radius-control);
-  color: var(--text-secondary);
+  color: var(--rail-text-muted);
   font-weight: var(--weight-medium);
   text-decoration: none;
   transition:
@@ -272,12 +338,16 @@ samp {
     color var(--duration-fast) var(--ease-out);
 }
 .sidenav a:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
+  background: var(--rail-hover);
+  color: var(--rail-text);
+}
+.sidenav a:focus-visible {
+  outline-color: var(--rail-focus);
+  outline-offset: 0;
 }
 .sidenav a[aria-current="page"] {
-  background: var(--surface-selected);
-  color: var(--text-primary);
+  background: var(--rail-selected);
+  color: var(--rail-text);
   font-weight: var(--weight-semibold);
 }
 .sidenav a[aria-current="page"]::before {
@@ -288,15 +358,10 @@ samp {
   bottom: 8px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: var(--action-primary);
+  background: var(--rail-accent);
 }
 .sidenav a[aria-current="page"] svg {
-  color: var(--action-primary);
-}
-.sidenav .nav-secondary {
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-default);
+  color: var(--rail-accent);
 }
 
 .bottomnav {
@@ -317,8 +382,25 @@ main:focus {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
+/* A new screen settles in: opacity only, no movement, no layout change. */
+.content[data-enter="a"] {
+  animation: screen-enter-a var(--duration-enter) var(--ease-out);
+}
+.content[data-enter="b"] {
+  animation: screen-enter-b var(--duration-enter) var(--ease-out);
+}
+@keyframes screen-enter-a {
+  from {
+    opacity: 0.35;
+  }
+}
+@keyframes screen-enter-b {
+  from {
+    opacity: 0.35;
+  }
+}
 
-/* ---------------------------- page parts ---------------------------- */
+/* ---------------------------- document head ---------------------------- */
 
 .page-header {
   display: flex;
@@ -326,6 +408,9 @@ main:focus {
   gap: var(--space-2) var(--space-3);
   align-items: flex-start;
   justify-content: space-between;
+  padding-bottom: var(--space-3);
+  /* Double rule: the screen opens like a printed trade document. */
+  border-bottom: 3px double var(--ink-rule);
 }
 .page-header__text {
   min-width: 0;
@@ -345,9 +430,50 @@ main:focus {
   margin-bottom: 0;
 }
 
+/* Identity strip of the subject (trade reference, amount, revision, contract ...). */
+.doc-facts {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  margin: var(--space-1) 0 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+.doc-facts > div {
+  min-width: 0;
+  padding: var(--space-2) var(--space-1-5);
+  margin: 0 -1px -1px 0;
+  border-right: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
+}
+.doc-facts dt {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+.doc-facts dd {
+  margin: 2px 0 0;
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.doc-facts dd code,
+.doc-facts dd .mono {
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+}
+
+/* ------------------------------ sheets ------------------------------ */
+
 .panel {
   background: var(--surface-panel);
   border: 1px solid var(--border-default);
+  border-top: 2px solid var(--action-primary);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-panel);
   padding: var(--space-4);
@@ -360,7 +486,11 @@ main:focus {
 .panel > h2:first-child + p {
   color: var(--text-secondary);
 }
-/* Sections inside one panel are separated by a hairline, not by more boxes. */
+/* The sheet's own promise line stands apart from the records below it. */
+.panel > h2:first-child + p.muted {
+  margin-bottom: var(--space-4);
+}
+/* Sections inside one sheet are separated by a hairline, not by more boxes. */
 .panel > section + section,
 .panel > p + section,
 .panel > div + section {
@@ -370,6 +500,15 @@ main:focus {
 }
 .panel > section > h3:first-child,
 .panel > section > h4:first-child {
+  margin-top: 0;
+}
+/* Inside a trade tab, each record block (checklist, intents, execution, exits) opens on a hairline. */
+.tab-body > section + section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.tab-body > section > :is(h3, h4):first-child {
   margin-top: 0;
 }
 .panel-grid {
@@ -386,25 +525,44 @@ main:focus {
   font-size: var(--text-md);
 }
 
-/* Labelled facts: overline label, value beneath, on a 4-column grid that reflows. */
+/*
+ * Labelled facts as ruled ledger boxes: label above value, hairlines between cells, the
+ * whole block framed once. Cells overlap by 1 px so every inner rule is drawn exactly once.
+ */
 .identity {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  gap: var(--space-3) var(--space-4);
-  margin: 0 0 var(--space-2);
+  margin: var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  overflow: hidden;
 }
-.identity div {
+.identity > div {
   min-width: 0;
+  padding: var(--space-1-5) var(--space-1-5) var(--space-1-5);
+  margin: 0 -1px -1px 0;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .identity dt {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
   color: var(--text-secondary);
   font-weight: var(--weight-semibold);
-  margin-bottom: 2px;
+  line-height: 1.3;
+  margin-bottom: var(--space-1);
 }
 .identity dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+.identity dd > code,
+.identity dd > .mono {
+  font-size: var(--text-md);
+}
+.callout .identity {
+  background: var(--surface-panel);
 }
 
 /* ------------------------------ controls ------------------------------ */
@@ -438,6 +596,7 @@ main:focus {
 }
 .btn:hover {
   background: var(--surface-hover);
+  border-color: var(--text-secondary);
 }
 .btn:active {
   background: var(--surface-subtle);
@@ -509,6 +668,10 @@ textarea {
   max-width: 40rem;
   transition: border-color var(--duration-fast) var(--ease-out);
 }
+input.mono,
+textarea.mono {
+  font-size: var(--text-md);
+}
 input[type="file"] {
   padding: 6px var(--space-2);
   font-size: var(--text-md);
@@ -570,6 +733,11 @@ legend {
 .filters select {
   max-width: none;
 }
+.filters + p[role="status"] {
+  margin: calc(-1 * var(--space-2)) 0 calc(-1 * var(--space-2));
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
 
 /* ------------------------------ status ------------------------------ */
 
@@ -612,11 +780,15 @@ legend {
 .tone-unknown .status__label {
   color: var(--status-unknown);
 }
-/* A compact status (icon + label, no sentence) reads as a quiet badge; the label stays the meaning. */
+/*
+ * A compact status (icon + label, no sentence) reads as an inspection stamp: tinted fill, a
+ * thin rule in the status colour. The label stays the meaning; colour only reinforces it.
+ */
 .status:not(:has(.status__meta)) {
   align-items: center;
   column-gap: 6px;
-  padding: 2px var(--space-2) 2px 6px;
+  padding: 1px var(--space-2) 1px 6px;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: var(--tint-neutral);
   font-size: var(--text-md);
@@ -628,18 +800,23 @@ legend {
 }
 .status.tone-positive:not(:has(.status__meta)) {
   background: var(--tint-positive);
+  border-color: color-mix(in srgb, var(--status-positive) 35%, transparent);
 }
 .status.tone-warning:not(:has(.status__meta)) {
   background: var(--tint-warning);
+  border-color: color-mix(in srgb, var(--status-warning) 35%, transparent);
 }
 .status.tone-negative:not(:has(.status__meta)) {
   background: var(--tint-negative);
+  border-color: color-mix(in srgb, var(--status-negative) 35%, transparent);
 }
 .status.tone-unknown:not(:has(.status__meta)) {
   background: var(--tint-unknown);
+  border-color: color-mix(in srgb, var(--status-unknown) 35%, transparent);
 }
 .context-bar .status:not(:has(.status__meta)) {
   font-size: var(--text-sm);
+  justify-self: start;
 }
 
 .callout {
@@ -697,7 +874,19 @@ legend {
 /* Statuses inside a tinted callout keep the callout's fill rather than stacking another. */
 .callout .status:not(:has(.status__meta)) {
   background: transparent;
+  border-color: transparent;
   padding-left: 0;
+}
+
+/* Empty state: an unfilled sheet waiting for its first record. */
+[data-testid="state-empty"] {
+  border: 1px dashed var(--border-control);
+  border-radius: var(--radius-panel);
+  background: var(--surface-panel);
+  padding: var(--space-4);
+}
+[data-testid="state-empty"] h2 {
+  font-size: var(--text-lg);
 }
 
 .banner {
@@ -756,6 +945,9 @@ legend {
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-panel);
 }
+.table-scroll + :is(h2, h3, h4, p, div, section) {
+  margin-top: var(--space-4);
+}
 .table-scroll:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
@@ -780,12 +972,15 @@ td {
 }
 thead th {
   border-top: 1px solid var(--border-default);
-  border-bottom: 1px solid var(--border-default);
+  /* Ledger head: an ink rule separates column names from the records. */
+  border-bottom: 1px solid var(--ink-rule);
 }
 th {
-  background: var(--surface-subtle);
+  background: var(--surface-canvas);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   padding-top: var(--space-2);
@@ -794,6 +989,9 @@ th {
 tbody th {
   color: var(--text-primary);
   white-space: normal;
+  font-size: var(--text-md);
+  letter-spacing: normal;
+  text-transform: none;
 }
 td {
   min-width: 12ch;
@@ -813,6 +1011,19 @@ td > .tabular,
 td > .mono.tabular {
   white-space: nowrap;
 }
+/* Statuses in a cell wrap between words, never inside one; long identifiers may break anywhere. */
+td .status__label {
+  overflow-wrap: normal;
+}
+[data-testid="trades-table"] td:first-child {
+  min-width: 20ch;
+}
+td:first-child > a {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
 
 /* ------------------------------ address ------------------------------ */
 
@@ -829,7 +1040,8 @@ td > .mono.tabular {
   word-break: break-all;
   background: var(--surface-canvas);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-control);
+  border-left: 3px solid var(--border-control);
+  border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-1-5);
 }
 .address__meta {
@@ -855,13 +1067,16 @@ td > .mono.tabular {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px var(--space-2);
+  padding: 1px var(--space-2);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
   font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  line-height: 1.4;
+  font-weight: var(--weight-regular);
+  letter-spacing: 0.01em;
+  line-height: 1.5;
   background: var(--surface-panel);
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
@@ -875,40 +1090,58 @@ td > .mono.tabular {
   display: flex;
   gap: var(--space-1);
   overflow-x: auto;
-  border-bottom: 1px solid var(--border-default);
   scrollbar-width: thin;
 }
 .tabnav li + li,
 .steps li + li {
   margin-top: 0;
 }
+/* Index tabs: the current section is a tab joined to the sheet beneath it. */
+.tabnav ul {
+  gap: 2px;
+  padding: 0 var(--space-1);
+}
 .tabnav a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 var(--space-1-5);
-  margin-bottom: -1px;
+  padding: 0 var(--space-3);
   color: var(--text-secondary);
   font-weight: var(--weight-medium);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
   white-space: nowrap;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
   transition:
     color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out);
 }
 .tabnav a:hover {
   color: var(--text-primary);
-  border-bottom-color: var(--border-default);
+  background: var(--surface-subtle);
+}
+.tabnav a:focus-visible {
+  outline-offset: -2px;
 }
 .tabnav a[aria-current="page"] {
   color: var(--text-primary);
-  border-bottom-color: var(--action-primary);
+  background: var(--surface-panel);
+  border-color: var(--border-default);
+  box-shadow: inset 0 2px 0 var(--action-primary);
   font-weight: var(--weight-semibold);
+}
+.content > .tabnav + .panel {
+  margin-top: calc(-1 * var(--space-4) - 1px);
+  border-top: 1px solid var(--border-default);
+  border-top-left-radius: 0;
+}
+.content > .tabnav {
+  position: relative;
+  z-index: 1;
 }
 
 .steps {
-  border-bottom: 0;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
@@ -934,6 +1167,7 @@ td > .mono.tabular {
   border-radius: var(--radius-sm);
   background: var(--surface-subtle);
   color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
 }
@@ -961,10 +1195,16 @@ td > .mono.tabular {
 .form-summary dl {
   margin: 0;
   display: grid;
-  gap: var(--space-1-5);
+  gap: 0;
+}
+.form-summary dl > div {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border-subtle);
 }
 .form-summary dt {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
   color: var(--text-secondary);
   font-weight: var(--weight-semibold);
 }
@@ -1005,6 +1245,7 @@ td > .mono.tabular {
 
 dialog {
   border: 1px solid var(--border-default);
+  border-top: 2px solid var(--action-primary);
   border-radius: var(--radius-panel);
   padding: var(--space-4);
   max-width: min(560px, calc(100vw - 32px));
@@ -1016,7 +1257,137 @@ dialog::backdrop {
   background: var(--backdrop);
 }
 
+/* ------------------------------ sign-in ------------------------------ */
+
+.signin-layout {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: start;
+}
+.signin-main,
+.signin-aside {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.panel--lead {
+  border-top-width: 4px;
+}
+.panel--lead h2 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.015em;
+}
+.enforce {
+  border-top-color: var(--ink-rule);
+  background: var(--surface-canvas);
+  box-shadow: none;
+}
+.enforce__list {
+  list-style: none;
+  counter-reset: enforce;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+}
+.enforce__list li {
+  counter-increment: enforce;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  column-gap: var(--space-1-5);
+  margin: 0;
+  padding: var(--space-1-5) 0;
+  border-top: 1px solid var(--border-default);
+}
+.enforce__list li::before {
+  content: counter(enforce, decimal-leading-zero);
+  grid-row: 1 / span 2;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--action-primary);
+  padding-top: 1px;
+}
+.enforce__list h3 {
+  font-size: var(--text-base);
+  margin: 0 0 var(--space-1);
+}
+.enforce__list p {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
 /* ------------------------------ responsive ------------------------------ */
+
+@media (min-width: 768px) {
+  .context-bar {
+    grid-template-columns: minmax(0, 2.4fr) auto minmax(0, 1.3fr) auto minmax(0, 2.2fr);
+  }
+  .context-bar > div:first-child {
+    grid-column: auto;
+  }
+  .context-bar > div {
+    border-bottom: 0;
+  }
+  .context-bar > div:last-child {
+    border-right: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* 1024-1365 px: the brand cell spans two rows; session on top, manifest strip beneath. */
+  .topbar {
+    grid-template-columns: var(--nav-width) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand . session"
+      "brand context context";
+    align-items: stretch;
+    background: var(--surface-panel);
+  }
+  .brand {
+    background: var(--rail-bg);
+    padding: 0 var(--space-3);
+  }
+  .context-bar {
+    border-top: 1px solid var(--border-subtle);
+    align-items: stretch;
+  }
+  .context-bar > div {
+    padding: 6px var(--space-3);
+  }
+  .context-bar dd.mono {
+    font-size: var(--text-xs);
+  }
+  .topbar > .session-action {
+    align-self: center;
+    margin: var(--space-2) var(--space-4) var(--space-2) 0;
+    background: var(--surface-panel);
+    color: var(--text-primary);
+    border-color: var(--border-control);
+    box-shadow: var(--shadow-control);
+  }
+  .topbar > .session-action:hover {
+    background: var(--surface-hover);
+  }
+  .topbar > .session-action:focus-visible {
+    outline-color: var(--focus-ring);
+  }
+}
+
+/* Wide screens: one header row, brand / manifest strip / session. */
+@media (min-width: 1366px) {
+  .topbar {
+    grid-template-areas: "brand context session";
+    min-height: var(--header-height);
+  }
+  .context-bar {
+    border-top: 0;
+  }
+  .topbar > .session-action {
+    margin-left: var(--space-2);
+  }
+}
 
 @media (max-width: 1023.98px) {
   .layout {
@@ -1027,8 +1398,7 @@ dialog::backdrop {
   }
   .sidenav {
     display: none;
-    border-right: 0;
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--rail-border);
   }
   .sidenav[data-open="true"] {
     display: block;
@@ -1039,39 +1409,37 @@ dialog::backdrop {
   main {
     padding: var(--space-4) var(--space-4) var(--space-6);
   }
-  .form-layout {
+  .form-layout,
+  .signin-layout {
     grid-template-columns: minmax(0, 1fr);
   }
   .form-summary {
     order: -1;
     position: static;
   }
+  /* Single column: returning users reach the stored-key sign-in before the explanation
+     (the panel holds no controls, so focus order is unaffected). */
+  .signin-aside > .enforce {
+    order: 1;
+  }
 }
 
 @media (max-width: 767.98px) {
   h1 {
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
   }
-  .topbar {
-    padding: var(--space-2) var(--space-3);
-    gap: var(--space-2);
+  .brand {
+    min-height: 56px;
   }
-  .context-bar {
-    margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-2));
-    padding: var(--space-2) var(--space-3);
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-2) var(--space-3);
+  .brand__tag {
+    display: none;
+  }
+  .brand__name {
+    grid-row: 1 / span 2;
+    align-self: center;
   }
   .context-bar > div {
-    display: grid;
-    gap: 2px;
-    padding: 0;
-    border-left: 0;
-    align-content: start;
-  }
-  .context-bar > div:first-child {
-    grid-column: 1 / -1;
+    padding: var(--space-1) var(--space-3);
   }
   .page-header__actions {
     width: 100%;
@@ -1103,13 +1471,83 @@ dialog::backdrop {
   .panel {
     padding: var(--space-3);
   }
+  .panel--lead h2 {
+    font-size: var(--text-xl);
+  }
   .filters {
     padding: var(--space-3);
+  }
+  .tabnav ul {
+    padding: 0;
+  }
+  .tabnav a {
+    padding: 0 var(--space-1-5);
   }
   .btn.nav-toggle,
   .sidenav,
   .sidenav[data-open="true"] {
     display: none;
+  }
+  /* Trades become labelled record cards; explicit roles keep the table relationships. */
+  .table--cards caption {
+    display: block;
+    font-size: var(--text-md);
+  }
+  .table--cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .table--cards,
+  .table--cards tbody,
+  .table--cards tr,
+  .table--cards td {
+    display: block;
+  }
+  .table--cards tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    border-top: 1px solid var(--ink-rule);
+  }
+  .table--cards td {
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+  }
+  .table--cards td {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .table--cards
+    td:is(
+      [data-label="Amount"],
+      [data-label="Revision"],
+      [data-label="Your relation"],
+      [data-label="Holds"]
+    ) {
+    grid-column: auto;
+  }
+  .table--cards td:is([data-label="Revision"], [data-label="Holds"]) {
+    border-left: 1px solid var(--border-subtle);
+  }
+  .table--cards td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-overline);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+  }
+  .table--cards td > .tabular {
+    white-space: normal;
+  }
+  .table-scroll:has(.table--cards) {
+    overflow-x: visible;
   }
   .bottomnav {
     display: block;
@@ -1143,6 +1581,7 @@ dialog::backdrop {
     text-decoration: none;
     text-align: center;
     padding: var(--space-1) 2px;
+    transition: color var(--duration-fast) var(--ease-out);
   }
   .bottomnav a[aria-current="page"] {
     color: var(--text-primary);
@@ -1182,6 +1621,13 @@ dialog::backdrop {
   background: var(--surface-panel);
   min-width: 0;
 }
+/* Signing blocks carry a navy rule: this is where a key is used. */
+.action {
+  border-left: 3px solid var(--action-primary);
+}
+.advisory {
+  border-style: dashed;
+}
 .action > :is(h3, h4):first-child,
 .relay > :is(h3, h4):first-child,
 .hold > :is(h3, h4):first-child,
@@ -1213,14 +1659,18 @@ dialog::backdrop {
   border-radius: var(--radius-panel);
   background: var(--surface-panel);
 }
+/* Signed payload: a ruled two-column ledger of the exact canonical fields. */
 .payload {
   display: grid;
-  gap: var(--space-2);
+  gap: 0;
   margin: var(--space-2) 0;
+  border-top: 1px solid var(--border-default);
 }
 .payload div {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  padding: var(--space-1-5) 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .payload dt {
   color: var(--text-secondary);
@@ -1288,4 +1738,10 @@ textarea {
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content[data-enter] {
+    animation: none;
+  }
 }

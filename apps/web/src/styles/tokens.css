@@ -1,11 +1,12 @@
 /*
- * Dockside semantic tokens (UI-SPEC §4, ADR-0026). Components consume only these variables;
+ * Dockside semantic tokens (UI-SPEC §4, ADR-0026, ADR-0032). Components consume only these variables;
  * raw colour values live in this file alone. Every text/background and control/background
  * pair used by components is checked for WCAG 2.2 AA in apps/web/test/tokens.test.ts.
  *
- * Direction: light-first Minimal Swiss enterprise operations. Flat surfaces, 1 px borders,
- * one restrained elevation step, 4/8 px rhythm, navy action colour, status colours reserved
- * for status (never branding).
+ * Direction: light-first Minimal Swiss enterprise operations, set as a trade document
+ * (ADR-0032): a navy harbour rail for navigation, ruled ledger boxes for labelled facts, a
+ * double-ruled document head on every screen. Flat surfaces, 1 px borders, one restrained
+ * elevation step, 4/8 px rhythm, navy action colour, status colours reserved for status.
  */
 :root {
   color-scheme: light dark;
@@ -40,6 +41,19 @@
   --tint-unknown: #f6f3fe;
   --tint-neutral: #f4f7fa;
 
+  /* ---- colour: the navy harbour rail (navigation and brand band) ---- */
+  --rail-bg: #102238;
+  --rail-hover: #182f4b;
+  --rail-selected: #1e3a5f;
+  --rail-border: #253c58;
+  --rail-text: #edf2f8;
+  --rail-text-muted: #b7c5d8;
+  --rail-accent: #9dbce6;
+  --rail-focus: #c9dbf3;
+
+  /* ---- colour: document ink (rules that structure a page like a printed trade document) ---- */
+  --ink-rule: #0f172a;
+
   --skeleton: #e2e8f0;
   --backdrop: rgb(15 23 42 / 0.55);
 
@@ -57,13 +71,14 @@
   --text-base: 1rem; /* 16 px: body */
   --text-lg: 1.125rem; /* 18 px: section title */
   --text-xl: 1.25rem; /* 20 px: panel title */
-  --text-2xl: 1.75rem; /* 28 px: screen title */
+  --text-2xl: 1.75rem; /* 28 px: screen title (mobile) */
+  --text-3xl: 1.875rem; /* 30 px: screen title (desktop) */
   --leading-tight: 1.25;
   --leading-normal: 1.5;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
-  --tracking-overline: 0.04em;
+  --tracking-overline: 0.06em;
 
   /* ---- spacing (4/8 rhythm) ---- */
   --space-1: 4px;
@@ -77,7 +92,7 @@
   /* ---- shape ---- */
   --radius-sm: 4px;
   --radius-control: 8px;
-  --radius-panel: 10px;
+  --radius-panel: 8px;
 
   /* ---- layers ---- */
   --z-sticky: 20;
@@ -88,6 +103,7 @@
   /* ---- motion: local feedback only (UI-SPEC §7) ---- */
   --duration: 160ms;
   --duration-fast: 120ms;
+  --duration-enter: 180ms;
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
 
   /* ---- layout ---- */
@@ -95,6 +111,7 @@
   --content-max: 1280px;
   --control-height: 44px;
   --control-height-sm: 36px;
+  --header-height: 64px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -123,6 +140,15 @@
     --tint-unknown: #1e1a36;
     --tint-neutral: #152034;
     --focus-ring: #9dbce6;
+    --rail-bg: #070d18;
+    --rail-hover: #111c2e;
+    --rail-selected: #1c2a40;
+    --rail-border: #1b2638;
+    --rail-text: #e2e8f0;
+    --rail-text-muted: #a3b1c6;
+    --rail-accent: #9dbce6;
+    --rail-focus: #c9dbf3;
+    --ink-rule: #7c8ca3;
     --skeleton: #1e293b;
     --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-control: 0 1px 1px rgb(0 0 0 / 0.3);
@@ -142,5 +168,6 @@
   :root {
     --duration: 0ms;
     --duration-fast: 0ms;
+    --duration-enter: 0ms;
   }
 }

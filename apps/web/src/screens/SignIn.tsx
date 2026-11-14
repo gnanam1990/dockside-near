@@ -275,159 +275,190 @@ export function SignInScreen() {
       ) : null}
       {failure ? <FailureState failure={failure} what="Sign-in" /> : null}
       {gate.reason ? <BlockedAction reason={gate.reason} /> : null}
-      <div className="panel-grid">
-        <section className="panel" aria-labelledby="bootstrap-title">
-          <h2 id="bootstrap-title">Create an organization</h2>
-          <p className="muted">
-            Creates a new organization and its security administrator. A new device key is generated in this
-            browser.
-          </p>
-          <form onSubmit={(e) => void onBootstrap(e)} noValidate>
-            <Field
-              id="org-name"
-              label="Organization name"
-              help="1 to 120 characters: letters, digits, spaces and . , ' & ( ) _ -"
-              error={orgError}
-            >
-              {(aria) => (
-                <input
-                  {...aria}
-                  type="text"
-                  autoComplete="organization"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  onBlur={() =>
-                    setOrgError(orgName.trim() || !orgError ? undefined : "Enter the organization name.")
-                  }
-                />
-              )}
-            </Field>
-            <button type="submit" className="btn btn--primary" disabled={busy || !gate.allowed}>
-              Request bootstrap challenge
-            </button>
-          </form>
-        </section>
-
-        <section className="panel" aria-labelledby="login-title">
-          <h2 id="login-title">Sign in with a stored device key</h2>
-          {keyStoreError ? (
-            <Callout tone="warning" icon="blocked" title="Key storage unavailable" headingLevel={3}>
-              <p>This browser blocked key storage ({keyStoreError}). Use a regular browser profile.</p>
-            </Callout>
-          ) : storedKeys.length === 0 ? (
-            <p className="muted" data-testid="no-stored-keys">
-              No enrolled device key is stored in this browser. Create an organization or accept an invitation
-              first; lost keys are replaced only through administrator recovery.
+      <div className="signin-layout">
+        <div className="signin-main">
+          <section className="panel panel--lead" aria-labelledby="bootstrap-title">
+            <h2 id="bootstrap-title">Create an organization</h2>
+            <p className="muted">
+              Creates a new organization and its security administrator. A new device key is generated in this
+              browser.
             </p>
-          ) : (
-            <form onSubmit={(e) => void onLogin(e)} noValidate>
-              <ErrorSummary errors={loginErrors} ref={loginSummary} />
-              <Field id="login-key" label="Device key" help="Keys enrolled from this browser.">
+            <form onSubmit={(e) => void onBootstrap(e)} noValidate>
+              <Field
+                id="org-name"
+                label="Organization name"
+                help="1 to 120 characters: letters, digits, spaces and . , ' & ( ) _ -"
+                error={orgError}
+              >
                 {(aria) => (
-                  <select
+                  <input
                     {...aria}
-                    value={loginKey}
-                    onChange={(e) => {
-                      setLoginKey(e.target.value);
-                      const k = storedKeys.find((x) => x.publicKey === e.target.value);
-                      if (k?.principalId) setLoginPrincipal(k.principalId);
-                    }}
-                  >
-                    {storedKeys.map((k) => (
-                      <option key={k.publicKey} value={k.publicKey}>
-                        {k.label} — {k.publicKey.slice(0, 18)}…
-                      </option>
-                    ))}
-                  </select>
+                    type="text"
+                    autoComplete="organization"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    onBlur={() =>
+                      setOrgError(orgName.trim() || !orgError ? undefined : "Enter the organization name.")
+                    }
+                  />
                 )}
               </Field>
+              <button type="submit" className="btn btn--primary" disabled={busy || !gate.allowed}>
+                Request bootstrap challenge
+              </button>
+            </form>
+          </section>
+          <section className="panel" aria-labelledby="invite-title">
+            <h2 id="invite-title">Accept an invitation</h2>
+            <p className="muted">
+              Use the one-time secret your administrator gave you. Acceptance happens in your own session; the
+              capability is granted later by the administrator.
+            </p>
+            <form onSubmit={(e) => void onInvite(e)} noValidate>
               <Field
-                id="login-principal"
-                label="Principal ID"
-                help="prn_ followed by 32 hex characters."
-                error={loginErrors.find((x) => x.fieldId === "login-principal")?.message}
+                id="invite-secret"
+                label="Invitation secret"
+                help="Paste is allowed. The secret is sent once and never stored by this browser."
+                error={inviteError}
               >
                 {(aria) => (
                   <input
                     {...aria}
                     type="text"
                     className="mono"
+                    autoComplete="one-time-code"
                     spellCheck={false}
-                    value={loginPrincipal}
-                    onChange={(e) => setLoginPrincipal(e.target.value)}
+                    value={secret}
+                    onChange={(e) => setSecret(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Field id="invite-name" label="Your display name (optional)" help="Shown to your organization.">
+                {(aria) => (
+                  <input
+                    {...aria}
+                    type="text"
+                    autoComplete="name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                   />
                 )}
               </Field>
               <button type="submit" className="btn btn--primary" disabled={busy || !gate.allowed}>
-                Request sign-in challenge
+                Request invitation challenge
               </button>
             </form>
-          )}
-        </section>
-
-        <section className="panel" aria-labelledby="recover-title">
-          <h2 id="recover-title">Lost or suspended key</h2>
-          <p className="muted">
-            A lost key is replaced only through a delayed recovery started by a security administrator of your
-            organization. You prove the new key from your own device, or veto a recovery you did not ask for.
-          </p>
-          <p>
-            <Link href="/recovery">Recover access</Link>
-          </p>
-        </section>
-
-        <section className="panel" aria-labelledby="invite-title">
-          <h2 id="invite-title">Accept an invitation</h2>
-          <p className="muted">
-            Use the one-time secret your administrator gave you. Acceptance happens in your own session; the
-            capability is granted later by the administrator.
-          </p>
-          <form onSubmit={(e) => void onInvite(e)} noValidate>
-            <Field
-              id="invite-secret"
-              label="Invitation secret"
-              help="Paste is allowed. The secret is sent once and never stored by this browser."
-              error={inviteError}
-            >
-              {(aria) => (
-                <input
-                  {...aria}
-                  type="text"
-                  className="mono"
-                  autoComplete="one-time-code"
-                  spellCheck={false}
-                  value={secret}
-                  onChange={(e) => setSecret(e.target.value)}
-                />
-              )}
-            </Field>
-            <Field id="invite-name" label="Your display name (optional)" help="Shown to your organization.">
-              {(aria) => (
-                <input
-                  {...aria}
-                  type="text"
-                  autoComplete="name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                />
-              )}
-            </Field>
-            <button type="submit" className="btn btn--primary" disabled={busy || !gate.allowed}>
-              Request invitation challenge
-            </button>
-          </form>
-        </section>
-
-        <section className="panel" aria-labelledby="wallet-title">
-          <h2 id="wallet-title">NEAR wallet signature (NEP-413)</h2>
-          <StatusBadge
-            dimension="productGate"
-            value="BLOCKED"
-            source="this web build"
-            observedAt={null}
-            reason="The API accepts NEP-413 wallet proofs, but no wallet connector is bundled in this web build yet."
-          />
-        </section>
+          </section>
+        </div>
+        <div className="signin-aside">
+          <section className="panel enforce" aria-labelledby="enforce-title">
+            <h2 id="enforce-title">What the escrow enforces</h2>
+            <p className="muted">
+              Each trade binds these rules into the agreement both parties sign; the API and the escrow
+              contract refuse anything else.
+            </p>
+            <ol className="enforce__list">
+              <li>
+                <h3>The payout account is fixed</h3>
+                <p>
+                  Changing the supplier&apos;s destination needs a new revision, consent from buyer and
+                  supplier, and an activation delay the contract enforces.
+                </p>
+              </li>
+              <li>
+                <h3>No release before inspection</h3>
+                <p>
+                  Funds move only after the evidence policy is complete and attested, the named inspector
+                  records PASS and the buyer approves.
+                </p>
+              </li>
+              <li>
+                <h3>Refunds go back to the funder</h3>
+                <p>
+                  A refund returns to the original funding account from its exact source bucket, never to a
+                  new address.
+                </p>
+              </li>
+            </ol>
+          </section>
+          <section className="panel" aria-labelledby="login-title">
+            <h2 id="login-title">Sign in with a stored device key</h2>
+            {keyStoreError ? (
+              <Callout tone="warning" icon="blocked" title="Key storage unavailable" headingLevel={3}>
+                <p>This browser blocked key storage ({keyStoreError}). Use a regular browser profile.</p>
+              </Callout>
+            ) : storedKeys.length === 0 ? (
+              <p className="muted" data-testid="no-stored-keys">
+                No enrolled device key is stored in this browser. Create an organization or accept an
+                invitation first; lost keys are replaced only through administrator recovery.
+              </p>
+            ) : (
+              <form onSubmit={(e) => void onLogin(e)} noValidate>
+                <ErrorSummary errors={loginErrors} ref={loginSummary} />
+                <Field id="login-key" label="Device key" help="Keys enrolled from this browser.">
+                  {(aria) => (
+                    <select
+                      {...aria}
+                      value={loginKey}
+                      onChange={(e) => {
+                        setLoginKey(e.target.value);
+                        const k = storedKeys.find((x) => x.publicKey === e.target.value);
+                        if (k?.principalId) setLoginPrincipal(k.principalId);
+                      }}
+                    >
+                      {storedKeys.map((k) => (
+                        <option key={k.publicKey} value={k.publicKey}>
+                          {k.label} — {k.publicKey.slice(0, 18)}…
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+                <Field
+                  id="login-principal"
+                  label="Principal ID"
+                  help="prn_ followed by 32 hex characters."
+                  error={loginErrors.find((x) => x.fieldId === "login-principal")?.message}
+                >
+                  {(aria) => (
+                    <input
+                      {...aria}
+                      type="text"
+                      className="mono"
+                      spellCheck={false}
+                      value={loginPrincipal}
+                      onChange={(e) => setLoginPrincipal(e.target.value)}
+                    />
+                  )}
+                </Field>
+                <button type="submit" className="btn btn--primary" disabled={busy || !gate.allowed}>
+                  Request sign-in challenge
+                </button>
+              </form>
+            )}
+          </section>
+          <section className="panel" aria-labelledby="recover-title">
+            <h2 id="recover-title">Lost or suspended key</h2>
+            <p className="muted">
+              A lost key is replaced only through a delayed recovery started by a security administrator of
+              your organization. You prove the new key from your own device, or veto a recovery you did not
+              ask for.
+            </p>
+            <p>
+              <Link href="/recovery">Recover access</Link>
+            </p>
+          </section>
+          <section className="panel" aria-labelledby="wallet-title">
+            <h2 id="wallet-title">NEAR wallet signature (NEP-413)</h2>
+            <StatusBadge
+              dimension="productGate"
+              value="BLOCKED"
+              source="this web build"
+              observedAt={null}
+              reason="The API accepts NEP-413 wallet proofs, but no wallet connector is bundled in this web build yet."
+            />
+          </section>
+        </div>
       </div>
     </>
   );

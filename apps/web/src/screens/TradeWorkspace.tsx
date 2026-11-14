@@ -877,20 +877,33 @@ export function TradeWorkspaceScreen({ tradeId, tab }: { tradeId: string; tab: s
       <PageHeader
         title={p ? `Trade ${p.trade.milestone.id}` : `Trade ${tradeId}`}
         network={p?.trade.network ?? app.ready?.network ?? null}
-        description={
-          p ? (
-            <>
-              <code>{p.trade.tradeId}</code> · <Near yocto={p.trade.amountYocto} network={p.trade.network} />{" "}
-              · revision r{p.trade.revision} · contract <code>{p.trade.escrowContractId}</code> · release
-              intent{" "}
-              {p.release.liveIntent
-                ? describeStatus("releaseIntentState", p.release.liveIntent.state).label
-                : "none"}{" "}
-              · synced {formatUtc(ctx?.receivedAt ?? 0)} ({formatAge(ctx?.receivedAt ?? 0, app.now)})
-            </>
-          ) : (
-            "Trade workspace."
-          )
+        description={p ? p.trade.milestone.description : "Trade workspace."}
+        facts={
+          p
+            ? [
+                ["Trade reference", <code key="t">{p.trade.tradeId}</code>],
+                ["Amount", <Near key="a" yocto={p.trade.amountYocto} network={p.trade.network} />],
+                [
+                  "Revision",
+                  <span key="r" className="mono">
+                    r{p.trade.revision}
+                  </span>,
+                ],
+                ["Escrow contract", <code key="c">{p.trade.escrowContractId}</code>],
+                [
+                  "Release intent",
+                  p.release.liveIntent
+                    ? describeStatus("releaseIntentState", p.release.liveIntent.state).label
+                    : "none",
+                ],
+                [
+                  "Synced",
+                  <span key="s" className="mono">
+                    {formatUtc(ctx?.receivedAt ?? 0)} ({formatAge(ctx?.receivedAt ?? 0, app.now)})
+                  </span>,
+                ],
+              ]
+            : undefined
         }
       />
       <nav className="tabnav" aria-label="Trade sections">
