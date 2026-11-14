@@ -7,8 +7,8 @@ back to whoever paid.
 [![CI](https://github.com/gnanam1990/dockside-near/actions/workflows/ci.yml/badge.svg)](https://github.com/gnanam1990/dockside-near/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Demo video: **pending** (not recorded yet; it will follow [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)).
-Until the video, the fastest checks need no install: the proof page, the payment receipt and the attack console
+Demo video (2 min, captions): https://gnanam1990.github.io/dockside-near/video/dockside-demo.mp4
+Besides the video, the fastest checks need no install: the proof page, the payment receipt and the attack console
 below (live on GitHub Pages), and the one-line `get_ledger` call below; `pnpm judge` re-checks everything in one
 command.
 
@@ -18,8 +18,8 @@ command.
   `pnpm proof:serve` serves the same pages locally ([M46](docs/status/M46.md)). The page re-checks the
   native-NEAR escrow2; the USDC escrow3 is re-checked by `pnpm judge` (below), not by the page yet.
 - **Attack console** ("try to steal this payment", reads NEAR live in your browser):
-  https://gnanam1990.github.io/dockside-near/attack/ — the testnet demo trade on escrow3 holds 2 test USDC
-  ([M53](docs/status/M53.md)).
+  https://gnanam1990.github.io/dockside-near/attack/ — the testnet demo trade on escrow3 holds 2 test USDC, with
+  5 recorded refusals ([M53](docs/status/M53.md)).
 - **Hosted app:** pending (the container is built and verified locally, [M55](docs/status/M55.md); not deployed).
 - Architecture and every developer command: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Item-by-item status:
   [BUILD-STATUS.md](BUILD-STATUS.md).
@@ -270,7 +270,7 @@ exists and the contract journeys ran on testnet, but the full real-product gate 
 | Who signed on testnet | **one operator** for every role (keys derived from one seed); separate people on separate devices: not run |
 | GitHub Pages proof page, payment receipt, attack console | **live** at https://gnanam1990.github.io/dockside-near/ (the proof page covers escrow2; `pnpm judge` covers both escrows) |
 | Hosted app | built and verified locally; **not deployed** |
-| Demo video | **not recorded yet** (script: [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)) |
+| Demo video | **recorded** (2 min, captions): https://gnanam1990.github.io/dockside-near/video/dockside-demo.mp4 (script: [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md)) |
 | Mainnet | **mainnet-ready, same audited contract, capped at 25 USDC per trade; deployment pending** |
 | 1Click real quote and cash-out | not run (only dry quotes against a local simulator) |
 | Manual accessibility review | not run (automated axe checks pass) |
@@ -287,7 +287,7 @@ What remains for `WORKING_TESTNET`: [docs/USER-NEXT-STEPS.md](docs/USER-NEXT-STE
 - **Libraries** (pinned in `pnpm-lock.yaml` and `contract/Cargo.lock`): near-sdk, React, Vite, Vitest, Playwright
   with axe-core, Biome, fast-check, lucide-react and Node's built-in `node:sqlite`; near-cli-rs, near-sandbox and
   near-workspaces for deployment and tests.
-- Demo script: [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md).
+- Demo video: https://gnanam1990.github.io/dockside-near/video/dockside-demo.mp4; script: [docs/demo/DEMO-SCRIPT.md](docs/demo/DEMO-SCRIPT.md).
 
 Development was AI-assisted (coding agents); all code was tested and reviewed in this repository.
 

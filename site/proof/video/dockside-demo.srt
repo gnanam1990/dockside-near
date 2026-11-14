@@ -1,0 +1,124 @@
+1
+00:00:00,300 --> 00:00:03,200
+Supplier payments get stolen by fake
+bank-detail emails or paid too early.
+
+2
+00:00:03,200 --> 00:00:06,100
+Dockside: a NEAR escrow that pays only
+the signed account, after inspection.
+
+3
+00:00:06,300 --> 00:00:10,900
+Web app on the local stack, simulated
+chain: the buyer drafts one agreement.
+
+4
+00:00:10,900 --> 00:00:15,300
+It binds the payout account, inspector,
+risk resolver and evidence policy.
+
+5
+00:00:15,500 --> 00:00:21,244
+The supplier checks the buyer's signature,
+countersigns, and the escrow registers it.
+
+6
+00:00:21,344 --> 00:00:25,844
+Both parties signed one terms digest;
+the payout is bound to one account.
+
+7
+00:00:25,944 --> 00:00:30,844
+Inspector uploads the report and photos;
+the isolated attestor signs the manifest.
+
+8
+00:00:30,844 --> 00:00:35,527
+The named inspector signs PASS;
+the simulated escrow records it.
+
+9
+00:00:35,627 --> 00:00:41,027
+The buyer locks the value and approves;
+the review names the bound recipient.
+
+10
+00:00:41,027 --> 00:00:46,177
+Release can go only to the bound
+supplier account (10 NEAR, simulated).
+
+11
+00:00:46,277 --> 00:00:50,277
+PAID only after the reconciler reads
+the chain receipt (simulated chain).
+
+12
+00:00:50,477 --> 00:00:55,277
+Real run on NEAR testnet, in USDC:
+escrow3 paid the supplier exactly 5 USDC.
+
+13
+00:00:55,277 --> 00:00:59,877
+Paid, hold, refusal and refund: all four
+journeys ran on NEAR testnet in USDC.
+
+14
+00:01:00,077 --> 00:01:04,877
+Six attacks, six on-chain refusals,
+each a real NEAR testnet transaction.
+
+15
+00:01:04,877 --> 00:01:09,477
+Then the same trade completed:
+exactly 5 USDC to the bound supplier.
+
+16
+00:01:09,677 --> 00:01:14,877
+Live attack console: a real trade holds
+2 test USDC in escrow3 on NEAR testnet.
+
+17
+00:01:14,877 --> 00:01:20,277
+Five recorded attacks from an account with
+no authority, read back from NEAR.
+
+18
+00:01:20,277 --> 00:01:25,421
+Every attempt refused by the contract;
+funds unchanged: still 2.00 USDC held.
+
+19
+00:01:25,621 --> 00:01:29,921
+Proof page: your browser reads the escrow
+contract live from NEAR testnet.
+
+20
+00:01:29,921 --> 00:01:34,054
+Pass: all 63 checks, read live
+at a final NEAR testnet block.
+
+21
+00:01:34,254 --> 00:01:38,754
+Receipt page: a paid trade, re-verified
+against NEAR testnet on every visit.
+
+22
+00:01:38,754 --> 00:01:42,808
+All 9 checks pass: audited build, ledger,
+inspection and the release transaction.
+
+23
+00:01:43,008 --> 00:01:49,308
+pnpm judge: one command runs the tests and
+re-reads both escrows on NEAR testnet.
+
+24
+00:01:49,308 --> 00:01:55,877
+Real run on a fresh clone: 90 passed,
+0 failed, 1 skipped (mainnet).
+
+25
+00:01:56,177 --> 00:02:02,677
+NEAR testnet only; mainnet not deployed.
+github.com/gnanam1990/dockside-near
