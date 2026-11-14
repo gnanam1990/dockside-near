@@ -1,0 +1,138 @@
+{
+  "schema": "dockside/testnet-run@1",
+  "network": "testnet",
+  "contractNetwork": "near-testnet",
+  "asset": {
+    "kind": "nep141",
+    "token": {
+      "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+      "decimals": 6
+    }
+  },
+  "scriptCommit": "e10f9bc4b3b523a03160b714eb25a982140f73a6",
+  "artifact": {
+    "bytes": 862018,
+    "sha256": "025af34e970c4e7942c31fdad79b175e0f7322bccc2fdbd61d78653cd0237770",
+    "nearCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "commit": "74cafa55404a3a8aba618abc2eacd77e58c02c72",
+    "platform": "linux-x64"
+  },
+  "deployTx": null,
+  "deployment": {
+    "contractId": "gnanam1990-dock-escrow3.testnet",
+    "onChainCodeHash": "ACFe6Us2mTm8ms2VYgC1PTG4VrMmMHzNhT99tcxk2sq",
+    "match": true,
+    "blockHeight": 277598937,
+    "config": {
+      "network": "near-testnet",
+      "minDepositYocto": "1000000000000000000000",
+      "minDepositNep141": "10000",
+      "maxTradeAmount": {
+        "nearYocto": "0",
+        "nep141": "0"
+      },
+      "nep141Token": {
+        "accountId": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+        "decimals": 6
+      },
+      "trades": 4,
+      "unexpectedAssets": 0,
+      "refundPolicy": {
+        "id": "dockside-refund-v1",
+        "revision": 1
+      }
+    }
+  },
+  "relayer": {
+    "relayer": "gnanam1990-dock-relayer.testnet",
+    "publicKey": "ed25519:C3EMNRphXDfHC5JEJXo1ZveMnAg3N8kMJm5pJa2xYZXp",
+    "receiverId": "gnanam1990-dock-escrow3.testnet",
+    "methodNames": [],
+    "allowance": "977957837127800300000000"
+  },
+  "journey": {
+    "kind": "attack-demo",
+    "ok": true,
+    "tradeId": "trd_0f0efb61b5d32937af351ca9a5cba150",
+    "releaseIntentId": "rli_08d61e16b64556e0e2ac4f3bf32d5a5b",
+    "checks": {
+      "holdActive": true,
+      "deterministicPolicyHold": true,
+      "holdExpiresAt": 1797044403138,
+      "releaseBlockedByHold": true,
+      "approvalRecorded": true,
+      "approvalTxHash": "AkmxdeTXgnaHKsU1BDXCb9Z19c2V4idFB3kcnYddyyaj",
+      "intentPaysBoundSupplier": true,
+      "fundedExactlyTheTradeAmount": true,
+      "reservedExactlyTheTradeAmount": true,
+      "nothingReleased": true,
+      "nothingRefunded": true,
+      "ledgerConservation": true
+    },
+    "transactions": [
+      {
+        "step": "register",
+        "method": "register_trade",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "8m7soBp8vS1udyZgybuxtM4MZhrW5MQqKxh144eq9oZ9",
+        "blockTimeMs": 1794625156469
+      },
+      {
+        "step": "policy",
+        "method": "register_evidence_policy",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "A3tnNJyvHzfCfnX1LfUYDpX96qMpidwAz9t346uBSBxH",
+        "blockTimeMs": 1794625162495
+      },
+      {
+        "step": "fund",
+        "method": "ft_transfer_call",
+        "signer": "gnanam1990-dock-buyer.testnet",
+        "txHash": "iVoYdXweuHhjpxXTJ6fZQBiwuaQvvamXKaShW24LjMR",
+        "blockTimeMs": 1794625171408
+      },
+      {
+        "step": "attestation",
+        "method": "submit_manifest_attestation",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "2XW7vVn6ZGG3xD4TaLrRrBMnaUvEbhwmaW4AJsnrnVCx",
+        "blockTimeMs": 1794625178120
+      },
+      {
+        "step": "inspection",
+        "method": "submit_inspection",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "52igXGtFhuaACP6S4xWnw8mUxAPo2tp23YXZFo4btqcR",
+        "blockTimeMs": 1794625183526
+      },
+      {
+        "step": "payee_storage",
+        "method": "check_payee_storage",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "8b4QCwU9uyvDacFipyS9QCoomP6GWqnGzrA2KXhT2cxB",
+        "blockTimeMs": 1794625188973
+      },
+      {
+        "step": "intent",
+        "method": "create_release_intent",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "DCM8pcmLwrzoUYYK8m3zXDsnhLDqKN4u2zhEX2PZuvKr",
+        "blockTimeMs": 1794625195091
+      },
+      {
+        "step": "approval",
+        "method": "approve_release",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "AkmxdeTXgnaHKsU1BDXCb9Z19c2V4idFB3kcnYddyyaj",
+        "blockTimeMs": 1794625200696
+      },
+      {
+        "step": "hold_set",
+        "method": "set_hold",
+        "signer": "gnanam1990-dock-relayer.testnet",
+        "txHash": "DkDfR6QXS3X3roaUPe3Hp3m4s2DiLftvFjXkRY3C42GA",
+        "blockTimeMs": 1794625205888
+      }
+    ]
+  }
+}
