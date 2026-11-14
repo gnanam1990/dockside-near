@@ -552,7 +552,11 @@ export function EvidenceTab() {
                   EvidencePolicy {p.policy.policyId} revision {p.policy.revision}: slot checklist
                 </h3>
                 <p>
-                  Manifest revision <span className="tabular">{e.manifest.revision}</span>, completeness{" "}
+                  Manifest revision{" "}
+                  <span className="tabular" data-testid="manifest-revision">
+                    {e.manifest.revision}
+                  </span>
+                  , completeness{" "}
                   <StatusBadge
                     dimension="evidenceState"
                     value={e.evaluation.status}
