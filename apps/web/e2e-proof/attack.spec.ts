@@ -210,8 +210,27 @@ test("before the demo exists the page says so and sends no request", async ({ pa
   const committed = JSON.parse(
     readFileSync(new URL("../../../site/proof/attack/attack-demo.json", import.meta.url), "utf8"),
   );
-  expect(committed.status).toBe("NOT_SET_UP");
-  const seen = await route(page, { config: committed });
+  const notSetUp = {
+    schema: committed.schema,
+    network: committed.network,
+    status: "NOT_SET_UP",
+    rpc: committed.rpc,
+    explorer: committed.explorer,
+    relay: null,
+    escrow: null,
+    tradeId: null,
+    releaseIntentId: null,
+    holdId: null,
+    amountYocto: null,
+    parties: null,
+    attacker: null,
+    baselineNonce: null,
+    setup: [],
+    terms: null,
+    approval: null,
+    recorded: [],
+  };
+  const seen = await route(page, { config: notSetUp });
   await open(page);
   await expect(page.locator(".verdict-title")).toHaveText("The demo trade has not been created yet");
   expect(seen.rpc).toBe(0);
